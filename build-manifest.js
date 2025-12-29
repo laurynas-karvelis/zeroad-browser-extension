@@ -6,7 +6,7 @@ import packageJson from "./package.json";
 const target = process.argv[2];
 
 if (!target) {
-  console.error("Usage: node hydrate.js <chrome|firefox>");
+  console.error("Usage: node build-manifest.js <chrome|firefox>");
   process.exit(1);
 }
 
