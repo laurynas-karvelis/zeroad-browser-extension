@@ -14,7 +14,7 @@ function onSiteMessage<T = unknown, P = unknown>(
     // Firefox extension - has to communicate via `content.js` (facepalm)
     chrome.runtime.onMessage.addListener((message) => message?.command === eventName && callback(message));
   } else {
-    // Chrome, Microsoft Edge and Safari inject `chrome.runtime.sendMessage()` into site's `window` context
+    // Chrome and Microsoft Edge into site's `window` context
     chrome.runtime.onMessageExternal.addListener((message, _sender, sendResponse) => {
       if (message?.command === eventName) callback(message).then(sendResponse).catch(sendResponse);
       return true;
