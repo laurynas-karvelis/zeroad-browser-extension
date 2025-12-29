@@ -1,0 +1,80 @@
+@import "./settings";
+@import "./bootstrap";
+
+body {
+  font-optical-sizing: auto;
+  text-rendering: optimizelegibility;
+  -webkit-font-smoothing: antialiased;
+  width: 430px;
+}
+
+.navbar {
+  font-family: $headings-font-family;
+  flex-wrap: nowrap;
+  justify-content: flex-start;
+
+  .navbar-nav {
+    flex-direction: row;
+  }
+
+  .navbar-brand {
+    font-weight: 500;
+    font-size: 0.95rem;
+  }
+}
+
+.greeting {
+  margin-bottom: 1rem;
+  color: $text-muted;
+}
+
+hr {
+  border: 0;
+  border-top: 2px dotted $gray-500;
+  margin: $spacer 0;
+}
+
+[hidden] {
+  display: none !important;
+}
+
+.text-small {
+  font-size: 0.85rem;
+}
+
+.text-large {
+  font-size: 1rem;
+}
+
+ul.unstyled-icon {
+  --icon: url("../images/svg/green-check-mark-icon.svg");
+
+  li {
+    margin-left: 1em;
+    padding: 0.3rem 0;
+    padding-left: 1.5rem;
+    line-height: $line-height-base;
+    position: relative;
+
+    &::before {
+      content: "";
+      position: absolute;
+      left: 0;
+      top: 0.48rem;
+      width: 0.8rem;
+      height: 0.8rem;
+      background-image: var(--icon);
+      background-size: contain;
+      background-repeat: no-repeat;
+    }
+  }
+}
+
+.btn img {
+  display: inline-block;
+  vertical-align: -0.125em;
+  font-size: var(--bs-btn-font-size);
+  width: 1em;
+  height: 1em;
+  color: var(--bs-btn-color);
+}

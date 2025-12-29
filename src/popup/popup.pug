@@ -1,0 +1,92 @@
+doctype html
+html(lang="en", data-bs-theme="auto")
+  head
+    meta(charset="UTF-8")
+    meta(name="viewport", content="width=device-width, initial-scale=1")
+    meta(content="en-GB", http-equiv="content-language")
+    link(rel="stylesheet", href="./css/main.css")
+    script(type="text/javascript", src="./js/popup.js") 
+  body
+    .container.px-4.py-3
+      header.mb-4
+        nav.navbar.border-bottom
+          a.navbar-brand(href="/")
+            img.d-inline-block.me-2(src="./images/dove.png", width="26", height="26")
+            | Zero Ad Network
+          ul.navbar-nav.ms-auto
+            li#link-pricing.nav-item
+              a.nav-link.px-0.pe-4.py-0(href="/#features") Features
+            li.nav-item
+              a.nav-link.p-0(href="/#pricing") Pricing
+      main
+        #extension-paused.alert.alert-warning.text-center(hidden) NOTE: Extension functionality is currently paused!
+
+        // Guest & user-not-subscribed
+        .guest.user.not-subscribed(hidden)
+          h4.guest.greeting(hidden) Welcome guest,
+          h4.user.not-subscribed.greeting(hidden) Hi {FIRST_NAME},
+          .guest(hidden)
+            p Sign up and activate a subscription to <b class="text-success">unlock</b> your ad-free and enhanced browsing experience:
+          .not-subscribed(hidden)
+            p Activate a subscription to <b class="text-success">begin enjoying</b> an ad-free and enhanced web experience:
+          ul.list-unstyled.unstyled-icon
+            li Enjoy a completely ad-free experience
+            li Skip cookie consent pop-ups
+            li No unnecessary third-party trackers
+            li No marketing interruptions
+            li Access content behind paywalls
+            li Unlock free access to partner subscriptions
+            li Unlock free access to streaming services
+          .d-grid
+            a.guest.btn.btn-lg.btn-primary(hidden, href="/login") Join us now &rarr;
+            a.user.not-subscribed.btn.btn-lg.btn-primary(hidden, href="/checkout") Choose your plan now &rarr;
+        // User-subscribed
+        .user.subscribed(hidden)
+          .subscription-valid(hidden)
+            p.clean-web(hidden) Your have the <b class="text-success">Clean Web</b> plan active for <b class="valid-until text-success"></b>.
+              span.text-muted.ms-1 Enjoy a completely ad-free experience and fewer interruptions.
+            p.one-pass(hidden) Your have the <b class="text-success">One Pass</b> plan active for <b class="valid-until text-success"></b>.
+              span.text-muted.ms-1 Access content behind paywalls and unlocked free access to subscriptions and streaming services.
+            p.freedom(hidden) Your have the <b class="text-success">Freedom</b> plan active for <b class="valid-until text-success"></b>.
+              span.text-muted.ms-1 Enjoy a completely ad-free experience and fewer interruptions.
+            p.text-muted Access content behind paywalls and unlocked free access to subscriptions and streaming services.
+
+          .subscription-expired(hidden)
+            h5 Your plan is now <span class="text-danger">expired</span>.
+            p.text-muted No action needed &mdash; we'll automatically refresh your token while your subscription is active.
+            p.text-muted If not, you can renew your subscription anytime from your dashboard to keep enjoying an ad-free web experience.
+
+          #partner-features.col(hidden)
+            hr
+            h5 The active tab <span class="text-success">site offers</span>:
+            ul.list-unstyled.unstyled-icon
+              li.clean_web(hidden) Ad Free experience without interruptions
+              li.one_pass(hidden) Free subscriptions and no paywalls
+
+          #developer-details(hidden)
+            hr
+            h5 Developer token overview:
+            span#developer-token-label.badge.text-bg-warning.me-1 Type: Developer Token
+            span#subscription-label.badge.text-bg-warning.me-1 Subscription: <span></span>
+            span#client-id-label.badge.text-bg-warning Client ID: <span></span>
+
+          hr
+
+          .d-flex.gap-2
+            a#choose-plan-btn.btn.btn-primary.flex-grow-1(href="/dashboard", title="Open my dashboard")
+              img.me-2(src="./images/svg/columns-gap.svg")
+              | Dashboard
+            a#report-site-btn.btn.btn-danger(hidden, data-href="/report/site", title="Report partnered site Issue")
+              img(src="./images/svg/bug.svg")
+            button#pause-btn.btn.btn-warning(hidden, title="Pause the extension")
+              img(src="./images/svg/pause-circle.svg")
+            button#resume-btn.btn.btn-success(hidden, title="Resume the extension")
+              img(src="./images/svg/play-circle.svg")
+      footer.mt-3
+        .d-flex.flex-row.justify-content-end.text-muted.gap-2.mt-3
+          small#debug-menu.d-flex.d-row.gap-1(hidden)
+            a#sync-token(href="/dashboard") sync token
+            a#push-telemetry(href="") push telemetry
+            a#display-telemetry(href="") show telemetry
+            a#reset-extension-state(href="") reset
+          small#version Version {VERSION}

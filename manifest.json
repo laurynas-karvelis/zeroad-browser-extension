@@ -1,0 +1,77 @@
+{
+  "root": {
+    "homepage_url": "https://zeroad.network",
+    "extension_name": "browser-extension",
+    "name": "Zero Ad Network",
+    "description": "Browse & support partnered Web without Ads, Paywalls or additional Subscriptions.",
+    "icons": {
+      "512": "images/dove.png"
+    },
+    "permissions": ["scripting", "declarativeNetRequest", "webRequest", "storage", "alarms", "activeTab"],
+    "popup": {
+      "default_popup": "popup.html",
+      "default_icon": "images/dove-gray-128.png"
+    },
+    "background_script": "js/worker.js",
+    "hosts": ["https://*/*", "http://*/*"],
+    "external_matches": ["https://zeroad.network/*", "http://localhost/*"]
+  },
+  "chrome": {
+    "manifest_version": 3,
+    "version": "${root.version}",
+    "homepage_url": "${root.homepage_url}",
+    "name": "${root.name}",
+    "description": "${root.description}",
+    "icons": { "$eval": "root.icons" },
+    "permissions": { "$eval": "root.permissions" },
+    "host_permissions": { "$eval": "root.hosts" },
+    "action": {
+      "default_popup": "${root.popup.default_popup}",
+      "default_icon": "${root.popup.default_icon}"
+    },
+    "background": {
+      "service_worker": "${root.background_script}",
+      "type": "module"
+    },
+    "externally_connectable": {
+      "matches": { "$eval": "root.external_matches" }
+    }
+  },
+  "firefox": {
+    "manifest_version": 3,
+    "version": "${root.version}",
+    "homepage_url": "${root.homepage_url}",
+    "name": "${root.name}",
+    "description": "${root.description}",
+    "icons": { "$eval": "root.icons" },
+    "permissions": { "$eval": "root.permissions" },
+    "host_permissions": { "$eval": "root.hosts" },
+    "background": {
+      "scripts": ["${root.background_script}"]
+    },
+    "action": {
+      "default_popup": "${root.popup.default_popup}",
+      "default_icon": "${root.popup.default_icon}"
+    },
+    "content_scripts": [
+      {
+        "matches": { "$eval": "root.external_matches" },
+        "js": ["js/content.js"]
+      }
+    ],
+    "browser_specific_settings": {
+      "gecko": {
+        "id": "${root.extension_name}@zeroad.network",
+        "data_collection_permissions": {
+          "required": [
+            "personallyIdentifyingInfo",
+            "authenticationInfo",
+            "locationInfo",
+            "browsingActivity",
+            "websiteContent"
+          ]
+        }
+      }
+    }
+  }
+}

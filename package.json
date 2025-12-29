@@ -1,0 +1,43 @@
+{
+  "name": "@zeroad.network/browser-extension",
+  "version": "0.9.0",
+  "license": "Apache-2.0",
+  "repository": "github:laurynas-karvelis/zeroad-browser-extension",
+  "homepage": "https://zeroad.network",
+  "author": {
+    "name": "Laurynas Karvelis <Explosive Brains Ltd>",
+    "email": "hello@zeroad.network",
+    "url": "http://zeroad.network"
+  },
+  "scripts": {
+    "postcss": "postcss build/css/main.css -o build/css/main.css",
+    "manifest:build": "bun run build-manifest.js",
+    "pug:build": "pug src/popup/popup.pug --pretty --out build/ && bun styles:build",
+    "assets:build": "rsync -a --delete src/images/ build/images/",
+    "styles:build": "sass --update --no-source-map --quiet src/styles:build/css && bun postcss",
+    "scripts:build": "bun build src/*.ts --outdir=build/js/ --target=browser",
+    "targets:build": "dirs=(\"chrome\" \"firefox\"); for d in \"${dirs[@]}\"; do (rsync -a --delete --mkpath build/ targets/$d/ && bun manifest:build $d > targets/$d/manifest.json); done",
+    "watch": "bun watch.mjs",
+    "prebuild": "bun --filter '@zeroad.network/token' build",
+    "build": "bun scripts:build && bun assets:build && bun pug:build && bun targets:build",
+    "postbuild": "dirs=(\"chrome\"); for d in \"${dirs[@]}\"; do (cd \"targets/$d\" && rm js/content.js); done",
+    "package": "version=$(jq -r '.version' ./package.json) dirs=(\"chrome\" \"firefox\"); for d in \"${dirs[@]}\"; do (cd \"targets/$d\" && zip -r $d-$version.zip manifest.json js popup.html css images); done"
+  },
+  "dependencies": {
+    "@zeroad.network/token": "^0.13.13"
+  },
+  "devDependencies": {
+    "@fullhuman/postcss-purgecss": "^7.0.2",
+    "@types/chrome": "^0.1.32",
+    "@types/firefox-webext-browser": "^143.0.0",
+    "bootstrap": "^5.3.8",
+    "chokidar": "^5.0.0",
+    "json-e": "^4.8.0",
+    "postcss": "^8.5.6",
+    "postcss-cli": "^11.0.1",
+    "postcss-csso": "^6.0.1",
+    "pug": "^3.0.3",
+    "pug-cli": "^1.0.0-alpha6",
+    "sass": "^1.96.0"
+  }
+}

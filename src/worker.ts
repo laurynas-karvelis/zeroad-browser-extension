@@ -1,0 +1,9 @@
+import "./worker/badge";
+import "./worker/credentials";
+import "./worker/event-broker";
+import "./worker/extension";
+import "./worker/header-injection";
+import "./worker/telemetry";
+import "./worker/tab-tracker";
+import "./worker/telemetry-sync";
+import "./worker/messaging";
