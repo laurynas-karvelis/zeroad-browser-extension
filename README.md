@@ -33,4 +33,3 @@ Each targeted browser artifact can be found inside these directories:
 
 - Google Chrome: `./targets/chrome/`
 - Mozilla Firefox: `./targets/firefox/`
-- Microsoft Edge: `./targets/edge/`
