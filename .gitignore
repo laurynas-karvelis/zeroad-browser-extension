@@ -1,2 +1,6 @@
-build
-targets
+/.vscode/
+/.idea/
+/build
+/targets
+/node_modules
+.DS_Store

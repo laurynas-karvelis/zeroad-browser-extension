@@ -18,7 +18,6 @@
     "scripts:build": "bun build src/*.ts --outdir=build/js/ --target=browser",
     "targets:build": "dirs=(\"chrome\" \"firefox\"); for d in \"${dirs[@]}\"; do (rsync -a --delete --mkpath build/ targets/$d/ && bun manifest:build $d > targets/$d/manifest.json); done",
     "watch": "bun watch.mjs",
-    "prebuild": "bun --filter '@zeroad.network/token' build",
     "build": "bun scripts:build && bun assets:build && bun pug:build && bun targets:build",
     "postbuild": "dirs=(\"chrome\"); for d in \"${dirs[@]}\"; do (cd \"targets/$d\" && rm js/content.js); done",
     "package": "version=$(jq -r '.version' ./package.json) dirs=(\"chrome\" \"firefox\"); for d in \"${dirs[@]}\"; do (cd \"targets/$d\" && zip -r $d-$version.zip manifest.json js popup.html css images); done"

@@ -1,0 +1,35 @@
+name: Browser Extension
+
+on:
+  workflow_dispatch:
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Set up Bun
+        uses: oven-sh/setup-bun@v2
+        with:
+          bun-version: latest
+
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Install dependencies
+        run: |
+          bun install --frozen-lockfile
+
+      - name: Build app
+        run: |
+          bun run build
+
+      - name: Package extension
+        run: |
+          bun run package
+
+      - name: Upload all zip files
+        uses: actions/upload-artifact@v4
+        with:
+          name: browser-extensions
+          path: ./targets/**/*.zip
