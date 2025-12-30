@@ -62,12 +62,14 @@ export class Telemetry {
     const { telemetry } = await chrome.storage.local.get<{ telemetry: StoredTelemetryMap }>(["telemetry"]);
     this.map = this.createMap(telemetry);
 
-    this.map.entries().forEach(([key, entry]) => {
+    // Clean-up potentially old entries
+    const toDelete: Hostname[] = [];
+    for (const [key, entry] of this.map.entries()) {
       if (!entry.views && !entry.duration) {
-        // Clean-up potentially old entries
-        this.map.delete(key);
+        toDelete.push(key);
       }
-    });
+    }
+    toDelete.forEach((key) => this.map.delete(key));
 
     this.save();
   }
