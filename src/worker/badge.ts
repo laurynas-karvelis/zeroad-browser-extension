@@ -7,6 +7,8 @@ enum BADGE_ICON {
 }
 
 class Badge {
+  private badgeTimeout?: ReturnType<typeof setTimeout>;
+
   constructor() {
     eventBroker()
       .on(EVENT.EXTENSION.SYNCED, () => this.setText("ON"))
@@ -20,9 +22,19 @@ class Badge {
     return chrome.action.setIcon({ tabId, path: chrome.runtime.getURL(icon) });
   }
 
-  async setText(text: string) {
-    await chrome.action.setBadgeText({ text: text });
-    setTimeout(() => this.setText(""), 5000);
+  async setText(text: string, durationMs = 5000) {
+    if (this.badgeTimeout) {
+      clearTimeout(this.badgeTimeout);
+    }
+
+    await chrome.action.setBadgeText({ text });
+
+    if (text) {
+      this.badgeTimeout = setTimeout(() => {
+        chrome.action.setBadgeText({ text: "" });
+        this.badgeTimeout = undefined;
+      }, durationMs);
+    }
   }
 }
 
