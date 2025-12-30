@@ -12,7 +12,17 @@ function onSiteMessage<T = unknown, P = unknown>(
 ) {
   if (typeof browser !== "undefined" && typeof browser.runtime !== "undefined") {
     // Firefox extension - has to communicate via `content.js` (facepalm)
-    chrome.runtime.onMessage.addListener((message) => message?.command === eventName && callback(message));
+    chrome.runtime.onMessage.addListener((message, sender) => {
+      // Verify sender is our content script
+      if (!sender.tab || !sender.url) {
+        log("warn", "[messaging]", "Rejected message from non-tab sender");
+        return;
+      }
+
+      if (message?.command === eventName) {
+        return callback(message);
+      }
+    });
   } else {
     // Chrome and Microsoft Edge into site's `window` context
     chrome.runtime.onMessageExternal.addListener((message, _sender, sendResponse) => {
