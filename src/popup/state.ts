@@ -7,8 +7,8 @@ import {
 import { TabTrackActiveTabEventData } from "../worker/tab-tracker";
 import { EVENT } from "../worker/event-broker";
 import { worker } from "./worker";
-import { $ } from "./dom";
 import { from } from "./date";
+import { $ } from "./dom";
 
 export class UserState {
   constructor(
