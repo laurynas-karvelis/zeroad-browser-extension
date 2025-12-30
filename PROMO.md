@@ -1,60 +1,94 @@
 # Discover a Cleaner, Faster, and Fair Web
 
-Tired of ads, pop-ups, cookie consent banners, and endless paywalls? With the Zero Ad Network browser extension, you can enjoy the web the way it was meant to be—clean, uninterrupted, and user-friendly—while supporting the creators behind the content you love.
+Sick of ads, cookie popups, and paywalls? The Zero Ad Network extension removes the clutter while making sure the sites you love actually get paid.
 
-## What the Extension Does
+## What It Does
 
-The Zero Ad Network browser extension works quietly in the background to:
+REMOVES THE ANNOYING STUFF
+• Ads and tracking scripts disappear on partner sites
+• No more cookie consent banners
+• Marketing popups? Gone.
 
-- Remove Ads and Trackers: Say goodbye to intrusive advertisements, annoying pop-ups, and unnecessary tracking scripts on partnered sites.
-- Bypass Paywalls: Access subscription-only content and basic plans on partner sites without paying multiple times.
-- Support Creators Fairly: A portion of your subscription fee is automatically sent to the sites you actually visit, rewarding them based on your engagement.
-- Think of it as a smarter, safer alternative to traditional ad blockers: one subscription gives you access to multiple sites, while creators get fairly compensated for their work.
+UNLOCKS PREMIUM CONTENT
+• Read articles behind paywalls
+• Access basic subscription features
+• One subscription, multiple sites
+
+PAYS CREATORS FAIRLY
+• Sites you visit get paid based on your time spent
+• No more choosing between ad blockers and supporting creators
+• Your subscription fee goes directly to the content you consume
 
 ## How It Works
 
-1. Sign Up & Subscribe
-1. Install the Extension
-1. Enjoy a Better Web
+1. PICK YOUR PLAN
+   Clean Web: Ad-free browsing, zero trackers
+   One Pass: Access paywalled content across partner sites
+   Freedom: Everything included
 
-Choose the plan that fits your browsing needs:
+2. INSTALL AND FORGET
+   Available for Chrome, Firefox, and Edge. Installs in seconds.
 
-- Clean Web – Ad-free browsing, no trackers, and no pop-ups.
-- One Pass – Access paywalled content and basic subscriptions on partner sites.
-- Freedom – Combines both Clean Web and One Pass for the ultimate experience.
+3. BROWSE NORMALLY
+   The extension handles everything automatically. Visit partner sites and enjoy a cleaner experience.
 
-The lightweight browser extension is available for Chrome and Firefox. Once installed, it automatically applies your subscription features whenever you visit a partner site.
+## Why This Beats Regular Ad Blockers
 
-Browse without clutter, pop-ups, or interruptions. At the same time, the sites you visit are rewarded fairly for the content they provide.
+Ad blockers hurt creators. We don't.
 
-## Why It’s Different From Ad Blockers
+Traditional ad blockers cut off website revenue entirely. Zero Ad Network replaces that revenue fairly:
+• Sites get paid when you visit them
+• You get an ad-free experience
+• Everybody wins
 
-- Privacy First: Your personal data is never sold or shared.
-- Fair Compensation: Instead of harming sites’ revenue like traditional ad blockers do, your subscription directly rewards the sites you visit.
-- One Payment, Multiple Benefits: Access multiple sites’ content without juggling dozens of subscriptions.
-- Seamless Experience: No technical setup, no manual tweaks, no extra configuration needed.
+PLUS:
+• Privacy-first (we don't sell your data)
+• One subscription instead of dozens
+• No configuration needed
+• Works on thousands of partner sites
 
-## How Your Subscription Supports Websites
+## How Sites Get Paid
 
 When you visit a partner site:
 
-- The browser extension sends a secure token confirming your active subscription.
-- The partner site uses this token to apply the features you’re entitled to—removing ads, bypassing paywalls, and unlocking basic subscriptions.
-- Your time spent and page views are anonymously tracked (only for partner sites) to ensure fair revenue distribution.
-- At the end of each month, your subscription fee is proportionally shared among the sites you visited.
+1. Extension sends a secure token proving you're a subscriber
+2. Site enables your benefits (removes ads, unlocks content)
+3. Anonymous metrics tracked (time spent, pages viewed)
+4. Monthly payout based on your actual usage
 
-This encourages websites to provide higher-quality, ad-free content and paywall-free access for subscribers.
+The more you visit a site, the more they earn. Simple.
 
-## Benefits at a Glance
+## The Big Picture
 
-- Ad-Free Browsing: Enjoy a smooth, distraction-free experience.
-- Paywall Access: Read articles, stream content, or use services without additional subscriptions.
-- Privacy & Security: Minimal data collection, no personal info sold or shared.
-- Support Creators: Your subscription helps fund the websites you actually use.
-- Simple & Flexible: Install, sign in, and browse. Change or cancel plans anytime.
+The web shouldn't force you to choose between privacy and supporting creators.
 
-## The Vision
+Right now, websites either:
+• Spam you with ads and tracking
+• Lock everything behind paywalls
+• Sell your data to survive
 
-We believe the internet should work like a utility: clean, fair, and accessible. Instead of relying on ads and data tracking, Zero Ad Network ensures creators are compensated directly for the value they provide, while users enjoy a smooth, uninterrupted web experience.
+Zero Ad Network offers a third option: direct support through a single subscription.
 
-By subscribing and installing the extension, you help create a web that works for everyone—users, creators, and publishers alike.
+No ads. No tracking. No juggling 20 different paywalls. Just a better web that works for everyone.
+
+## Privacy Guarantee
+
+WHAT WE SEND:
+• A subscription token to all sites you visit (so partner sites can recognize you)
+• Anonymous usage stats only for partner sites
+
+WHAT WE DON'T DO:
+• Sell your data
+• Include personal info in tokens
+• Track you on non-partner sites
+• Share your browsing history
+
+The token just says "this person is a subscriber" - nothing about who you are.
+
+## Get Started
+
+Install the extension, sign up, and browse freely.
+
+Change plans or cancel anytime. No long-term commitment. No hassle.
+
+Join thousands of people building a better web - one where users browse freely and creators get paid fairly.
