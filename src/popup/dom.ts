@@ -2,6 +2,12 @@ function iterateElements<T = HTMLElement>(elements: NodeListOf<HTMLElement>, fn:
   elements.forEach((element) => fn(element as T));
 }
 
+function sanitizeHtml(text: string): string {
+  const div = document.createElement("div");
+  div.textContent = text;
+  return div.innerHTML;
+}
+
 export function updateUrls(baseUrl: string) {
   document.querySelectorAll("a").forEach((el) => {
     // Replace base URL of "[chrome|moz]-extension://<uuid>/" with "/"
@@ -72,7 +78,7 @@ export function $(query: string, parent?: { elements: NodeListOf<HTMLElement> })
     replace(values: Record<string, string>) {
       iterateElements(elements, (el) =>
         Object.entries(values).forEach(([placeholder, replacement]) => {
-          el.innerText = el.innerText.replace(`{${placeholder}}`, replacement);
+          el.innerText = el.innerText.replace(`{${placeholder}}`, sanitizeHtml(replacement));
         })
       );
       return this;
