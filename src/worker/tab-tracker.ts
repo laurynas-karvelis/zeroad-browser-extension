@@ -1,6 +1,7 @@
 import { SERVER_HEADER, FEATURE, decodeServerHeader } from "@zeroad.network/token/browser";
 import { EVENT, eventBroker } from "./event-broker";
 import { Entry, telemetry } from "./telemetry";
+import { isValidUrl } from "./utils";
 
 type BrowserTab = chrome.tabs.Tab & { partner: boolean };
 
@@ -164,7 +165,7 @@ chrome.tabs.onUpdated.addListener((_tabId, changeInfo, tab) => {
     return;
   }
 
-  if (tab.url) {
+  if (isValidUrl(tab.url)) {
     if (!telemetry().hasPartnerEntryByUrl(tab.url)) {
       // Might include "Welcome header" inside one of their <meta> tags
       helpers.testHtmlMetaTags(tab);
@@ -192,7 +193,11 @@ chrome.tabs.onRemoved.addListener((tabId) => trackedTabs().delete(tabId));
 chrome.windows.onRemoved.addListener((windowId) => trackedTabs().deleteByWindowId(windowId));
 
 chrome.webRequest.onCompleted.addListener(
-  async (details) => helpers.testWebRequestHeaders(details.url, details.responseHeaders || []),
+  async (details) => {
+    if (isValidUrl(details.url)) {
+      helpers.testWebRequestHeaders(details.url, details.responseHeaders || []);
+    }
+  },
   { types: ["main_frame"], urls: ["<all_urls>"] },
   ["responseHeaders"]
 );
