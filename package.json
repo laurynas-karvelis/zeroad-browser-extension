@@ -26,17 +26,17 @@
     "@zeroad.network/token": "^0.14.0"
   },
   "devDependencies": {
-    "@fullhuman/postcss-purgecss": "^7.0.2",
-    "@types/chrome": "^0.1.32",
+    "@fullhuman/postcss-purgecss": "^8.0.0",
+    "@types/chrome": "^0.1.36",
     "@types/firefox-webext-browser": "^143.0.0",
     "bootstrap": "^5.3.8",
     "chokidar": "^5.0.0",
-    "json-e": "^4.8.0",
+    "json-e": "^4.8.1",
     "postcss": "^8.5.6",
     "postcss-cli": "^11.0.1",
     "postcss-csso": "^6.0.1",
     "pug": "^3.0.3",
     "pug-cli": "^1.0.0-alpha6",
-    "sass": "^1.96.0"
+    "sass": "^1.97.3"
   }
 }

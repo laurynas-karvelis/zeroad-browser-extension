@@ -1,3 +1,4 @@
+/* eslint-disable no-console */
 // Firefox extension only
 (() => {
   const CONTENT_JS_LOOKUP = "js/content.js";
