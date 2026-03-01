@@ -31,7 +31,7 @@
     "@types/firefox-webext-browser": "^143.0.0",
     "bootstrap": "^5.3.8",
     "chokidar": "^5.0.0",
-    "json-e": "^4.8.1",
+    "json-e": "^4.8.2",
     "postcss": "^8.5.6",
     "postcss-cli": "^11.0.1",
     "postcss-csso": "^6.0.1",
