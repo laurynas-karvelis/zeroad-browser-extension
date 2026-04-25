@@ -1,5 +1,5 @@
-import { EVENT, eventBroker } from "./event-broker";
-import { TabTrackActiveTabEventData } from "./tab-tracker";
+import { EVENT, eventBroker } from "./event-broker"
+import { TabTrackActiveTabEventData } from "./tab-tracker"
 
 enum BADGE_ICON {
   ACTIVE = "./images/dove-128.png",
@@ -7,36 +7,36 @@ enum BADGE_ICON {
 }
 
 class Badge {
-  private badgeTimeout?: ReturnType<typeof setTimeout>;
+  private badgeTimeout?: ReturnType<typeof setTimeout>
 
   constructor() {
     eventBroker()
       .on(EVENT.EXTENSION.SYNCED, () => this.setText("ON"))
       .on<TabTrackActiveTabEventData>(EVENT.TAB_TRACKER.IS_ACTIVE_TAB_PARTNER, ({ tabId, isPartner }) => {
-        if (isPartner) this.setIcon(tabId, BADGE_ICON.ACTIVE);
-        else this.setIcon(tabId, BADGE_ICON.INACTIVE);
-      });
+        if (isPartner) this.setIcon(tabId, BADGE_ICON.ACTIVE)
+        else this.setIcon(tabId, BADGE_ICON.INACTIVE)
+      })
   }
 
   private setIcon(tabId: number | undefined, icon: BADGE_ICON) {
-    return chrome.action.setIcon({ tabId, path: chrome.runtime.getURL(icon) });
+    return chrome.action.setIcon({ tabId, path: chrome.runtime.getURL(icon) })
   }
 
   async setText(text: string, durationMs = 5000) {
     if (this.badgeTimeout) {
-      clearTimeout(this.badgeTimeout);
+      clearTimeout(this.badgeTimeout)
     }
 
-    await chrome.action.setBadgeText({ text });
+    await chrome.action.setBadgeText({ text })
 
     if (text) {
       this.badgeTimeout = setTimeout(() => {
-        chrome.action.setBadgeText({ text: "" });
-        this.badgeTimeout = undefined;
-      }, durationMs);
+        chrome.action.setBadgeText({ text: "" })
+        this.badgeTimeout = undefined
+      }, durationMs)
     }
   }
 }
 
-const singleton = new Badge();
-export const badge = () => singleton;
+const singleton = new Badge()
+export const badge = () => singleton

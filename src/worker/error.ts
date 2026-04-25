@@ -1,8 +1,8 @@
 export class ExtensionError extends Error {
-  cause: unknown;
+  cause: unknown
 
   constructor(message: string, cause?: unknown) {
-    super(message);
-    this.cause = cause;
+    super(message)
+    this.cause = cause
   }
 }

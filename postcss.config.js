@@ -1,6 +1,6 @@
 /* eslint-disable @typescript-eslint/no-require-imports */
-const { purgeCSSPlugin } = require("@fullhuman/postcss-purgecss");
-const postCsso = require("postcss-csso");
+const { purgeCSSPlugin } = require("@fullhuman/postcss-purgecss")
+const postCsso = require("postcss-csso")
 
 module.exports = {
   plugins: [
@@ -14,4 +14,4 @@ module.exports = {
       },
     }),
   ],
-};
+}

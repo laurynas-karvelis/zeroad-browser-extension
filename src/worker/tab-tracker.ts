@@ -1,30 +1,30 @@
-import { SERVER_HEADER, FEATURE, decodeServerHeader } from "@zeroad.network/token/browser";
-import { EVENT, eventBroker } from "./event-broker";
-import { Entry, telemetry } from "./telemetry";
-import { isValidUrl } from "./utils";
+import { SERVER_HEADER, FEATURE, decodeServerHeader } from "@zeroad.network/token/browser"
+import { EVENT, eventBroker } from "./event-broker"
+import { Entry, telemetry } from "./telemetry"
+import { isValidUrl } from "./utils"
 
-type BrowserTab = chrome.tabs.Tab & { partner: boolean };
+type BrowserTab = chrome.tabs.Tab & { partner: boolean }
 
 export type TabTrackerPartnerDetectedData = {
-  clientId: string;
-  features: (keyof typeof FEATURE)[];
-  source: "header" | "meta";
-  url: string;
-};
+  clientId: string
+  features: (keyof typeof FEATURE)[]
+  source: "header" | "meta"
+  url: string
+}
 
 export type TabTrackActiveTabEventData =
   | {
-      telemetryEntry: Entry;
-      tabId?: number;
-      isPartner: true;
-      url: string;
+      telemetryEntry: Entry
+      tabId?: number
+      isPartner: true
+      url: string
     }
   | {
-      telemetryEntry: undefined;
-      tabId?: number;
-      isPartner: false;
-      url?: string;
-    };
+      telemetryEntry: undefined
+      tabId?: number
+      isPartner: false
+      url?: string
+    }
 
 enum TAB_REGISTER_SOURCE {
   ON_TAB_ACTIVATED = "tabs.onActivated",
@@ -33,13 +33,13 @@ enum TAB_REGISTER_SOURCE {
 }
 
 class TrackedTabs {
-  map = new Map<number, BrowserTab>();
+  map = new Map<number, BrowserTab>()
 
   notifyIfActiveTabIsPartner(tab?: BrowserTab) {
-    tab = tab || this.findActiveTab();
+    tab = tab || this.findActiveTab()
 
     if (tab?.active) {
-      let data: TabTrackActiveTabEventData;
+      let data: TabTrackActiveTabEventData
 
       if (tab.partner) {
         data = {
@@ -47,71 +47,71 @@ class TrackedTabs {
           url: tab.url!,
           tabId: tab.id,
           telemetryEntry: telemetry().findPartnerEntryByUrl(tab.url)!,
-        };
+        }
       } else {
         data = {
           isPartner: tab.partner,
           url: tab.url,
           tabId: tab.id,
           telemetryEntry: undefined,
-        };
+        }
       }
 
-      eventBroker().emit<TabTrackActiveTabEventData>(EVENT.TAB_TRACKER.IS_ACTIVE_TAB_PARTNER, data);
+      eventBroker().emit<TabTrackActiveTabEventData>(EVENT.TAB_TRACKER.IS_ACTIVE_TAB_PARTNER, data)
     }
   }
 
   findActiveTab() {
-    return this.map.values().find((tab) => tab.active);
+    return this.map.values().find((tab) => tab.active)
   }
 
   flushActive(currentTabId?: number) {
-    const tab = this.findActiveTab();
-    if (currentTabId && currentTabId === tab?.id) return;
+    const tab = this.findActiveTab()
+    if (currentTabId && currentTabId === tab?.id) return
 
     if (tab?.active) {
-      if (tab.partner && tab.lastAccessed) telemetry().addDuration(tab.url, Math.floor(Date.now() - tab.lastAccessed));
-      tab.active = false;
+      if (tab.partner && tab.lastAccessed) telemetry().addDuration(tab.url, Math.floor(Date.now() - tab.lastAccessed))
+      tab.active = false
     }
   }
 
   register(tab: chrome.tabs.Tab, source: TAB_REGISTER_SOURCE) {
     if ([TAB_REGISTER_SOURCE.ON_TAB_ACTIVATED, TAB_REGISTER_SOURCE.ON_WINDOW_FOCUS_CHANGED].includes(source)) {
-      this.flushActive(tab.id);
+      this.flushActive(tab.id)
     }
 
     if (!tab.id) {
-      return;
+      return
     }
 
-    const partner = telemetry().hasPartnerEntryByUrl(tab.url);
-    const trackedTab = { ...tab, partner };
+    const partner = telemetry().hasPartnerEntryByUrl(tab.url)
+    const trackedTab = { ...tab, partner }
 
-    this.map.set(tab.id, trackedTab);
-    this.notifyIfActiveTabIsPartner(trackedTab);
+    this.map.set(tab.id, trackedTab)
+    this.notifyIfActiveTabIsPartner(trackedTab)
   }
 
   delete(tabId: number) {
-    this.flushActive();
-    this.map.delete(tabId);
+    this.flushActive()
+    this.map.delete(tabId)
   }
 
   deleteByWindowId(windowId: number) {
     this.map.forEach((tab) => {
       if (tab.windowId === windowId && tab.id) {
-        this.delete(tab.id);
+        this.delete(tab.id)
       }
-    });
+    })
   }
 }
 
-const singleton = new TrackedTabs();
-export const trackedTabs = () => singleton;
+const singleton = new TrackedTabs()
+export const trackedTabs = () => singleton
 
 const helpers = {
   PARTNER_SITE_HEADER_NAME: SERVER_HEADER.WELCOME.toLocaleLowerCase(),
   testPartnerWelcomeHeaderValue(url: string, welcomeHeaderValue: string | undefined, source: "header" | "meta") {
-    const decodedValue = decodeServerHeader(welcomeHeaderValue);
+    const decodedValue = decodeServerHeader(welcomeHeaderValue)
 
     if (decodedValue) {
       eventBroker().emit<TabTrackerPartnerDetectedData>(EVENT.TAB_TRACKER.PARTNER_DETECTED, {
@@ -119,14 +119,14 @@ const helpers = {
         features: decodedValue.features,
         source,
         url,
-      });
+      })
     }
   },
 
   async testHtmlMetaTags(tab: chrome.tabs.Tab) {
-    if (!tab.id || !tab.url) return;
+    if (!tab.id || !tab.url) return
 
-    let welcomeHeaderValue: string | undefined;
+    let welcomeHeaderValue: string | undefined
     try {
       const [{ result: metaContentValue }] = await chrome.scripting.executeScript({
         target: { tabId: tab.id },
@@ -134,70 +134,70 @@ const helpers = {
           return Array.from(document.head.querySelectorAll("meta[name][content]"))
             .find((el) => el.getAttribute("name")?.trim().toLocaleLowerCase() === lookupHeaderName)
             ?.getAttribute("content")
-            ?.trim();
+            ?.trim()
         },
         args: [this.PARTNER_SITE_HEADER_NAME],
-      });
+      })
 
-      welcomeHeaderValue = metaContentValue || undefined;
+      welcomeHeaderValue = metaContentValue || undefined
     } catch (_err) {
       // Ignore
     }
 
-    helpers.testPartnerWelcomeHeaderValue(tab.url, welcomeHeaderValue, "meta");
+    helpers.testPartnerWelcomeHeaderValue(tab.url, welcomeHeaderValue, "meta")
   },
 
   testWebRequestHeaders(url: string, headers: chrome.webRequest.HttpHeader[]) {
     const welcomeHeaderValue = headers.find(
       (header) => header.name.toLocaleLowerCase() === helpers.PARTNER_SITE_HEADER_NAME
-    )?.value;
+    )?.value
 
-    helpers.testPartnerWelcomeHeaderValue(url, welcomeHeaderValue, "header");
+    helpers.testPartnerWelcomeHeaderValue(url, welcomeHeaderValue, "header")
   },
-};
+}
 
 chrome.tabs.onActivated.addListener(async ({ tabId }) => {
-  trackedTabs().register(await chrome.tabs.get(tabId), TAB_REGISTER_SOURCE.ON_TAB_ACTIVATED);
-});
+  trackedTabs().register(await chrome.tabs.get(tabId), TAB_REGISTER_SOURCE.ON_TAB_ACTIVATED)
+})
 
 chrome.tabs.onUpdated.addListener((_tabId, changeInfo, tab) => {
   if (changeInfo.status !== "complete") {
-    return;
+    return
   }
 
   if (isValidUrl(tab.url)) {
     if (!telemetry().hasPartnerEntryByUrl(tab.url)) {
       // Might include "Welcome header" inside one of their <meta> tags
-      helpers.testHtmlMetaTags(tab);
+      helpers.testHtmlMetaTags(tab)
     }
 
     if (telemetry().hasPartnerEntryByUrl(tab.url)) {
-      telemetry().addViews(tab.url);
+      telemetry().addViews(tab.url)
     }
   }
 
-  trackedTabs().register(tab, TAB_REGISTER_SOURCE.ON_TAB_UPDATED);
-});
+  trackedTabs().register(tab, TAB_REGISTER_SOURCE.ON_TAB_UPDATED)
+})
 
 chrome.windows.onFocusChanged.addListener(async (windowId) => {
-  if (windowId === chrome.windows.WINDOW_ID_NONE) return;
+  if (windowId === chrome.windows.WINDOW_ID_NONE) return
 
   // A special case: the `onActivated` event won't fire when switching between windows
   // We have to inject current timestamp as `lastAccessed` ourselves
-  const [tab] = await chrome.tabs.query({ active: true, currentWindow: true });
-  if (tab) trackedTabs().register({ ...tab, lastAccessed: Date.now() }, TAB_REGISTER_SOURCE.ON_WINDOW_FOCUS_CHANGED);
-});
+  const [tab] = await chrome.tabs.query({ active: true, currentWindow: true })
+  if (tab) trackedTabs().register({ ...tab, lastAccessed: Date.now() }, TAB_REGISTER_SOURCE.ON_WINDOW_FOCUS_CHANGED)
+})
 
-chrome.tabs.onRemoved.addListener((tabId) => trackedTabs().delete(tabId));
+chrome.tabs.onRemoved.addListener((tabId) => trackedTabs().delete(tabId))
 
-chrome.windows.onRemoved.addListener((windowId) => trackedTabs().deleteByWindowId(windowId));
+chrome.windows.onRemoved.addListener((windowId) => trackedTabs().deleteByWindowId(windowId))
 
 chrome.webRequest.onCompleted.addListener(
   async (details) => {
     if (isValidUrl(details.url)) {
-      helpers.testWebRequestHeaders(details.url, details.responseHeaders || []);
+      helpers.testWebRequestHeaders(details.url, details.responseHeaders || [])
     }
   },
   { types: ["main_frame"], urls: ["<all_urls>"] },
   ["responseHeaders"]
-);
+)

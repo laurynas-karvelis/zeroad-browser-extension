@@ -3,20 +3,20 @@ export const worker = {
     return new Promise((resolve, reject) => {
       chrome.runtime.sendMessage({ command }, (response) => {
         if (chrome.runtime.lastError) {
-          reject(chrome.runtime.lastError);
-          return;
+          reject(chrome.runtime.lastError)
+          return
         }
 
-        resolve(response as T);
-      });
-    });
+        resolve(response as T)
+      })
+    })
   },
 
   on<T>(event: string, callback: (data: T) => unknown) {
     chrome.runtime.onMessage.addListener(({ event: receivedEvent, data }) => {
-      if (receivedEvent === event) return callback(data as T);
-    });
+      if (receivedEvent === event) return callback(data as T)
+    })
 
-    return this;
+    return this
   },
-};
+}

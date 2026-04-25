@@ -1,6 +1,6 @@
-import { inDevMode } from "./utils";
+import { inDevMode } from "./utils"
 
-let devMode: boolean | undefined = undefined;
+let devMode: boolean | undefined = undefined
 
 enum HOMEPAGE {
   DEV = "http://localhost:3000",
@@ -13,19 +13,19 @@ enum API_SERVER {
 }
 
 function buildUrl(path: string) {
-  const host = (devMode && HOMEPAGE.DEV) || HOMEPAGE.PROD;
-  return [host, path].join("");
+  const host = (devMode && HOMEPAGE.DEV) || HOMEPAGE.PROD
+  return [host, path].join("")
 }
 
 function buildApiUrl(path: string) {
-  const host = (devMode && API_SERVER.DEV) || API_SERVER.PROD;
-  return [host, path].join("");
+  const host = (devMode && API_SERVER.DEV) || API_SERVER.PROD
+  return [host, path].join("")
 }
 
-export type GetConfigResult = Awaited<ReturnType<typeof getConfig>>;
+export type GetConfigResult = Awaited<ReturnType<typeof getConfig>>
 
 export async function getConfig() {
-  if (devMode === undefined) devMode = await inDevMode();
+  if (devMode === undefined) devMode = await inDevMode()
 
   return {
     VERSION: chrome.runtime.getManifest().version,
@@ -39,5 +39,5 @@ export async function getConfig() {
     DATA_INGEST: {
       INGEST_URL: buildApiUrl("/extension/telemetry"),
     },
-  };
+  }
 }

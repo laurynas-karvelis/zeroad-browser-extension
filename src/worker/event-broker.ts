@@ -1,27 +1,27 @@
-import { log } from "./logger";
-import { LeafValues } from "./types";
+import { log } from "./logger"
+import { LeafValues } from "./types"
 
 class EventBroker extends EventTarget {
   emit<T = unknown>(eventName: EventType, data?: T) {
-    const logData: unknown[] = ["[event-broken]", eventName];
-    if (data !== undefined) logData.push(data);
-    log("debug", ...logData);
+    const logData: unknown[] = ["[event-broken]", eventName]
+    if (data !== undefined) logData.push(data)
+    log("debug", ...logData)
 
-    this.dispatchEvent(new CustomEvent(eventName, { detail: data }));
-    return this;
+    this.dispatchEvent(new CustomEvent(eventName, { detail: data }))
+    return this
   }
 
   on<T = unknown>(eventName: EventType, callback: (data: T) => void) {
     // @ts-expect-error Cant be bothered
-    this.addEventListener(eventName, (e: CustomEvent) => callback(e.detail as T));
-    return this;
+    this.addEventListener(eventName, (e: CustomEvent) => callback(e.detail as T))
+    return this
   }
 }
 
-const singleton = new EventBroker();
-export const eventBroker = () => singleton;
+const singleton = new EventBroker()
+export const eventBroker = () => singleton
 
-export type EventType = LeafValues<typeof EVENT>;
+export type EventType = LeafValues<typeof EVENT>
 
 export const EVENT = {
   EXTENSION: {
@@ -65,4 +65,4 @@ export const EVENT = {
     PING: "PING",
     SYNC_CLIENT_DATA: "SYNC_CLIENT_DATA",
   },
-} as const;
+} as const
