@@ -1,5 +1,5 @@
 import { log } from "./logger"
-import { LeafValues } from "./types"
+import type { LeafValues } from "./types"
 
 class EventBroker extends EventTarget {
   emit<T = unknown>(eventName: EventType, data?: T) {

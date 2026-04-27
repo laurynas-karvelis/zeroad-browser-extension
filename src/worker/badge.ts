@@ -1,5 +1,5 @@
 import { EVENT, eventBroker } from "./event-broker"
-import { TabTrackActiveTabEventData } from "./tab-tracker"
+import type { TabTrackActiveTabEventData } from "./tab-tracker"
 
 enum BADGE_ICON {
   ACTIVE = "./images/dove-128.png",

@@ -56,7 +56,7 @@ export async function httpPost<T>(url: string, token: string, payload: object, t
       return response.json()
     }
 
-    throw new Error("Response is not JSON: " + url)
+    throw new Error(`Response is not JSON: ${url}`)
   } catch (error) {
     clearTimeout(timeoutId)
     if (error instanceof DOMException && error.name === "AbortError") {

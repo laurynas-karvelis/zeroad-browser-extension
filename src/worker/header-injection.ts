@@ -16,7 +16,9 @@ class HeaderInjection {
   async removeBaseRule() {
     // Delete any pre-existing rule
     const ruleId = 1
-    return chrome.declarativeNetRequest.updateSessionRules({ removeRuleIds: [ruleId] })
+    return chrome.declarativeNetRequest.updateSessionRules({
+      removeRuleIds: [ruleId],
+    })
   }
 
   async enableBaseRule() {
@@ -32,7 +34,13 @@ class HeaderInjection {
       condition: { resourceTypes: ["main_frame", "media"] },
       action: {
         type: "modifyHeaders",
-        requestHeaders: [{ operation: "set", header: CLIENT_HEADER.HELLO, value: extension().getExtensionToken() }],
+        requestHeaders: [
+          {
+            operation: "set",
+            header: CLIENT_HEADER.HELLO,
+            value: extension().getExtensionToken(),
+          },
+        ],
       },
     }
 

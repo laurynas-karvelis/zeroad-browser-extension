@@ -1,6 +1,6 @@
 import { EVENT } from "../worker/event-broker"
-import { worker } from "./worker"
 import { $ } from "./dom"
+import { worker } from "./worker"
 
 export function enableDevTools() {
   const $parent = $("#debug-menu").show()

@@ -1,14 +1,14 @@
+import { EVENT } from "../worker/event-broker"
+import type { TabTrackActiveTabEventData } from "../worker/tab-tracker"
 import {
   PLAN_NAME_TO_FEATURE_NAMES,
   SUBSCRIPTION_PLAN_LABEL,
-  SubscriptionExtensionData,
-  UserExtensionData,
+  type SubscriptionExtensionData,
+  type UserExtensionData,
 } from "../worker/types"
-import { TabTrackActiveTabEventData } from "../worker/tab-tracker"
-import { EVENT } from "../worker/event-broker"
-import { worker } from "./worker"
 import { from } from "./date"
 import { $ } from "./dom"
+import { worker } from "./worker"
 
 export class UserState {
   constructor(
@@ -18,7 +18,9 @@ export class UserState {
 
   render() {
     if (this.user?.refreshToken) {
-      $(".user.greeting").replace({ FIRST_NAME: this.user.firstName || "Member" })
+      $(".user.greeting").replace({
+        FIRST_NAME: this.user.firstName || "Member",
+      })
 
       if (!this.subscription?.extensionToken) this.onMemberWithoutSubscription()
       else this.onMemberWithSubscription()
@@ -36,7 +38,7 @@ export class UserState {
 
   private buildReportButtonUrl(baseUrl: string, partnerUrl: string, clientId: string) {
     const url = new URL(baseUrl)
-    url.pathname = url.pathname.replace(/\/$/, "") + "/" + encodeURIComponent(clientId)
+    url.pathname = `${url.pathname.replace(/\/$/, "")}/${encodeURIComponent(clientId)}`
     url.searchParams.set("url", partnerUrl)
     return url.toString()
   }

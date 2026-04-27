@@ -1,10 +1,10 @@
-import { ExtensionSyncData, SubscriptionExtensionData, UserExtensionData } from "./types"
-import { headerInjection } from "./header-injection"
-import { EVENT, eventBroker } from "./event-broker"
-import { telemetrySync } from "./telemetry-sync"
-import { credentials } from "./credentials"
-import { setLogLevel } from "./logger"
 import { getConfig } from "./config"
+import { credentials } from "./credentials"
+import { EVENT, eventBroker } from "./event-broker"
+import { headerInjection } from "./header-injection"
+import { setLogLevel } from "./logger"
+import { telemetrySync } from "./telemetry-sync"
+import type { ExtensionSyncData, SubscriptionExtensionData, UserExtensionData } from "./types"
 import { inDevMode } from "./utils"
 
 class Extension {

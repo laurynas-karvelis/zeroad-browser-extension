@@ -3,10 +3,30 @@ import chokidar from "chokidar"
 
 // Define file groups and corresponding scripts with labels
 const watchers = [
-  { dir: "src/images/", allowed: () => true, cmd: "assets:build", label: "ASSETS" },
-  { dir: "src/styles/", allowed: (path) => /\.scss$/.test(path), cmd: "styles:build", label: "STYLES" },
-  { dir: "src/", allowed: (path) => /\.pug$/.test(path), cmd: "pug:build", label: "PUG" },
-  { dir: "src/", allowed: (path) => /\.ts$/.test(path), cmd: "scripts:build", label: "SCRIPTS" },
+  {
+    dir: "src/images/",
+    allowed: () => true,
+    cmd: "assets:build",
+    label: "ASSETS",
+  },
+  {
+    dir: "src/styles/",
+    allowed: (path) => /\.scss$/.test(path),
+    cmd: "styles:build",
+    label: "STYLES",
+  },
+  {
+    dir: "src/",
+    allowed: (path) => /\.pug$/.test(path),
+    cmd: "pug:build",
+    label: "PUG",
+  },
+  {
+    dir: "src/",
+    allowed: (path) => /\.ts$/.test(path),
+    cmd: "scripts:build",
+    label: "SCRIPTS",
+  },
 ]
 
 // Define what gets run and in what order
@@ -37,7 +57,7 @@ async function runCommand(command, args = []) {
 
 // Initialize watchers
 for (const { dir, allowed, cmd, label } of watchers) {
-  chokidar.watch(process.cwd() + "/" + dir, { persistent: true, ignoreInitial: true }).on("all", (event, path) => {
+  chokidar.watch(`${process.cwd()}/${dir}`, { persistent: true, ignoreInitial: true }).on("all", (_event, path) => {
     if (allowed(path)) {
       run(cmd, label, path)
     }

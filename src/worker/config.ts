@@ -1,6 +1,6 @@
 import { inDevMode } from "./utils"
 
-let devMode: boolean | undefined = undefined
+let devMode: boolean | undefined
 
 enum HOMEPAGE {
   DEV = "http://localhost:3000",

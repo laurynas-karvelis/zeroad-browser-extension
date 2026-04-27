@@ -1,10 +1,10 @@
-import { applyBootstrapTheme, setVersion, updateUrls } from "./popup/dom"
 import { enableDevTools } from "./popup/dev-tools"
-import { ExtensionSyncData } from "./worker/types"
-import { GetConfigResult } from "./worker/config"
-import { EVENT } from "./worker/event-broker"
+import { applyBootstrapTheme, setVersion, updateUrls } from "./popup/dom"
 import { UserState } from "./popup/state"
 import { worker } from "./popup/worker"
+import type { GetConfigResult } from "./worker/config"
+import { EVENT } from "./worker/event-broker"
+import type { ExtensionSyncData } from "./worker/types"
 
 function getConfig() {
   return worker.sendCommand<GetConfigResult>(EVENT.POPUP.GET_CONFIG)

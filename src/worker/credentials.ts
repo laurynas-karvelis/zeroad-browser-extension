@@ -1,10 +1,10 @@
-import { EVENT, eventBroker } from "./event-broker"
-import { ExtensionSyncData } from "./types"
-import { extension } from "./extension"
-import { getConfig } from "./config"
-import { httpPost } from "./utils"
 import { schedule } from "./alarm"
+import { getConfig } from "./config"
+import { EVENT, eventBroker } from "./event-broker"
+import { extension } from "./extension"
 import { log } from "./logger"
+import type { ExtensionSyncData } from "./types"
+import { httpPost } from "./utils"
 
 type StoredAttempt = { renewalAttempts: number }
 
@@ -14,7 +14,9 @@ const getAttempt = async () => {
 }
 
 const increaseAttempt = async () => {
-  return chrome.storage.local.set<StoredAttempt>({ renewalAttempts: (await getAttempt()) + 1 })
+  return chrome.storage.local.set<StoredAttempt>({
+    renewalAttempts: (await getAttempt()) + 1,
+  })
 }
 
 const clearAttempt = async () => {
@@ -86,7 +88,9 @@ class Credentials {
       log("debug", "[token-renew]", err)
       await Promise.all([
         increaseAttempt(),
-        schedule.create(this.EXTENSION_TOKEN_RENEWAL_ATTEMPT_ALARM, { periodInMinutes: 1 }),
+        schedule.create(this.EXTENSION_TOKEN_RENEWAL_ATTEMPT_ALARM, {
+          periodInMinutes: 1,
+        }),
       ])
     }
   }

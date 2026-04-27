@@ -1,10 +1,10 @@
-import { TabTrackActiveTabEventData, trackedTabs } from "./tab-tracker"
-import { EVENT, eventBroker, EventType } from "./event-broker"
-import { ExtensionSyncData } from "./types"
-import { telemetry } from "./telemetry"
-import { extension } from "./extension"
 import { getConfig } from "./config"
+import { EVENT, type EventType, eventBroker } from "./event-broker"
+import { extension } from "./extension"
 import { log } from "./logger"
+import { type TabTrackActiveTabEventData, trackedTabs } from "./tab-tracker"
+import { telemetry } from "./telemetry"
+import type { ExtensionSyncData } from "./types"
 
 function onSiteMessage<T = unknown, P = unknown>(
   eventName: EventType,
@@ -56,7 +56,10 @@ class Messaging {
     })
 
     onPopupMessage(EVENT.POPUP.DISPLAY_TELEMETRY_DATA, async () => {
-      log("info", "[runtime-message-service]", { map: telemetry().map, export: telemetry().export() })
+      log("info", "[runtime-message-service]", {
+        map: telemetry().map,
+        export: telemetry().export(),
+      })
     })
 
     onPopupMessage(EVENT.POPUP.GET_CONFIG, getConfig)

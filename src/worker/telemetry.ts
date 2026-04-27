@@ -1,8 +1,8 @@
-import { TabTrackerPartnerDetectedData } from "./tab-tracker"
-import { EVENT, eventBroker, EventType } from "./event-broker"
-import { arraysEqual, getHostname } from "./utils"
+import { EVENT, type EventType, eventBroker } from "./event-broker"
 import { extension } from "./extension"
-import { Hostname } from "./types"
+import type { TabTrackerPartnerDetectedData } from "./tab-tracker"
+import type { Hostname } from "./types"
+import { arraysEqual, getHostname } from "./utils"
 
 export type Entry = {
   clientId: TabTrackerPartnerDetectedData["clientId"]
@@ -53,13 +53,17 @@ export class Telemetry {
     if (this.saveTimeout) clearTimeout(this.saveTimeout)
 
     this.saveTimeout = setTimeout(() => {
-      chrome.storage.local.set<{ telemetry: StoredTelemetryMap }>({ telemetry: this.exportMap() })
+      chrome.storage.local.set<{ telemetry: StoredTelemetryMap }>({
+        telemetry: this.exportMap(),
+      })
       this.saveTimeout = undefined
     }, SAVE_DEBOUNCE_DELAY)
   }
 
   private async load() {
-    const { telemetry } = await chrome.storage.local.get<{ telemetry: StoredTelemetryMap }>(["telemetry"])
+    const { telemetry } = await chrome.storage.local.get<{
+      telemetry: StoredTelemetryMap
+    }>(["telemetry"])
     this.map = this.createMap(telemetry)
 
     // Clean-up potentially old entries

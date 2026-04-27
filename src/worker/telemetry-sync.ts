@@ -1,11 +1,11 @@
-import { EVENT, eventBroker } from "./event-broker"
-import { ExtensionError } from "./error"
-import { telemetry } from "./telemetry"
-import { extension } from "./extension"
-import { getConfig } from "./config"
-import { httpPost } from "./utils"
 import { schedule } from "./alarm"
+import { getConfig } from "./config"
+import type { ExtensionError } from "./error"
+import { EVENT, eventBroker } from "./event-broker"
+import { extension } from "./extension"
 import { log } from "./logger"
+import { telemetry } from "./telemetry"
+import { httpPost } from "./utils"
 
 class TelemetrySync {
   SCHEDULE_NAME = "telemetry-push"

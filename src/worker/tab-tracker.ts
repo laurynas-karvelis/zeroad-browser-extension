@@ -1,6 +1,6 @@
-import { SERVER_HEADER, FEATURE, decodeServerHeader } from "@zeroad.network/token/browser"
+import { decodeServerHeader, type FEATURE, SERVER_HEADER } from "@zeroad.network/token/browser"
 import { EVENT, eventBroker } from "./event-broker"
-import { Entry, telemetry } from "./telemetry"
+import { type Entry, telemetry } from "./telemetry"
 import { isValidUrl } from "./utils"
 
 type BrowserTab = chrome.tabs.Tab & { partner: boolean }
