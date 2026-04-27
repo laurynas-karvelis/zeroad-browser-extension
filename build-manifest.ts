@@ -1,4 +1,3 @@
-/* eslint-disable no-console */
 import JSONe from "json-e"
 import template from "./manifest.json"
 import packageJson from "./package.json"

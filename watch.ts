@@ -11,19 +11,19 @@ const watchers = [
   },
   {
     dir: "src/styles/",
-    allowed: (path) => /\.scss$/.test(path),
+    allowed: (path: string) => /\.scss$/.test(path),
     cmd: "styles:build",
     label: "STYLES",
   },
   {
     dir: "src/",
-    allowed: (path) => /\.pug$/.test(path),
+    allowed: (path: string) => /\.pug$/.test(path),
     cmd: "pug:build",
     label: "PUG",
   },
   {
     dir: "src/",
-    allowed: (path) => /\.ts$/.test(path),
+    allowed: (path: string) => /\.ts$/.test(path),
     cmd: "scripts:build",
     label: "SCRIPTS",
   },
@@ -31,7 +31,7 @@ const watchers = [
 
 // Define what gets run and in what order
 /* eslint-disable no-console */
-function run(cmd, label, path, ms = 100) {
+function run(cmd: string, label: string, path: string, ms = 100) {
   clearTimeout(timers[cmd])
   timers[cmd] = setTimeout(async () => {
     console.log(`[${label}] change detected: ${path}`)
@@ -44,7 +44,7 @@ function run(cmd, label, path, ms = 100) {
 
 // Debounce helper
 const timers = {}
-async function runCommand(command, args = []) {
+async function runCommand(command: string, args = []) {
   const child = spawn({
     cmd: [command, ...args],
     stdout: "inherit",

@@ -1,10 +1,9 @@
-/* eslint-disable @typescript-eslint/no-require-imports */
-const { purgeCSSPlugin } = require("@fullhuman/postcss-purgecss")
-const postCsso = require("postcss-csso")
+import purgeCSSPlugin from "@fullhuman/postcss-purgecss"
+import lightning from "postcss-lightningcss"
+import type { Config } from "postcss-load-config"
 
-module.exports = {
+const config: Config = {
   plugins: [
-    postCsso({ restructure: true }),
     purgeCSSPlugin({
       content: ["./build/**/*.html", "./src/**/*.ts"],
       safelist: {
@@ -13,5 +12,8 @@ module.exports = {
         deep: [/^dark-/, /^theme-dark-/],
       },
     }),
+    lightning({ browsers: ">= 0.5%, last 2 versions" }),
   ],
 }
+
+export default config
