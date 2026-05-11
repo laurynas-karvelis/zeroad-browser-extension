@@ -42,11 +42,14 @@ class TrackedTabs {
       let data: TabTrackActiveTabEventData
 
       if (tab.partner) {
+        const telemetryEntry = telemetry().findPartnerEntryByUrl(tab.url)
+        if (!tab.url || !telemetryEntry) return
+
         data = {
           isPartner: tab.partner,
-          url: tab.url!,
+          url: tab.url,
           tabId: tab.id,
-          telemetryEntry: telemetry().findPartnerEntryByUrl(tab.url)!,
+          telemetryEntry,
         }
       } else {
         data = {

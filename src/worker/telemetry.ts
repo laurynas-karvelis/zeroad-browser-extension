@@ -89,7 +89,8 @@ export class Telemetry {
 
       eventBroker().emit(EVENT.TELEMETRY.PARTNER_ADDED, { clientId })
     } else {
-      const entry = this.map.get(hostname)!
+      const entry = this.map.get(hostname)
+      if (!entry) return
 
       let shouldSave = false
 
