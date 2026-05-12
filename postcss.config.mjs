@@ -1,8 +1,7 @@
 import purgeCSSPlugin from "@fullhuman/postcss-purgecss"
 import lightning from "postcss-lightningcss"
-import type { Config } from "postcss-load-config"
 
-const config: Config = {
+const config = {
   plugins: [
     purgeCSSPlugin({
       content: ["./build/**/*.html", "./src/**/*.ts"],
