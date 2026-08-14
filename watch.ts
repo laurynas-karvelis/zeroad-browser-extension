@@ -43,8 +43,8 @@ function run(cmd: string, label: string, path: string, ms = 100) {
 }
 
 // Debounce helper
-const timers = {}
-async function runCommand(command: string, args = []) {
+const timers: Record<string, ReturnType<typeof setTimeout>> = {}
+async function runCommand(command: string, args: string[] = []) {
   const child = spawn({
     cmd: [command, ...args],
     stdout: "inherit",
