@@ -28,7 +28,7 @@
   },
   "devDependencies": {
     "@fullhuman/postcss-purgecss": "^8.0.0",
-    "@types/chrome": "^0.1.43",
+    "@types/chrome": "^0.2.5",
     "@types/firefox-webext-browser": "^143.0.0",
     "bootstrap": "^5.3.8",
     "chokidar": "^5.0.0",
