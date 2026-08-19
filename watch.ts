@@ -17,9 +17,9 @@ const watchers = [
   },
   {
     dir: "src/",
-    allowed: (path: string) => /\.pug$/.test(path),
-    cmd: "pug:build",
-    label: "PUG",
+    allowed: (path: string) => /\.tsx$/.test(path),
+    cmd: "popup:build",
+    label: "POPUP",
   },
   {
     dir: "src/",

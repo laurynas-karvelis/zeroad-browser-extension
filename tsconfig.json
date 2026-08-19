@@ -3,6 +3,8 @@
     "target": "esnext",
     "lib": ["DOM", "ESNext"],
     "module": "ESNext",
+    "jsx": "react-jsx",
+    "jsxImportSource": "hono/jsx",
     "moduleResolution": "Bundler",
     "strict": true,
     "skipLibCheck": true,

@@ -1,20 +1,18 @@
 // A real DOM for the popup tests, built from the very template the extension ships.
 //
-// `popup.pug` is compiled here rather than copied into a fixture string, so a selector in
+// `popup.tsx` is rendered here rather than copied into a fixture string, so a selector in
 // `dom.ts`/`state.ts` that stops matching the markup fails a test instead of silently doing
 // nothing - which is exactly how the `$` wrapper behaves in production.
 
 import { Window } from "happy-dom"
-import pug from "pug"
+import { renderPopupHtml } from "../popup/popup"
 
-const TEMPLATE_PATH = new URL("../popup/popup.pug", import.meta.url).pathname
-
-// Compiling pug is the slow part, so it happens once and every mount re-parses the same HTML.
+// Rendering is the slow part, so it happens once and every mount re-parses the same HTML.
 let templateHtml: string | undefined
 
 /** Replaces the global `window`/`document` with a freshly rendered popup. Call from `beforeEach`. */
 export function mountPopup() {
-  templateHtml ??= pug.renderFile(TEMPLATE_PATH, { pretty: true })
+  templateHtml ??= renderPopupHtml()
 
   const window = new Window({ url: "chrome-extension://test-extension-id/popup.html" })
   window.document.write(templateHtml)

@@ -280,8 +280,8 @@ describe("applyBootstrapTheme", () => {
 })
 
 describe("the template the popup is written against", () => {
-  // These are not assertions about `dom.ts` - they pin the markup its selectors rely on, so a pug
-  // edit that renames one of them fails here instead of silently rendering an empty popup.
+  // These are not assertions about `dom.ts` - they pin the markup its selectors rely on, so a
+  // template edit that renames one of them fails here instead of silently rendering an empty popup.
   test("still carries every hook the popup code looks for", () => {
     for (const selector of [
       "#version",
