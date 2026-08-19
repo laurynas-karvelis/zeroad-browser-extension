@@ -10,6 +10,8 @@ export type MockEvent<TArgs extends unknown[]> = {
   removeListener(listener: (...args: TArgs) => unknown): void
   hasListener(listener: (...args: TArgs) => unknown): boolean
   listenerCount(): number
+  /** Drops every listener, for a suite whose subject registers a fresh one per test. */
+  clear(): void
   /** Invokes every registered listener and awaits each one, so tests can assert on the fallout. */
   dispatch(...args: TArgs): Promise<unknown[]>
 }
@@ -25,6 +27,7 @@ function createEvent<TArgs extends unknown[]>(): MockEvent<TArgs> {
     },
     hasListener: (listener) => listeners.includes(listener as Listener),
     listenerCount: () => listeners.length,
+    clear: () => void listeners.splice(0, listeners.length),
     async dispatch(...args) {
       const results: unknown[] = []
       for (const listener of [...listeners]) {
@@ -120,9 +123,18 @@ export function createChromeMock() {
       sentMessages: [] as unknown[],
       /** What the next `sendMessage` callback receives. Set per test to script the worker's reply. */
       sendMessageResponse: undefined as unknown,
+      /** Replies keyed by command, for a test whose subject issues more than one. Wins over the above. */
+      sendMessageResponses: {} as Record<string, unknown>,
       sendMessage(message: unknown, callback?: (response: unknown) => void) {
         mock.runtime.sentMessages.push(message)
-        callback?.(mock.runtime.sendMessageResponse)
+
+        const command = (message as { command?: string })?.command
+        const scripted =
+          command !== undefined && command in mock.runtime.sendMessageResponses
+            ? mock.runtime.sendMessageResponses[command]
+            : mock.runtime.sendMessageResponse
+
+        callback?.(scripted)
       },
     },
 

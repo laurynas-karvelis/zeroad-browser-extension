@@ -47,7 +47,7 @@ export function $(selector: string, within?: Selection): Selection {
       each((element) => {
         // Assigning to innerText writes the value as text, so it must not be HTML-escaped first.
         element.innerText = Object.entries(values).reduce(
-          (text, [placeholder, value]) => text.replace(`{${placeholder}}`, value),
+          (text, [placeholder, value]) => text.replaceAll(`{${placeholder}}`, value),
           element.innerText
         )
       }),
@@ -81,9 +81,17 @@ export function setVersion(version: string) {
 /** Repoints the template's site-relative links at the real site, since the popup is its own origin. */
 export function updateUrls(baseUrl: string) {
   document.querySelectorAll("a").forEach((anchor) => {
-    anchor.href = new URL(anchor.getAttribute("href") || "", baseUrl).toString()
-    anchor.target = "_blank"
+    const href = anchor.getAttribute("href")
 
+    // An anchor without an `href` is a button in disguise - the report button, whose real
+    // destination is only known once the active tab turns out to be a partner site. Giving it one
+    // here would leave it quietly pointing at the home page whenever that lookup comes back empty.
+    if (href !== null) {
+      anchor.href = new URL(href, baseUrl).toString()
+      anchor.target = "_blank"
+    }
+
+    // Still resolved, and separately - `data-href` is the deferred destination's base.
     if (anchor.dataset.href) anchor.dataset.href = new URL(anchor.dataset.href, baseUrl).toString()
   })
 }

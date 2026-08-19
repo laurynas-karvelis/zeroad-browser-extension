@@ -1,4 +1,5 @@
-import { EVENT } from "../worker/event-broker"
+import { EVENT, type EventType } from "../worker/event-broker"
+import { log } from "../worker/logger"
 import type { TabTrackActiveTabEventData } from "../worker/tab-tracker"
 import {
   PLAN_NAME_TO_FEATURE_NAMES,
@@ -10,30 +11,43 @@ import { from } from "./date"
 import { $ } from "./dom"
 import { worker } from "./worker"
 
+/**
+ * The popup has no error surface of its own and a half-rendered popup is better than a blank one,
+ * so a worker round-trip that fails is logged and the affected controls are simply left hidden.
+ */
+function reportFailure(error: unknown) {
+  log("error", "[popup]", "Could not finish rendering", error)
+}
+
 export class UserState {
   constructor(
     private user?: UserExtensionData,
     private subscription?: SubscriptionExtensionData
   ) {}
 
-  render() {
-    if (this.user?.refreshToken) {
-      $(".user.greeting").replace({
-        FIRST_NAME: this.user.firstName || "Member",
-      })
-
-      if (!this.subscription?.extensionToken) this.onMemberWithoutSubscription()
-      else this.onMemberWithSubscription()
-    } else {
+  /** Resolves once the popup has settled, having reported rather than thrown any worker failure. */
+  render(): Promise<void> {
+    if (!this.user?.refreshToken) {
       // User is brand new or not signed in
       $(".guest, .guest.greeting").show()
+      return Promise.resolve()
     }
+
+    $(".user.greeting").replace({
+      FIRST_NAME: this.user.firstName || "Member",
+    })
+
+    const rendered = this.subscription?.extensionToken
+      ? this.onMemberWithSubscription()
+      : this.onMemberWithoutSubscription()
+
+    return rendered.catch(reportFailure)
   }
 
-  private onMemberWithoutSubscription() {
+  private async onMemberWithoutSubscription() {
     // The `clientData` exists, user has account
     $(".user.not-subscribed, .user .not-subscribed").show()
-    this.setupPartnerSiteUi()
+    await this.setupPartnerSiteUi()
   }
 
   private buildReportButtonUrl(baseUrl: string, partnerUrl: string, clientId: string) {
@@ -103,26 +117,29 @@ export class UserState {
       $("#client-id-label span").text(this.subscription.clientId)
     }
 
-    this.setupPauseResumeButtons()
-    this.setupPartnerSiteUi()
+    await this.setupPauseResumeButtons()
+    await this.setupPartnerSiteUi()
   }
 
   private async setupPauseResumeButtons() {
-    $("#pause-btn").onClick(async () => {
-      await worker.sendCommand(EVENT.POPUP.EXTENSION_PAUSE_REQUEST)
-      await this.checkExtensionPaused()
-    })
+    const request = (command: EventType) => async () => {
+      // A click handler is the one place nothing is awaiting us, so it owns its own failures.
+      try {
+        await worker.sendCommand(command)
+        await this.checkExtensionPaused()
+      } catch (error) {
+        reportFailure(error)
+      }
+    }
 
-    $("#resume-btn").onClick(async () => {
-      await worker.sendCommand(EVENT.POPUP.EXTENSION_RESUME_REQUEST)
-      await this.checkExtensionPaused()
-    })
+    $("#pause-btn").onClick(request(EVENT.POPUP.EXTENSION_PAUSE_REQUEST))
+    $("#resume-btn").onClick(request(EVENT.POPUP.EXTENSION_RESUME_REQUEST))
 
     await this.checkExtensionPaused()
   }
 
   private async checkExtensionPaused() {
-    const isPaused = await worker.sendCommand(EVENT.POPUP.IS_EXTENSION_PAUSED)
+    const isPaused = await worker.sendCommand<boolean>(EVENT.POPUP.IS_EXTENSION_PAUSED)
 
     $("#resume-btn").toggle(isPaused)
     $("#pause-btn").toggle(!isPaused)

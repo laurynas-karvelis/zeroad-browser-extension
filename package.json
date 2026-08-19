@@ -33,6 +33,7 @@
     "@types/firefox-webext-browser": "^143.0.0",
     "bootstrap": "^5.3.8",
     "chokidar": "^5.0.0",
+    "happy-dom": "^20.11.5",
     "json-e": "^4.8.2",
     "lightningcss": "^1.33.0",
     "postcss": "^8.5.25",

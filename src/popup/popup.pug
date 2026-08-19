@@ -49,7 +49,9 @@ html(lang="en", data-bs-theme="auto")
               span.text-muted.ms-1 Access content behind paywalls and unlocked free access to subscriptions and streaming services.
             p.freedom(hidden) Your have the <b class="text-success">Freedom</b> plan active for <b class="valid-until text-success"></b>.
               span.text-muted.ms-1 Enjoy a completely ad-free experience and fewer interruptions.
-              p.text-muted Access content behind paywalls and unlocked free access to subscriptions and streaming services.
+              //- A nested <p> would be auto-closed by the parser, hoisting this line out of the
+              //- hidden .freedom paragraph and showing it to every plan. A block span stays put.
+              span.text-muted.d-block Access content behind paywalls and unlocked free access to subscriptions and streaming services.
 
           .subscription-expired(hidden)
             h5 Your plan is now <span class="text-danger">expired</span>.
