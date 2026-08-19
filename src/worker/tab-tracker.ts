@@ -35,76 +35,94 @@ enum TAB_REGISTER_SOURCE {
 class TrackedTabs {
   map = new Map<number, BrowserTab>()
 
+  // Chrome marks one tab `active` per window, so the flag alone cannot say which tab the user is
+  // actually looking at. The worker remembers that itself, and times the visit itself rather than
+  // trusting `tab.lastAccessed`, whose meaning varies with how the tab was reached.
+  private focusedTabId?: number
+  private focusedSince?: number
+
   notifyIfActiveTabIsPartner(tab?: BrowserTab) {
     tab = tab || this.findActiveTab()
 
-    if (tab?.active) {
-      let data: TabTrackActiveTabEventData
+    // Only the focused tab drives the badge; a background window's "active" tab must not.
+    if (!tab || tab.id !== this.focusedTabId) return
 
-      if (tab.partner) {
-        const telemetryEntry = telemetry().findPartnerEntryByUrl(tab.url)
-        if (!tab.url || !telemetryEntry) return
+    const telemetryEntry = tab.partner ? telemetry().findPartnerEntryByUrl(tab.url) : undefined
 
-        data = {
-          isPartner: tab.partner,
-          url: tab.url,
-          tabId: tab.id,
-          telemetryEntry,
-        }
-      } else {
-        data = {
-          isPartner: tab.partner,
-          url: tab.url,
-          tabId: tab.id,
-          telemetryEntry: undefined,
-        }
-      }
+    const data: TabTrackActiveTabEventData =
+      telemetryEntry && tab.url
+        ? { isPartner: true, url: tab.url, tabId: tab.id, telemetryEntry }
+        : { isPartner: false, url: tab.url, tabId: tab.id, telemetryEntry: undefined }
 
-      eventBroker().emit<TabTrackActiveTabEventData>(EVENT.TAB_TRACKER.IS_ACTIVE_TAB_PARTNER, data)
-    }
+    eventBroker().emit<TabTrackActiveTabEventData>(EVENT.TAB_TRACKER.IS_ACTIVE_TAB_PARTNER, data)
   }
 
   findActiveTab() {
-    return this.map.values().find((tab) => tab.active)
+    return this.focusedTabId === undefined ? undefined : this.map.get(this.focusedTabId)
   }
 
-  flushActive(currentTabId?: number) {
+  /** Books the time spent on the focused tab and leaves nothing focused. */
+  flushActive() {
     const tab = this.findActiveTab()
-    if (currentTabId && currentTabId === tab?.id) return
 
-    if (tab?.active) {
-      if (tab.partner && tab.lastAccessed) telemetry().addDuration(tab.url, Math.floor(Date.now() - tab.lastAccessed))
-      tab.active = false
+    if (tab?.partner && this.focusedSince) {
+      telemetry().addDuration(tab.url, Math.floor(Date.now() - this.focusedSince))
     }
+
+    this.focusedTabId = undefined
+    this.focusedSince = undefined
   }
 
   register(tab: chrome.tabs.Tab, source: TAB_REGISTER_SOURCE) {
-    if ([TAB_REGISTER_SOURCE.ON_TAB_ACTIVATED, TAB_REGISTER_SOURCE.ON_WINDOW_FOCUS_CHANGED].includes(source)) {
-      this.flushActive(tab.id)
-    }
+    if (!tab.id) return
 
-    if (!tab.id) {
-      return
-    }
+    const previous = this.map.get(tab.id)
 
-    const partner = telemetry().hasPartnerEntryByUrl(tab.url)
-    const trackedTab = { ...tab, partner }
+    // Time already spent belongs to the page it was spent on, not to whatever navigated over it.
+    if (tab.id === this.focusedTabId && previous && previous.url !== tab.url) this.flushActive()
 
+    const trackedTab = { ...tab, partner: telemetry().hasPartnerEntryByUrl(tab.url) }
     this.map.set(tab.id, trackedTab)
+
+    const takesFocus =
+      source === TAB_REGISTER_SOURCE.ON_TAB_ACTIVATED ||
+      source === TAB_REGISTER_SOURCE.ON_WINDOW_FOCUS_CHANGED ||
+      // A restarted worker has no idea what is focused until the user switches something.
+      (this.focusedTabId === undefined && !!tab.active)
+
+    if (takesFocus) this.focus(tab.id)
+
     this.notifyIfActiveTabIsPartner(trackedTab)
   }
 
+  /** Re-reads partner status for every tracked tab, for when a site is recognised after it loaded. */
+  refreshPartnerFlags() {
+    for (const tab of this.map.values()) {
+      tab.partner = telemetry().hasPartnerEntryByUrl(tab.url)
+    }
+
+    this.notifyIfActiveTabIsPartner()
+  }
+
   delete(tabId: number) {
-    this.flushActive()
+    // Closing a background tab must not stop the clock on the tab the user is reading.
+    if (tabId === this.focusedTabId) this.flushActive()
     this.map.delete(tabId)
   }
 
   deleteByWindowId(windowId: number) {
-    this.map.forEach((tab) => {
-      if (tab.windowId === windowId && tab.id) {
-        this.delete(tab.id)
-      }
-    })
+    for (const tab of [...this.map.values()]) {
+      if (tab.windowId === windowId && tab.id) this.delete(tab.id)
+    }
+  }
+
+  private focus(tabId: number) {
+    // Re-focusing the same tab keeps its clock running instead of discarding the elapsed time.
+    if (this.focusedTabId === tabId) return
+
+    this.flushActive()
+    this.focusedTabId = tabId
+    this.focusedSince = Date.now()
   }
 }
 
@@ -163,15 +181,17 @@ chrome.tabs.onActivated.addListener(async ({ tabId }) => {
   trackedTabs().register(await chrome.tabs.get(tabId), TAB_REGISTER_SOURCE.ON_TAB_ACTIVATED)
 })
 
-chrome.tabs.onUpdated.addListener((_tabId, changeInfo, tab) => {
+chrome.tabs.onUpdated.addListener(async (_tabId, changeInfo, tab) => {
   if (changeInfo.status !== "complete") {
     return
   }
 
   if (isValidUrl(tab.url)) {
     if (!telemetry().hasPartnerEntryByUrl(tab.url)) {
-      // Might include "Welcome header" inside one of their <meta> tags
-      helpers.testHtmlMetaTags(tab)
+      // Might include "Welcome header" inside one of their <meta> tags. This has to be awaited:
+      // the very first visit to a meta-tag partner is only recognised once the script comes back,
+      // and an un-awaited check would leave that page view uncounted.
+      await helpers.testHtmlMetaTags(tab)
     }
 
     if (telemetry().hasPartnerEntryByUrl(tab.url)) {
@@ -185,15 +205,17 @@ chrome.tabs.onUpdated.addListener((_tabId, changeInfo, tab) => {
 chrome.windows.onFocusChanged.addListener(async (windowId) => {
   if (windowId === chrome.windows.WINDOW_ID_NONE) return
 
-  // A special case: the `onActivated` event won't fire when switching between windows
-  // We have to inject current timestamp as `lastAccessed` ourselves
+  // A special case: the `onActivated` event won't fire when switching between windows, so this is
+  // the only signal that the user moved their attention to whatever is active over here.
   const [tab] = await chrome.tabs.query({ active: true, currentWindow: true })
-  if (tab) trackedTabs().register({ ...tab, lastAccessed: Date.now() }, TAB_REGISTER_SOURCE.ON_WINDOW_FOCUS_CHANGED)
+  if (tab) trackedTabs().register(tab, TAB_REGISTER_SOURCE.ON_WINDOW_FOCUS_CHANGED)
 })
 
 chrome.tabs.onRemoved.addListener((tabId) => trackedTabs().delete(tabId))
 
 chrome.windows.onRemoved.addListener((windowId) => trackedTabs().deleteByWindowId(windowId))
+
+eventBroker().on(EVENT.TELEMETRY.PARTNER_ADDED, () => trackedTabs().refreshPartnerFlags())
 
 chrome.webRequest.onCompleted.addListener(
   async (details) => {

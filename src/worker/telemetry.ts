@@ -18,10 +18,19 @@ const SAVE_DEBOUNCE_DELAY = 5000
 
 export class Telemetry {
   map: Map<Hostname, Entry> = this.createMap()
+
+  /**
+   * Resolves once the stored map has been read back. A service worker restarts constantly, so
+   * anything reading the map right after start-up (a push alarm, most notably) must await this
+   * or it will see an empty map and conclude there is nothing to send.
+   */
+  readonly ready: Promise<void>
+
   private saveTimeout?: ReturnType<typeof setTimeout>
 
-  constructor() {
-    this.load()
+  /** @param saveDebounceDelay how long writes are coalesced for - only lowered by tests. */
+  constructor(private readonly saveDebounceDelay = SAVE_DEBOUNCE_DELAY) {
+    this.ready = this.load()
 
     eventBroker()
       .on<TabTrackerPartnerDetectedData>(EVENT.TAB_TRACKER.PARTNER_DETECTED, ({ clientId, url, features }) =>
@@ -57,7 +66,7 @@ export class Telemetry {
         telemetry: this.exportMap(),
       })
       this.saveTimeout = undefined
-    }, SAVE_DEBOUNCE_DELAY)
+    }, this.saveDebounceDelay)
   }
 
   private async load() {
@@ -95,6 +104,8 @@ export class Telemetry {
       let shouldSave = false
 
       if (entry.clientId !== clientId) {
+        // The hostname changed hands: adopt the new owner and drop counters the old one earned.
+        entry.clientId = clientId
         entry.views = 0
         entry.duration = 0
 
@@ -156,7 +167,9 @@ export class Telemetry {
     const data: TelemetryExportData = {}
 
     for (const [hostname, { clientId, views, duration }] of this.map) {
-      if (!views || !duration) continue
+      // Anything with activity ships. A view with no dwell time is still a visit, and if it is
+      // dropped here it is never reported at all - `softReset` zeroes the entry on the next flush.
+      if (!views && !duration) continue
 
       if (!data[clientId]) {
         data[clientId] = { views, duration, hosts: [hostname] }

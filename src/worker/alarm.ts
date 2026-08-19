@@ -15,13 +15,13 @@ export const schedule = {
   },
 
   on(name: string | string[], callback: () => unknown | Promise<unknown>) {
-    chrome.alarms.onAlarm.addListener(async (alarm) => {
-      log("debug", `[alarm] ${name} triggered`)
-      const nameWhitelist = Array.isArray(name) ? name : [name]
+    const nameWhitelist = Array.isArray(name) ? name : [name]
 
-      if (nameWhitelist.includes(alarm.name)) {
-        return callback()
-      }
+    chrome.alarms.onAlarm.addListener(async (alarm) => {
+      if (!nameWhitelist.includes(alarm.name)) return
+
+      log("debug", `[alarm] ${alarm.name} triggered`)
+      return callback()
     })
 
     return this

@@ -19,6 +19,9 @@ class TelemetrySync {
   }
 
   async push() {
+    // The push alarm can fire the instant the worker wakes up, before the stored map is back.
+    await telemetry().ready
+
     if (!extension().isSubscriptionActive()) {
       eventBroker().emit(EVENT.TELEMETRY.FLUSH)
       log("warn", "[telemetry-sync]", "Inactive subscription. Skip telemetry push and flush its data.")

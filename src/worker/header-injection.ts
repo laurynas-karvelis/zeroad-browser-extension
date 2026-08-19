@@ -24,7 +24,8 @@ class HeaderInjection {
   async enableBaseRule() {
     const ruleId = 1
 
-    if (!extension().isSubscriptionActive()) {
+    // A paused extension stays paused no matter who asks for the rule to go back up.
+    if (extension().isPaused() || !extension().isSubscriptionActive()) {
       return this.removeBaseRule()
     }
 

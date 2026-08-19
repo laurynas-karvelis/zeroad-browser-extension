@@ -2,7 +2,7 @@ import { getConfig } from "./config"
 import { credentials } from "./credentials"
 import { EVENT, eventBroker } from "./event-broker"
 import { headerInjection } from "./header-injection"
-import { setLogLevel } from "./logger"
+import { log, setLogLevel } from "./logger"
 import { telemetrySync } from "./telemetry-sync"
 import type { ExtensionSyncData, SubscriptionExtensionData, UserExtensionData } from "./types"
 import { inDevMode } from "./utils"
@@ -95,20 +95,37 @@ class Extension {
   }
 
   private async reload(payload: ExtensionSyncData) {
-    const { user, subscription } = payload
+    const { user, subscription } = payload || {}
+
+    // A payload can arrive straight from the website, so it is not trusted to be well-formed.
+    if (!user?.refreshToken) {
+      log("warn", "[extension]", "Ignoring a sync payload that carries no refresh token")
+      return
+    }
 
     if (this.state.user?.refreshToken && this.state.user?.refreshToken !== user.refreshToken) {
       // Switching to another user, push telemetry
       await telemetrySync().push()
     }
 
-    await chrome.storage.sync.set<ExtensionSyncData>({ user, subscription })
+    const hasNewExtensionToken =
+      !!subscription?.extensionToken && subscription.extensionToken !== this.state.subscription?.extensionToken
 
-    if (subscription?.extensionToken && subscription?.extensionToken !== this.state.subscription?.extensionToken) {
-      // We got a new extension token
-      eventBroker().emit(EVENT.EXTENSION.SYNCED)
-      return this.load()
+    if (subscription) {
+      await chrome.storage.sync.set<ExtensionSyncData>({ user, subscription })
+    } else {
+      // The subscription is gone (cancelled, lapsed) - drop the stored one rather than writing
+      // `undefined` over it, which `storage.sync` would keep as-is.
+      await chrome.storage.sync.set<Pick<ExtensionSyncData, "user">>({ user })
+      await chrome.storage.sync.remove(["subscription"])
     }
+
+    if (hasNewExtensionToken) eventBroker().emit(EVENT.EXTENSION.SYNCED)
+
+    // Always reload. Reloading only for a brand new token left a cancelled or downgraded
+    // subscription live in memory, so header injection kept running on credentials the
+    // server had already withdrawn.
+    return this.load()
   }
 
   private async reset() {
