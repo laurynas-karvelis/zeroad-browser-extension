@@ -1,5 +1,5 @@
 import { afterEach, beforeEach, describe, expect, mock, spyOn, test } from "bun:test"
-import { chromeMock } from "./__fixtures__/chrome"
+import { chromeMock } from "../__fixtures__/chrome"
 
 const state = { refreshToken: "refresh-1" as string | undefined }
 mock.module("./extension", () => ({ extension: () => ({ getRefreshToken: () => state.refreshToken }) }))

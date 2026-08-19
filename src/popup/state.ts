@@ -50,8 +50,8 @@ export class UserState {
     worker.on<TabTrackActiveTabEventData>(EVENT.MESSAGING.IS_ACTIVE_TAB_PARTNER, (data) => {
       const { isPartner, url, telemetryEntry } = data
 
-      const $reportBtn = $("#report-site-btn").visibleWhen(isPartner)
-      const $partnerFeatures = $("#partner-features").visibleWhen(isPartner)
+      const $reportBtn = $("#report-site-btn").toggle(isPartner)
+      const $partnerFeatures = $("#partner-features").toggle(isPartner)
 
       if (!isPartner) {
         return
@@ -66,15 +66,14 @@ export class UserState {
         const planEnablesFeature = planFeatureNames.includes(featureName)
 
         $(`#partner-features li.${featureName.toLowerCase()}`)
-          .title("", planEnablesFeature)
-          .title("This feature isn't included in your plan", !planEnablesFeature)
-          .removeClass(unavailableFeatureClassList, planEnablesFeature)
-          .addClass(unavailableFeatureClassList, !planEnablesFeature)
+          .title(planEnablesFeature ? "" : "This feature isn't included in your plan")
+          .toggleClass(unavailableFeatureClassList, !planEnablesFeature)
           .show()
       })
 
       // set up report button
-      $reportBtn.href(this.buildReportButtonUrl($reportBtn.dataset("href") as string, url, clientId))
+      const reportBaseUrl = $reportBtn.data("href")
+      if (reportBaseUrl) $reportBtn.href(this.buildReportButtonUrl(reportBaseUrl, url, clientId))
     })
 
     await worker.sendCommand(EVENT.POPUP.CHECK_IF_ACTIVE_TAB_PARTNER_REQUEST)
@@ -125,9 +124,9 @@ export class UserState {
   private async checkExtensionPaused() {
     const isPaused = await worker.sendCommand(EVENT.POPUP.IS_EXTENSION_PAUSED)
 
-    $("#resume-btn").visibleWhen(isPaused)
-    $("#pause-btn").hiddenWhen(isPaused)
+    $("#resume-btn").toggle(isPaused)
+    $("#pause-btn").toggle(!isPaused)
 
-    $("#extension-paused").visibleWhen(isPaused)
+    $("#extension-paused").toggle(isPaused)
   }
 }

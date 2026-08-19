@@ -1,5 +1,5 @@
 import { beforeEach, describe, expect, mock, test } from "bun:test"
-import { chromeMock } from "./__fixtures__/chrome"
+import { chromeMock } from "../__fixtures__/chrome"
 
 // No `browser` global, so `messaging` takes the Chrome path: sites reach the worker directly
 // through `onMessageExternal`, which the browser gates with `externally_connectable`.

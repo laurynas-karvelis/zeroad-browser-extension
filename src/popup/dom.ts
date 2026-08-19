@@ -1,128 +1,102 @@
-function iterateElements<T = HTMLElement>(elements: NodeListOf<HTMLElement>, fn: (element: T) => unknown) {
-  elements.forEach((element) => fn(element as T))
+/**
+ * A chainable wrapper around one `querySelectorAll` result.
+ *
+ * Every method is a no-op on an empty match, so a selector that finds nothing quietly does
+ * nothing instead of throwing - the popup renders whichever sections apply to the current
+ * account and simply never matches the rest.
+ */
+export type Selection = {
+  elements: HTMLElement[]
+  /** Narrows to descendants of the current match. Empty in, empty out. */
+  $(selector: string): Selection
+  show(): Selection
+  hide(): Selection
+  toggle(visible: unknown): Selection
+  text(value: string): Selection
+  /** Substitutes the `{PLACEHOLDER}` markers the template ships with. */
+  replace(values: Record<string, string>): Selection
+  title(value: string): Selection
+  href(url: string): Selection
+  toggleClass(names: string | string[], on: unknown): Selection
+  onClick(handler: (event: Event) => unknown): Selection
+  /** Reads a `data-*` value off the first match, or undefined when there is none. */
+  data(name: string): string | undefined
 }
 
-function sanitizeHtml(text: string): string {
-  const div = document.createElement("div")
-  div.textContent = text
-  return div.innerHTML
-}
+export function $(selector: string, within?: Selection): Selection {
+  const roots: ParentNode[] = within ? within.elements : [document]
+  const elements = roots.flatMap((root) => [...root.querySelectorAll<HTMLElement>(selector)])
 
-export function updateUrls(baseUrl: string) {
-  document.querySelectorAll("a").forEach((el) => {
-    // Replace base URL of "[chrome|moz]-extension://<uuid>/" with "/"
-    el.href = baseUrl + el.href.replace(/^(.+:\/\/.+\/)/i, "/")
-    el.target = "_blank"
-    if ("href" in el.dataset) el.dataset.href = baseUrl + el.dataset.href
-  })
-}
-
-export function applyBootstrapTheme() {
-  const prefersDark = window.matchMedia("(prefers-color-scheme: dark)")
-  const root = document.documentElement
-  const theme = root.getAttribute("data-bs-theme")
-
-  const applyTheme = () => {
-    if (theme === "auto") {
-      root.setAttribute("data-bs-theme", prefersDark.matches ? "dark" : "light")
-      return true
-    }
-
-    return false
+  const each = (apply: (element: HTMLElement) => void): Selection => {
+    elements.forEach(apply)
+    return selection
   }
 
-  if (applyTheme()) {
-    prefersDark.addEventListener("change", applyTheme)
+  const selection: Selection = {
+    elements,
+
+    $: (nested) => $(nested, selection),
+
+    show: () => selection.toggle(true),
+    hide: () => selection.toggle(false),
+    toggle: (visible) => each((element) => (element.hidden = !visible)),
+
+    text: (value) => each((element) => (element.innerText = value)),
+
+    replace: (values) =>
+      each((element) => {
+        // Assigning to innerText writes the value as text, so it must not be HTML-escaped first.
+        element.innerText = Object.entries(values).reduce(
+          (text, [placeholder, value]) => text.replace(`{${placeholder}}`, value),
+          element.innerText
+        )
+      }),
+
+    title: (value) => each((element) => (element.title = value)),
+    href: (url) => each((element) => element.setAttribute("href", url)),
+
+    toggleClass: (names, on) =>
+      each((element) => {
+        for (const name of Array.isArray(names) ? names : [names]) element.classList.toggle(name, !!on)
+      }),
+
+    onClick: (handler) =>
+      each((element) =>
+        element.addEventListener("click", (event) => {
+          event.preventDefault()
+          handler(event)
+        })
+      ),
+
+    data: (name) => elements[0]?.dataset[name],
   }
+
+  return selection
 }
 
 export function setVersion(version: string) {
   $("#version").replace({ VERSION: version })
 }
 
-export function $(query: string, parent?: { elements: NodeListOf<HTMLElement> }) {
-  const elements = (parent?.elements[0] || document).querySelectorAll<HTMLElement>(query)
+/** Repoints the template's site-relative links at the real site, since the popup is its own origin. */
+export function updateUrls(baseUrl: string) {
+  document.querySelectorAll("a").forEach((anchor) => {
+    anchor.href = new URL(anchor.getAttribute("href") || "", baseUrl).toString()
+    anchor.target = "_blank"
 
-  return {
-    elements,
-    $(query: string) {
-      return $(query, this)
-    },
-    visibleWhen(truthy: unknown) {
-      if (truthy) this.show()
-      else this.hide()
-      return this
-    },
-    hiddenWhen(truthy: unknown) {
-      if (truthy) this.hide()
-      else this.show()
-      return this
-    },
-    title(title: string, when?: boolean) {
-      if (when !== undefined && !when) return this
-      iterateElements(elements, (el) => (el.title = title))
-      return this
-    },
-    show() {
-      iterateElements(elements, (el) => (el.hidden = false))
-      return this
-    },
-    hide() {
-      iterateElements(elements, (el) => (el.hidden = true))
-      return this
-    },
-    text(value?: string) {
-      if (value) iterateElements(elements, (el) => (el.innerText = value))
-      return (elements[0] as HTMLElement).innerText
-    },
-    replace(values: Record<string, string>) {
-      iterateElements(elements, (el) =>
-        Object.entries(values).forEach(([placeholder, replacement]) => {
-          el.innerText = el.innerText.replace(`{${placeholder}}`, sanitizeHtml(replacement))
-        })
-      )
-      return this
-    },
-    addClass(className: string | string[], when?: boolean) {
-      if (when !== undefined && !when) return this
-      iterateElements(elements, (el) =>
-        ((Array.isArray(className) && className) || [className]).forEach((name) => {
-          el.classList.add(name)
-        })
-      )
-      return this
-    },
-    removeClass(className: string | string[], when?: boolean) {
-      if (when !== undefined && !when) return this
-      iterateElements(elements, (el) =>
-        ((Array.isArray(className) && className) || [className]).forEach((name) => {
-          el.classList.remove(name)
-        })
-      )
-      return this
-    },
-    href(url?: string) {
-      if (url !== undefined) {
-        iterateElements<HTMLLinkElement>(elements, (el) => (el.href = url))
-        return this
-      }
-      return (elements[0] as HTMLLinkElement)?.href || ""
-    },
-    dataset(prop: string, value?: string) {
-      if (value !== undefined) {
-        iterateElements<HTMLLinkElement>(elements, (el) => (el.dataset[prop as keyof DOMStringMap] = value))
-        return this
-      }
-      return (elements[0] as HTMLLinkElement).dataset[prop]
-    },
-    onClick(fn: (e: Event) => void) {
-      iterateElements<HTMLLinkElement>(elements, (el) =>
-        el.addEventListener("click", (e) => {
-          e.preventDefault()
-          return fn(e)
-        })
-      )
-      return this
-    },
-  }
+    if (anchor.dataset.href) anchor.dataset.href = new URL(anchor.dataset.href, baseUrl).toString()
+  })
+}
+
+export function applyBootstrapTheme() {
+  const root = document.documentElement
+
+  // Only "auto" follows the OS - an explicit choice in the template is left as authored.
+  if (root.getAttribute("data-bs-theme") !== "auto") return
+
+  const prefersDark = window.matchMedia("(prefers-color-scheme: dark)")
+  const applyTheme = () => root.setAttribute("data-bs-theme", prefersDark.matches ? "dark" : "light")
+
+  applyTheme()
+  prefersDark.addEventListener("change", applyTheme)
 }

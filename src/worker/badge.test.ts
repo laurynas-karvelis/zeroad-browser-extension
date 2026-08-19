@@ -1,5 +1,5 @@
 import { beforeEach, describe, expect, test } from "bun:test"
-import { chromeMock } from "./__fixtures__/chrome"
+import { chromeMock } from "../__fixtures__/chrome"
 
 const { EVENT, eventBroker } = await import("./event-broker")
 const { badge } = await import("./badge")

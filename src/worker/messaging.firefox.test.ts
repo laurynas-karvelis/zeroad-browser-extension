@@ -1,5 +1,5 @@
 import { beforeEach, describe, expect, mock, test } from "bun:test"
-import { chromeMock } from "./__fixtures__/chrome"
+import { chromeMock } from "../__fixtures__/chrome"
 
 // On Firefox the site cannot talk to the worker directly - `content.js` relays for it, so site
 // messages arrive on the ordinary runtime channel and must be told apart from popup messages.

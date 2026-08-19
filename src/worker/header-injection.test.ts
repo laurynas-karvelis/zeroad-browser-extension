@@ -1,6 +1,6 @@
 import { beforeEach, describe, expect, mock, test } from "bun:test"
 import { CLIENT_HEADER } from "@zeroad.network/token/browser"
-import { chromeMock } from "./__fixtures__/chrome"
+import { chromeMock } from "../__fixtures__/chrome"
 
 const state = { active: true, paused: false, token: "hello-token" as string | undefined }
 mock.module("./extension", () => ({

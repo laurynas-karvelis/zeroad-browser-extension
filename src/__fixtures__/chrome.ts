@@ -118,9 +118,11 @@ export function createChromeMock() {
       onMessage: createEvent<[unknown, unknown, (response: unknown) => void]>(),
       onMessageExternal: createEvent<[unknown, unknown, (response: unknown) => void]>(),
       sentMessages: [] as unknown[],
+      /** What the next `sendMessage` callback receives. Set per test to script the worker's reply. */
+      sendMessageResponse: undefined as unknown,
       sendMessage(message: unknown, callback?: (response: unknown) => void) {
         mock.runtime.sentMessages.push(message)
-        callback?.(undefined)
+        callback?.(mock.runtime.sendMessageResponse)
       },
     },
 

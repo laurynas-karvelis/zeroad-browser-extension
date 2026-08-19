@@ -1,5 +1,5 @@
 import { afterEach, beforeEach, describe, expect, mock, test } from "bun:test"
-import { chromeMock } from "./__fixtures__/chrome"
+import { chromeMock } from "../__fixtures__/chrome"
 
 // `telemetry` refuses to count anything while the subscription is inactive, and the real
 // `extension` singleton drags in half the worker - stub it down to just that decision.

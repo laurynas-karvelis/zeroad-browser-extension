@@ -1,7 +1,7 @@
 import { beforeEach, describe, expect, mock, test } from "bun:test"
 import { encodeServerHeader } from "@zeroad.network/token"
 import { FEATURE, SERVER_HEADER } from "@zeroad.network/token/browser"
-import { chromeMock } from "./__fixtures__/chrome"
+import { chromeMock } from "../__fixtures__/chrome"
 
 // A hostname-keyed stand-in for the telemetry store: tab-tracker only ever asks it whether a URL
 // belongs to a partner and tells it how long the user stayed.

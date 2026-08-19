@@ -1,5 +1,5 @@
 import { describe, expect, test } from "bun:test"
-import { chromeMock } from "./__fixtures__/chrome"
+import { chromeMock } from "../__fixtures__/chrome"
 
 chromeMock.management.installType = "normal"
 chromeMock.runtime.manifestVersion = "1.2.3"
