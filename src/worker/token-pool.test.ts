@@ -152,8 +152,8 @@ describe("tokenPool", () => {
 
     test("discards the previous batch, so two anonymity sets never mix", async () => {
       await tokenPool().refresh()
-      await tokenPool().tokenFor("partner.test")
-      expect(await tokenPool().boundHostnames()).toEqual(["partner.test"])
+      await tokenPool().tokenFor("publisher.test")
+      expect(await tokenPool().boundHostnames()).toEqual(["publisher.test"])
 
       await tokenPool().refresh()
 
@@ -168,7 +168,7 @@ describe("tokenPool", () => {
     })
 
     test("produces a token the publisher SDK's format expects", async () => {
-      const token = await tokenPool().tokenFor("partner.test")
+      const token = await tokenPool().tokenFor("publisher.test")
       const bytes = fromBase64Url(token as string)
 
       expect(bytes).toHaveLength(TOKEN_BYTES)
@@ -179,7 +179,7 @@ describe("tokenPool", () => {
     test("the hostname signature verifies against the ephemeral key in the token", async () => {
       // This is the check a publisher runs, reproduced exactly: reconstruct the message from the host
       // being served and verify it with the key the token carries
-      const hostname = "partner.test"
+      const hostname = "publisher.test"
       const bytes = fromBase64Url((await tokenPool().tokenFor(hostname)) as string)
 
       const encoder = new TextEncoder()
@@ -210,7 +210,7 @@ describe("tokenPool", () => {
     })
 
     test("the same token fails for any other hostname", async () => {
-      const bytes = fromBase64Url((await tokenPool().tokenFor("partner.test")) as string)
+      const bytes = fromBase64Url((await tokenPool().tokenFor("publisher.test")) as string)
 
       const encoder = new TextEncoder()
       const domain = encoder.encode(HOSTNAME_DOMAIN)
@@ -240,7 +240,7 @@ describe("tokenPool", () => {
     })
 
     test("carries the authority signature through untouched", async () => {
-      const token = await tokenPool().tokenFor("partner.test")
+      const token = await tokenPool().tokenFor("publisher.test")
       const bytes = fromBase64Url(token as string)
 
       const stored = chromeMock.storage.local.peek().tokenPool as { unused: { signature: string }[] }
@@ -271,8 +271,8 @@ describe("tokenPool", () => {
     })
 
     test("reuses the same token for a returning visit", async () => {
-      const first = await tokenPool().tokenFor("partner.test")
-      const second = await tokenPool().tokenFor("partner.test")
+      const first = await tokenPool().tokenFor("publisher.test")
+      const second = await tokenPool().tokenFor("publisher.test")
 
       expect(second).toBe(first as string)
       expect(await tokenPool().size()).toBe(BATCH_SIZE - 1)
@@ -298,7 +298,7 @@ describe("tokenPool", () => {
 
   describe("when there is nothing to spend", () => {
     test("returns nothing rather than throwing with no pool at all", async () => {
-      expect(await tokenPool().tokenFor("partner.test")).toBeUndefined()
+      expect(await tokenPool().tokenFor("publisher.test")).toBeUndefined()
     })
 
     test("returns nothing once the batch has expired", async () => {
@@ -307,7 +307,7 @@ describe("tokenPool", () => {
 
       await Bun.sleep(1100)
 
-      expect(await tokenPool().tokenFor("partner.test")).toBeUndefined()
+      expect(await tokenPool().tokenFor("publisher.test")).toBeUndefined()
       expect(await tokenPool().size()).toBe(0)
     })
 
@@ -321,7 +321,7 @@ describe("tokenPool", () => {
 
     test("clear wipes both the credentials and the bindings", async () => {
       await tokenPool().refresh()
-      await tokenPool().tokenFor("partner.test")
+      await tokenPool().tokenFor("publisher.test")
 
       await tokenPool().clear()
 

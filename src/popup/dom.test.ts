@@ -36,7 +36,7 @@ describe("$", () => {
   })
 
   test("narrows a nested lookup to descendants of the current match", () => {
-    expect($("li", $("#partner-features")).elements).toHaveLength(2)
+    expect($("li", $("#publisher-features")).elements).toHaveLength(2)
     expect($("li").elements.length).toBeGreaterThan(2)
   })
 
@@ -135,9 +135,9 @@ describe("toggleClass", () => {
 
 describe("title", () => {
   test("sets the tooltip on every match", () => {
-    $("#partner-features li").title("Not in your plan")
+    $("#publisher-features li").title("Not in your plan")
 
-    expect($("#partner-features li").elements.map((element) => element.title)).toEqual([
+    expect($("#publisher-features li").elements.map((element) => element.title)).toEqual([
       "Not in your plan",
       "Not in your plan",
     ])
@@ -158,9 +158,9 @@ describe("onClick", () => {
 
   test("binds every match", () => {
     const handler = mock()
-    $("#partner-features li").onClick(handler)
+    $("#publisher-features li").onClick(handler)
 
-    for (const element of $("#partner-features li").elements) element.click()
+    for (const element of $("#publisher-features li").elements) element.click()
 
     expect(handler).toHaveBeenCalledTimes(2)
   })
@@ -202,7 +202,7 @@ describe("updateUrls", () => {
 
   test("leaves an anchor with no href of its own without one", () => {
     // The report button is a button in disguise; its real destination is only known once the active
-    // tab turns out to be a partner site. Handing it the home page here hides that it never got set.
+    // tab turns out to be a publisher site. Handing it the home page here hides that it never got set.
     updateUrls(SITE_URL)
 
     expect(hrefOf("#report-site-btn")).toBeUndefined()
@@ -289,10 +289,10 @@ describe("the template the popup is written against", () => {
       "#link-pricing",
       "#debug-menu",
       "#report-site-btn",
-      "#partner-features",
+      "#publisher-features",
       "#developer-details",
       "#subscription-label span",
-      "#client-id-label span",
+      "#developer-hostname-label span",
       "#pause-btn",
       "#resume-btn",
       ".guest",
@@ -306,7 +306,7 @@ describe("the template the popup is written against", () => {
   })
 
   test("starts with everything conditional hidden", () => {
-    for (const selector of [".guest", ".user.subscribed", "#partner-features", "#debug-menu", "#extension-paused"]) {
+    for (const selector of [".guest", ".user.subscribed", "#publisher-features", "#debug-menu", "#extension-paused"]) {
       expect({ selector, hidden: $(selector).elements.every((element) => element.hidden) }).toEqual({
         selector,
         hidden: true,
@@ -321,6 +321,6 @@ describe("the template the popup is written against", () => {
 
 describe("titleOf", () => {
   test("is empty on a freshly rendered feature row", () => {
-    expect(titleOf("#partner-features li.clean_web")).toBe("")
+    expect(titleOf("#publisher-features li.clean_web")).toBe("")
   })
 })

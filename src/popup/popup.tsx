@@ -94,7 +94,7 @@ function UnsubscribedSection() {
         <li>No unnecessary third-party trackers</li>
         <li>No marketing interruptions</li>
         <li>Access content behind paywalls</li>
-        <li>Unlock free access to partner subscriptions</li>
+        <li>Unlock free access to publisher subscriptions</li>
         <li>Unlock free access to streaming services</li>
       </ul>
       <div class="d-grid">
@@ -174,10 +174,10 @@ function ExpiredSubscription() {
   )
 }
 
-function PartnerFeatures() {
+function PublisherFeatures() {
   return (
     <div
-      id="partner-features"
+      id="publisher-features"
       class="col"
       hidden
     >
@@ -224,10 +224,10 @@ function DeveloperDetails() {
         Subscription: <span></span>
       </span>
       <span
-        id="client-id-label"
+        id="developer-hostname-label"
         class="badge text-bg-warning"
       >
-        Client ID: <span></span>
+        Site: <span></span>
       </span>
     </div>
   )
@@ -250,13 +250,13 @@ function SubscriberControls() {
         Dashboard
       </a>
       {/* biome-ignore lint/a11y/useValidAnchor: the destination is only known once the active tab
-          turns out to be a partner site - see `updateUrls` in `dom.ts`. */}
+          turns out to be a publisher site - see `updateUrls` in `dom.ts`. */}
       <a
         id="report-site-btn"
         class="btn btn-danger"
         hidden
         data-href="/report/site"
-        title="Report partnered site Issue"
+        title="Report publishered site Issue"
       >
         <img
           src="./images/svg/bug.svg"
@@ -299,7 +299,7 @@ function SubscribedSection() {
     >
       <ValidSubscription />
       <ExpiredSubscription />
-      <PartnerFeatures />
+      <PublisherFeatures />
       <DeveloperDetails />
       <hr />
       <SubscriberControls />

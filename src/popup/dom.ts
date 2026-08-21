@@ -84,7 +84,7 @@ export function updateUrls(baseUrl: string) {
     const href = anchor.getAttribute("href")
 
     // An anchor without an `href` is a button in disguise - the report button, whose real
-    // destination is only known once the active tab turns out to be a partner site. Giving it one
+    // destination is only known once the active tab turns out to be a publisher site. Giving it one
     // here would leave it quietly pointing at the home page whenever that lookup comes back empty.
     if (href !== null) {
       anchor.href = new URL(href, baseUrl).toString()

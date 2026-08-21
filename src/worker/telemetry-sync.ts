@@ -46,7 +46,7 @@ class TelemetrySync {
         extension: { version: chrome.runtime.getManifest().version },
       },
       data: {
-        sites: telemetryData,
+        publishers: telemetryData,
       },
     }
 

@@ -12,7 +12,7 @@ import { chromeMock } from "../__fixtures__/chrome"
 })
 
 mock.module("./extension", () => ({ extension: () => ({ getExtensionData: () => ({}), isPaused: () => false }) }))
-mock.module("./tab-tracker", () => ({ trackedTabs: () => ({ notifyIfActiveTabIsPartner: mock() }) }))
+mock.module("./tab-tracker", () => ({ trackedTabs: () => ({ notifyIfActiveTabIsPublisher: mock() }) }))
 mock.module("./telemetry", () => ({ telemetry: () => ({ map: new Map(), export: () => ({}) }) }))
 
 const { EVENT, eventBroker } = await import("./event-broker")

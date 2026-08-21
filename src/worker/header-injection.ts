@@ -7,11 +7,11 @@ import type { Hostname } from "./types"
 /**
  * Installs the `declarativeNetRequest` rules that attach a token to outgoing requests.
  *
- * There is one rule per partner hostname rather than a single blanket rule, because there is no longer
+ * There is one rule per publisher hostname rather than a single blanket rule, because there is no longer
  * a single token to blanket with: every site gets one bound to its own name. That is the whole point -
  * a shared token would be a shared identifier, and any site holding it could spend it at another.
  *
- * Rules are only installed for hostnames already recognised as partners, so an ordinary site never
+ * Rules are only installed for hostnames already recognised as publishers, so an ordinary site never
  * sees a token and the pool is not spent on sites that would ignore it.
  */
 

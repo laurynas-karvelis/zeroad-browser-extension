@@ -35,7 +35,7 @@ describe("telemetrySync", () => {
   beforeEach(() => {
     state.active = true
     state.telemetryToken = "tel-1"
-    exported = { "client-a": { views: 3, duration: 900, hosts: ["a.test"] } }
+    exported = { "client-a": { hostnames: { "a.test": { views: 3, duration: 900 } } } }
     readyResolved = true
     ready = Promise.resolve()
     chromeMock.runtime.manifestVersion = "0.9.3"
@@ -58,7 +58,7 @@ describe("telemetrySync", () => {
     expect((init.headers as Record<string, string>).Authorization).toBe("Bearer tel-1")
     expect(JSON.parse(init.body as string)).toEqual({
       client: { source: "extension", extension: { version: "0.9.3" } },
-      data: { sites: { "client-a": { views: 3, duration: 900, hosts: ["a.test"] } } },
+      data: { publishers: { "client-a": { hostnames: { "a.test": { views: 3, duration: 900 } } } } },
     })
   })
 
@@ -107,7 +107,7 @@ describe("telemetrySync", () => {
 
   describe("skipping", () => {
     test("an inactive subscription drops the data instead of sending it", async () => {
-      // Nothing browsed without a live subscription may earn a partner a payout.
+      // Nothing browsed without a live subscription may earn a publisher a payout.
       state.active = false
       const flush = mock()
       eventBroker().on(EVENT.TELEMETRY.FLUSH, flush)

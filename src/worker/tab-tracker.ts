@@ -3,9 +3,9 @@ import { headerInjection } from "./header-injection"
 import { type Entry, telemetry } from "./telemetry"
 import { isValidUrl } from "./utils"
 
-type BrowserTab = chrome.tabs.Tab & { partner: boolean }
+type BrowserTab = chrome.tabs.Tab & { publisher: boolean }
 
-export type TabTrackerPartnerDetectedData = {
+export type TabTrackerPublisherDetectedData = {
   publisherId: string
   /** Protocol version the publisher announced, so a newer one can be skipped rather than mis-served. */
   version: number
@@ -17,13 +17,13 @@ export type TabTrackActiveTabEventData =
   | {
       telemetryEntry: Entry
       tabId?: number
-      isPartner: true
+      isPublisher: true
       url: string
     }
   | {
       telemetryEntry: undefined
       tabId?: number
-      isPartner: false
+      isPublisher: false
       url?: string
     }
 
@@ -42,20 +42,20 @@ class TrackedTabs {
   private focusedTabId?: number
   private focusedSince?: number
 
-  notifyIfActiveTabIsPartner(tab?: BrowserTab) {
+  notifyIfActiveTabIsPublisher(tab?: BrowserTab) {
     tab = tab || this.findActiveTab()
 
     // Only the focused tab drives the badge; a background window's "active" tab must not.
     if (!tab || tab.id !== this.focusedTabId) return
 
-    const telemetryEntry = tab.partner ? telemetry().findPartnerEntryByUrl(tab.url) : undefined
+    const telemetryEntry = tab.publisher ? telemetry().findPublisherEntryByUrl(tab.url) : undefined
 
     const data: TabTrackActiveTabEventData =
       telemetryEntry && tab.url
-        ? { isPartner: true, url: tab.url, tabId: tab.id, telemetryEntry }
-        : { isPartner: false, url: tab.url, tabId: tab.id, telemetryEntry: undefined }
+        ? { isPublisher: true, url: tab.url, tabId: tab.id, telemetryEntry }
+        : { isPublisher: false, url: tab.url, tabId: tab.id, telemetryEntry: undefined }
 
-    eventBroker().emit<TabTrackActiveTabEventData>(EVENT.TAB_TRACKER.IS_ACTIVE_TAB_PARTNER, data)
+    eventBroker().emit<TabTrackActiveTabEventData>(EVENT.TAB_TRACKER.IS_ACTIVE_TAB_PUBLISHER, data)
   }
 
   findActiveTab() {
@@ -66,7 +66,7 @@ class TrackedTabs {
   flushActive() {
     const tab = this.findActiveTab()
 
-    if (tab?.partner && this.focusedSince) {
+    if (tab?.publisher && this.focusedSince) {
       telemetry().addDuration(tab.url, Math.floor(Date.now() - this.focusedSince))
     }
 
@@ -82,7 +82,7 @@ class TrackedTabs {
     // Time already spent belongs to the page it was spent on, not to whatever navigated over it.
     if (tab.id === this.focusedTabId && previous && previous.url !== tab.url) this.flushActive()
 
-    const trackedTab = { ...tab, partner: telemetry().hasPartnerEntryByUrl(tab.url) }
+    const trackedTab = { ...tab, publisher: telemetry().hasPublisherEntryByUrl(tab.url) }
     this.map.set(tab.id, trackedTab)
 
     const takesFocus =
@@ -93,16 +93,16 @@ class TrackedTabs {
 
     if (takesFocus) this.focus(tab.id)
 
-    this.notifyIfActiveTabIsPartner(trackedTab)
+    this.notifyIfActiveTabIsPublisher(trackedTab)
   }
 
-  /** Re-reads partner status for every tracked tab, for when a site is recognised after it loaded. */
-  refreshPartnerFlags() {
+  /** Re-reads publisher status for every tracked tab, for when a site is recognised after it loaded. */
+  refreshPublisherFlags() {
     for (const tab of this.map.values()) {
-      tab.partner = telemetry().hasPartnerEntryByUrl(tab.url)
+      tab.publisher = telemetry().hasPublisherEntryByUrl(tab.url)
     }
 
-    this.notifyIfActiveTabIsPartner()
+    this.notifyIfActiveTabIsPublisher()
   }
 
   delete(tabId: number) {
@@ -162,8 +162,8 @@ export function parsePublisherHeader(headerValue: string | null | undefined) {
 }
 
 const helpers = {
-  PARTNER_SITE_HEADER_NAME: PUBLISHER_HEADER.toLocaleLowerCase(),
-  testPartnerHeaderValue(url: string, headerValue: string | undefined, source: "header" | "meta") {
+  PUBLISHER_SITE_HEADER_NAME: PUBLISHER_HEADER.toLocaleLowerCase(),
+  testPublisherHeaderValue(url: string, headerValue: string | undefined, source: "header" | "meta") {
     const decodedValue = parsePublisherHeader(headerValue)
     if (!decodedValue) return
 
@@ -171,7 +171,7 @@ const helpers = {
     // token it cannot read
     if (decodedValue.version !== SUPPORTED_PROTOCOL_VERSION) return
 
-    eventBroker().emit<TabTrackerPartnerDetectedData>(EVENT.TAB_TRACKER.PARTNER_DETECTED, {
+    eventBroker().emit<TabTrackerPublisherDetectedData>(EVENT.TAB_TRACKER.PUBLISHER_DETECTED, {
       publisherId: decodedValue.publisherId,
       version: decodedValue.version,
       source,
@@ -192,7 +192,7 @@ const helpers = {
             ?.getAttribute("content")
             ?.trim()
         },
-        args: [this.PARTNER_SITE_HEADER_NAME],
+        args: [this.PUBLISHER_SITE_HEADER_NAME],
       })
 
       headerValue = metaContentValue || undefined
@@ -200,15 +200,15 @@ const helpers = {
       // Ignore
     }
 
-    helpers.testPartnerHeaderValue(tab.url, headerValue, "meta")
+    helpers.testPublisherHeaderValue(tab.url, headerValue, "meta")
   },
 
   testWebRequestHeaders(url: string, headers: chrome.webRequest.HttpHeader[]) {
     const headerValue = headers.find(
-      (header) => header.name.toLocaleLowerCase() === helpers.PARTNER_SITE_HEADER_NAME
+      (header) => header.name.toLocaleLowerCase() === helpers.PUBLISHER_SITE_HEADER_NAME
     )?.value
 
-    helpers.testPartnerHeaderValue(url, headerValue, "header")
+    helpers.testPublisherHeaderValue(url, headerValue, "header")
   },
 }
 
@@ -222,14 +222,14 @@ chrome.tabs.onUpdated.addListener(async (_tabId, changeInfo, tab) => {
   }
 
   if (isValidUrl(tab.url)) {
-    if (!telemetry().hasPartnerEntryByUrl(tab.url)) {
+    if (!telemetry().hasPublisherEntryByUrl(tab.url)) {
       // Might include "Welcome header" inside one of their <meta> tags. This has to be awaited:
-      // the very first visit to a meta-tag partner is only recognised once the script comes back,
+      // the very first visit to a meta-tag publisher is only recognised once the script comes back,
       // and an un-awaited check would leave that page view uncounted.
       await helpers.testHtmlMetaTags(tab)
     }
 
-    if (telemetry().hasPartnerEntryByUrl(tab.url)) {
+    if (telemetry().hasPublisherEntryByUrl(tab.url)) {
       telemetry().addViews(tab.url)
     }
   }
@@ -250,12 +250,12 @@ chrome.tabs.onRemoved.addListener((tabId) => trackedTabs().delete(tabId))
 
 chrome.windows.onRemoved.addListener((windowId) => trackedTabs().deleteByWindowId(windowId))
 
-eventBroker().on(EVENT.TELEMETRY.PARTNER_ADDED, () => trackedTabs().refreshPartnerFlags())
+eventBroker().on(EVENT.TELEMETRY.PUBLISHER_ADDED, () => trackedTabs().refreshPublisherFlags())
 
 // Phase D, the discovery loop: the first response from a participating site is what reveals it takes
 // part. From then on it gets a token bound to its hostname, so the visit after this one arrives
 // identified. Nothing is spent on a site that never announced itself.
-eventBroker().on<TabTrackerPartnerDetectedData>(EVENT.TAB_TRACKER.PARTNER_DETECTED, async ({ url }) => {
+eventBroker().on<TabTrackerPublisherDetectedData>(EVENT.TAB_TRACKER.PUBLISHER_DETECTED, async ({ url }) => {
   try {
     await headerInjection().enableForHostname(new URL(url).hostname)
   } catch (_err) {

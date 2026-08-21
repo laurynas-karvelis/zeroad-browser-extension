@@ -44,21 +44,21 @@ describe("badge", () => {
     expect(chromeMock.action.badgeText).toBe("")
   })
 
-  test("marks the tab with the active icon when the user is on a partner site", () => {
-    eventBroker().emit(EVENT.TAB_TRACKER.IS_ACTIVE_TAB_PARTNER, { tabId: 42, isPartner: true })
+  test("marks the tab with the active icon when the user is on a publisher site", () => {
+    eventBroker().emit(EVENT.TAB_TRACKER.IS_ACTIVE_TAB_PUBLISHER, { tabId: 42, isPublisher: true })
 
     expect(chromeMock.action.icons.at(-1)).toEqual({ tabId: 42, path: ACTIVE_ICON })
   })
 
   test("marks the tab with the inactive icon everywhere else", () => {
-    eventBroker().emit(EVENT.TAB_TRACKER.IS_ACTIVE_TAB_PARTNER, { tabId: 42, isPartner: false })
+    eventBroker().emit(EVENT.TAB_TRACKER.IS_ACTIVE_TAB_PUBLISHER, { tabId: 42, isPublisher: false })
 
     expect(chromeMock.action.icons.at(-1)).toEqual({ tabId: 42, path: INACTIVE_ICON })
   })
 
   test("the icon is scoped to the tab it was reported for", () => {
-    eventBroker().emit(EVENT.TAB_TRACKER.IS_ACTIVE_TAB_PARTNER, { tabId: 1, isPartner: true })
-    eventBroker().emit(EVENT.TAB_TRACKER.IS_ACTIVE_TAB_PARTNER, { tabId: 2, isPartner: false })
+    eventBroker().emit(EVENT.TAB_TRACKER.IS_ACTIVE_TAB_PUBLISHER, { tabId: 1, isPublisher: true })
+    eventBroker().emit(EVENT.TAB_TRACKER.IS_ACTIVE_TAB_PUBLISHER, { tabId: 2, isPublisher: false })
 
     expect(chromeMock.action.icons).toEqual([
       { tabId: 1, path: ACTIVE_ICON },

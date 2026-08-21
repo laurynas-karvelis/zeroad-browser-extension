@@ -5,7 +5,7 @@ Sick of ads, cookie popups, and paywalls? The Zero Ad Network extension removes 
 ## What It Does
 
 REMOVES THE ANNOYING STUFF
-• Ads and tracking scripts disappear on partner sites
+• Ads and tracking scripts disappear on publisher sites
 • No more cookie consent banners
 • Marketing popups? Gone.
 
@@ -23,14 +23,14 @@ PAYS CREATORS FAIRLY
 
 1. PICK YOUR PLAN
    Clean Web: Ad-free browsing, zero trackers
-   One Pass: Access paywalled content across partner sites
+   One Pass: Access paywalled content across publisher sites
    Freedom: Everything included
 
 2. INSTALL AND FORGET
    Available for Chrome, Firefox, and Edge. Installs in seconds.
 
 3. BROWSE NORMALLY
-   The extension handles everything automatically. Visit partner sites and enjoy a cleaner experience.
+   The extension handles everything automatically. Visit publisher sites and enjoy a cleaner experience.
 
 ## Why This Beats Regular Ad Blockers
 
@@ -45,11 +45,11 @@ PLUS:
 • Privacy-first (we don't sell your data)
 • One subscription instead of dozens
 • No configuration needed
-• Works on thousands of partner sites
+• Works on thousands of publisher sites
 
 ## How Sites Get Paid
 
-When you visit a partner site:
+When you visit a publisher site:
 
 1. Extension sends a secure token proving you're a subscriber
 2. Site enables your benefits (removes ads, unlocks content)
@@ -74,13 +74,13 @@ No ads. No tracking. No juggling 20 different paywalls. Just a better web that w
 ## Privacy Guarantee
 
 WHAT WE SEND:
-• A subscription token to all sites you visit (so partner sites can recognize you)
-• Anonymous usage stats only for partner sites
+• A subscription token to all sites you visit (so publisher sites can recognize you)
+• Anonymous usage stats only for publisher sites
 
 WHAT WE DON'T DO:
 • Sell your data
 • Include personal info in tokens
-• Track you on non-partner sites
+• Track you on non-publisher sites
 • Share your browsing history
 
 The token just says "this person is a subscriber" - nothing about who you are.

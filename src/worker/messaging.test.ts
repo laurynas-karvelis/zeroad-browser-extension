@@ -11,8 +11,8 @@ const extensionStub = {
 }
 mock.module("./extension", () => ({ extension: () => extensionStub }))
 
-const notifyIfActiveTabIsPartner = mock()
-mock.module("./tab-tracker", () => ({ trackedTabs: () => ({ notifyIfActiveTabIsPartner }) }))
+const notifyIfActiveTabIsPublisher = mock()
+mock.module("./tab-tracker", () => ({ trackedTabs: () => ({ notifyIfActiveTabIsPublisher }) }))
 
 mock.module("./telemetry", () => ({ telemetry: () => ({ map: new Map(), export: () => ({}) }) }))
 
@@ -39,7 +39,7 @@ async function askSiteChannel(message: object) {
 describe("popup messages", () => {
   beforeEach(() => {
     chromeMock.runtime.sentMessages = []
-    notifyIfActiveTabIsPartner.mockClear()
+    notifyIfActiveTabIsPublisher.mockClear()
     for (const spy of Object.values(extensionStub)) spy.mockClear()
   })
 
@@ -84,9 +84,9 @@ describe("popup messages", () => {
   })
 
   test("asks the tab tracker to re-announce the current tab", async () => {
-    await askPopupChannel(EVENT.POPUP.CHECK_IF_ACTIVE_TAB_PARTNER_REQUEST)
+    await askPopupChannel(EVENT.POPUP.CHECK_IF_ACTIVE_TAB_PUBLISHER_REQUEST)
 
-    expect(notifyIfActiveTabIsPartner).toHaveBeenCalled()
+    expect(notifyIfActiveTabIsPublisher).toHaveBeenCalled()
   })
 
   test("exactly one handler claims a known command", async () => {
@@ -168,11 +168,11 @@ describe("events proxied to the popup", () => {
   })
 
   test("the active-tab verdict is forwarded with its data", () => {
-    const data = { isPartner: true, tabId: 5, url: "https://a.test/", telemetryEntry: undefined }
+    const data = { isPublisher: true, tabId: 5, url: "https://a.test/", telemetryEntry: undefined }
 
-    eventBroker().emit(EVENT.TAB_TRACKER.IS_ACTIVE_TAB_PARTNER, data)
+    eventBroker().emit(EVENT.TAB_TRACKER.IS_ACTIVE_TAB_PUBLISHER, data)
 
-    expect(chromeMock.runtime.sentMessages).toEqual([{ event: EVENT.MESSAGING.IS_ACTIVE_TAB_PARTNER, data }])
+    expect(chromeMock.runtime.sentMessages).toEqual([{ event: EVENT.MESSAGING.IS_ACTIVE_TAB_PUBLISHER, data }])
   })
 
   test("a closed popup is not an error", () => {

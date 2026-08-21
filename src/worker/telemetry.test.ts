@@ -16,7 +16,7 @@ const { Telemetry } = await import("./telemetry")
 // the same mutation to its own map) but not for storage ones - those live in telemetry.storage.test.ts.
 const SAVE_DEBOUNCE_DELAY = 5
 
-type StoredMap = Record<string, { clientId: string; views: number; duration: number }>
+type StoredMap = Record<string, { publisherId: string; views: number; duration: number }>
 
 const seedStored = (telemetry: StoredMap) => chromeMock.storage.local.seed({ telemetry })
 
@@ -27,8 +27,8 @@ async function createTelemetry() {
   return instance
 }
 
-const entry = (clientId: string, views = 0, duration = 0) => ({
-  clientId,
+const entry = (publisherId: string, views = 0, duration = 0) => ({
+  publisherId,
   views,
   duration,
 })
@@ -67,45 +67,45 @@ describe("Telemetry", () => {
     })
   })
 
-  describe("partner detection", () => {
-    test("adds an entry and announces the partner when a new hostname is detected", async () => {
+  describe("publisher detection", () => {
+    test("adds an entry and announces the publisher when a new hostname is detected", async () => {
       const telemetry = await createTelemetry()
-      const partnerAdded = mock()
-      eventBroker().on(EVENT.TELEMETRY.PARTNER_ADDED, partnerAdded)
+      const publisherAdded = mock()
+      eventBroker().on(EVENT.TELEMETRY.PUBLISHER_ADDED, publisherAdded)
 
-      eventBroker().emit(EVENT.TAB_TRACKER.PARTNER_DETECTED, {
+      eventBroker().emit(EVENT.TAB_TRACKER.PUBLISHER_DETECTED, {
         publisherId: "client-a",
         url: "https://a.test/some/page?q=1",
       })
 
       expect(telemetry.map.get("a.test")).toEqual(entry("client-a"))
-      expect(partnerAdded).toHaveBeenCalledWith({ clientId: "client-a" })
+      expect(publisherAdded).toHaveBeenCalledWith({ publisherId: "client-a" })
     })
 
     test("keys entries by hostname, so every page of a site shares one entry", async () => {
       const telemetry = await createTelemetry()
 
       for (const url of ["https://a.test/one", "https://a.test/two", "http://a.test:8080/three"]) {
-        eventBroker().emit(EVENT.TAB_TRACKER.PARTNER_DETECTED, { publisherId: "client-a", url, version: 1 })
+        eventBroker().emit(EVENT.TAB_TRACKER.PUBLISHER_DETECTED, { publisherId: "client-a", url, version: 1 })
       }
 
       expect(telemetry.map.size).toBe(1)
     })
 
-    test("ignores detections with no usable hostname or no clientId", async () => {
+    test("ignores detections with no usable hostname or no publisherId", async () => {
       const telemetry = await createTelemetry()
 
-      eventBroker().emit(EVENT.TAB_TRACKER.PARTNER_DETECTED, { publisherId: "c", url: "not a url", version: 1 })
-      eventBroker().emit(EVENT.TAB_TRACKER.PARTNER_DETECTED, { publisherId: "", url: "https://a.test/", version: 1 })
+      eventBroker().emit(EVENT.TAB_TRACKER.PUBLISHER_DETECTED, { publisherId: "c", url: "not a url", version: 1 })
+      eventBroker().emit(EVENT.TAB_TRACKER.PUBLISHER_DETECTED, { publisherId: "", url: "https://a.test/", version: 1 })
 
       expect(telemetry.map.size).toBe(0)
     })
 
-    test("re-detecting the same partner leaves its counters alone", async () => {
+    test("re-detecting the same publisher leaves its counters alone", async () => {
       seedStored({ "a.test": entry("client-a", 3, 500) })
       const telemetry = await createTelemetry()
 
-      eventBroker().emit(EVENT.TAB_TRACKER.PARTNER_DETECTED, {
+      eventBroker().emit(EVENT.TAB_TRACKER.PUBLISHER_DETECTED, {
         publisherId: "client-a",
         url: "https://a.test/",
       })
@@ -113,12 +113,12 @@ describe("Telemetry", () => {
       expect(telemetry.map.get("a.test")).toEqual(entry("client-a", 3, 500))
     })
 
-    test("a hostname changing owner adopts the new clientId and drops the old counters", async () => {
+    test("a hostname changing owner adopts the new publisherId and drops the old counters", async () => {
       // Otherwise every later visit is credited to whoever used to own the domain.
       seedStored({ "a.test": entry("old-client", 9, 900) })
       const telemetry = await createTelemetry()
 
-      eventBroker().emit(EVENT.TAB_TRACKER.PARTNER_DETECTED, {
+      eventBroker().emit(EVENT.TAB_TRACKER.PUBLISHER_DETECTED, {
         publisherId: "new-client",
         url: "https://a.test/",
       })
@@ -137,10 +137,10 @@ describe("Telemetry", () => {
     })
 
     test("duration on a never-viewed entry backfills a single view", async () => {
-      // A partner tab already open when the subscription activates accrues time before any
+      // A publisher tab already open when the subscription activates accrues time before any
       // page load is seen; reporting duration with zero views would be nonsense.
       const telemetry = await createTelemetry()
-      eventBroker().emit(EVENT.TAB_TRACKER.PARTNER_DETECTED, {
+      eventBroker().emit(EVENT.TAB_TRACKER.PUBLISHER_DETECTED, {
         publisherId: "client-a",
         url: "https://a.test/",
       })
@@ -150,7 +150,7 @@ describe("Telemetry", () => {
       expect(telemetry.map.get("a.test")).toMatchObject({ views: 1, duration: 400 })
     })
 
-    test("ignores hostnames that are not partners", async () => {
+    test("ignores hostnames that are not publishers", async () => {
       const telemetry = await createTelemetry()
 
       telemetry.addViews("https://stranger.test/")
@@ -160,7 +160,7 @@ describe("Telemetry", () => {
     })
 
     test("counts nothing while the subscription is inactive", async () => {
-      // The user is not paying, so nothing they browse may earn a partner a payout.
+      // The user is not paying, so nothing they browse may earn a publisher a payout.
       seedStored({ "a.test": entry("client-a", 1, 10) })
       const telemetry = await createTelemetry()
       subscriptionActive = false
@@ -186,7 +186,7 @@ describe("Telemetry", () => {
   })
 
   describe("export", () => {
-    test("groups hostnames under their clientId and sums their counters", async () => {
+    test("groups every hostname under its publisher, keeping each hostname's counters separate", async () => {
       seedStored({
         "a.test": entry("client-a", 2, 200),
         "blog.a.test": entry("client-a", 3, 300),
@@ -194,23 +194,29 @@ describe("Telemetry", () => {
       })
       const telemetry = await createTelemetry()
 
+      // Each hostname keeps its own counters - a publisher with several sites needs each credited
       expect(telemetry.export()).toEqual({
-        "client-a": { views: 5, duration: 500, hosts: ["a.test", "blog.a.test"] },
-        "client-b": { views: 1, duration: 100, hosts: ["b.test"] },
+        "client-a": {
+          hostnames: {
+            "a.test": { views: 2, duration: 200 },
+            "blog.a.test": { views: 3, duration: 300 },
+          },
+        },
+        "client-b": { hostnames: { "b.test": { views: 1, duration: 100 } } },
       })
     })
 
-    test("includes a partner that was viewed but never dwelled on", async () => {
+    test("includes a publisher that was viewed but never dwelled on", async () => {
       // Revenue is duration-weighted, but the visit still belongs in the user's stats.
       seedStored({ "a.test": entry("client-a", 4, 0) })
       const telemetry = await createTelemetry()
 
-      expect(telemetry.export()).toEqual({ "client-a": { views: 4, duration: 0, hosts: ["a.test"] } })
+      expect(telemetry.export()).toEqual({ "client-a": { hostnames: { "a.test": { views: 4, duration: 0 } } } })
     })
 
-    test("skips partners with no activity at all", async () => {
+    test("skips publishers with no activity at all", async () => {
       const telemetry = await createTelemetry()
-      eventBroker().emit(EVENT.TAB_TRACKER.PARTNER_DETECTED, {
+      eventBroker().emit(EVENT.TAB_TRACKER.PUBLISHER_DETECTED, {
         publisherId: "client-a",
         url: "https://a.test/",
       })
@@ -220,7 +226,7 @@ describe("Telemetry", () => {
   })
 
   describe("flushing", () => {
-    test("zeroes counters but keeps the partners, so re-detection is not needed", async () => {
+    test("zeroes counters but keeps the publishers, so re-detection is not needed", async () => {
       seedStored({ "a.test": entry("client-a", 2, 200) })
       const telemetry = await createTelemetry()
 

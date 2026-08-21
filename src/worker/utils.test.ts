@@ -25,7 +25,7 @@ describe("isValidUrl", () => {
   })
 
   test("rejects the non-web URLs a browser hands us for its own pages", () => {
-    // The extension must never treat these as partner-site candidates.
+    // The extension must never treat these as publisher-site candidates.
     expect(isValidUrl("chrome://extensions")).toBe(false)
     expect(isValidUrl("about:blank")).toBe(false)
     expect(isValidUrl("file:///etc/hosts")).toBe(false)

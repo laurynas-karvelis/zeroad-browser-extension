@@ -1,18 +1,26 @@
 import { EVENT, type EventType, eventBroker } from "./event-broker"
 import { extension } from "./extension"
-import type { TabTrackerPartnerDetectedData } from "./tab-tracker"
+import type { TabTrackerPublisherDetectedData } from "./tab-tracker"
 import type { Hostname } from "./types"
 import { getHostname } from "./utils"
 
 export type Entry = {
-  /** The publisher this hostname belongs to, for crediting the visit. */
-  clientId: TabTrackerPartnerDetectedData["publisherId"]
+  /** The publisher this hostname announced itself as belonging to, for crediting the visit. */
+  publisherId: TabTrackerPublisherDetectedData["publisherId"]
   views: number
   duration: number
 }
 
 type StoredTelemetryMap = Record<Hostname, Entry>
-type TelemetryExportData = Record<string, { views: number; duration: number; hosts: Hostname[] }>
+
+/**
+ * What gets sent: every hostname visited, grouped under the publisher that claimed it, with the views
+ * and dwell time for each one kept separate.
+ *
+ * Per hostname rather than per publisher total, because a publisher with several sites needs each of
+ * them credited on its own, and this is the only place that knows which site the time was spent on.
+ */
+export type TelemetryExportData = Record<string, { hostnames: Record<Hostname, { views: number; duration: number }> }>
 
 const SAVE_DEBOUNCE_DELAY = 5000
 
@@ -33,7 +41,7 @@ export class Telemetry {
     this.ready = this.load()
 
     eventBroker()
-      .on<TabTrackerPartnerDetectedData>(EVENT.TAB_TRACKER.PARTNER_DETECTED, ({ publisherId, url }) =>
+      .on<TabTrackerPublisherDetectedData>(EVENT.TAB_TRACKER.PUBLISHER_DETECTED, ({ publisherId, url }) =>
         this.addEntry(publisherId, url)
       )
       .on(EVENT.TELEMETRY.FLUSH, () => this.softReset())
@@ -87,23 +95,23 @@ export class Telemetry {
     this.save()
   }
 
-  private addEntry(clientId: Entry["clientId"], url: string) {
+  private addEntry(publisherId: Entry["publisherId"], url: string) {
     const hostname = getHostname(url)
 
-    if (!hostname || !clientId) return
+    if (!hostname || !publisherId) return
 
     if (!this.map.has(hostname)) {
-      this.map.set(hostname, { clientId, views: 0, duration: 0 })
+      this.map.set(hostname, { publisherId, views: 0, duration: 0 })
       this.save()
 
-      eventBroker().emit(EVENT.TELEMETRY.PARTNER_ADDED, { clientId })
+      eventBroker().emit(EVENT.TELEMETRY.PUBLISHER_ADDED, { publisherId })
     } else {
       const entry = this.map.get(hostname)
       if (!entry) return
 
-      if (entry.clientId !== clientId) {
+      if (entry.publisherId !== publisherId) {
         // The hostname changed hands: adopt the new owner and drop counters the old one earned.
-        entry.clientId = clientId
+        entry.publisherId = publisherId
         entry.views = 0
         entry.duration = 0
 
@@ -112,12 +120,12 @@ export class Telemetry {
     }
   }
 
-  hasPartnerEntryByUrl(url: string | undefined): boolean {
+  hasPublisherEntryByUrl(url: string | undefined): boolean {
     if (!url) return false
     return this.map.has(getHostname(url))
   }
 
-  findPartnerEntryByUrl(url: string | undefined): Entry | undefined {
+  findPublisherEntryByUrl(url: string | undefined): Entry | undefined {
     if (!url) return undefined
     return this.map.get(getHostname(url))
   }
@@ -134,14 +142,14 @@ export class Telemetry {
     entry[key] += amount
 
     if (key === "duration" && !entry.views) {
-      // After the subscription is applied while partnered sites are already loaded in tabs,
+      // After the subscription is applied while publishered sites are already loaded in tabs,
       // it can be that duration will be bumped up, but the views haven't been set yet.
       // Hence, set `views` to 1
       entry.views = 1
     }
 
     this.save()
-    eventBroker().emit(eventName, { clientId: entry.clientId, [key]: amount })
+    eventBroker().emit(eventName, { publisherId: entry.publisherId, [key]: amount })
   }
 
   addViews(url: string | undefined) {
@@ -152,21 +160,17 @@ export class Telemetry {
     this.incrementStat(url, "duration", duration, EVENT.TELEMETRY.DURATION_ADDED)
   }
 
-  export() {
+  export(): TelemetryExportData {
     const data: TelemetryExportData = {}
 
-    for (const [hostname, { clientId, views, duration }] of this.map) {
+    for (const [hostname, { publisherId, views, duration }] of this.map) {
       // Anything with activity ships. A view with no dwell time is still a visit, and if it is
       // dropped here it is never reported at all - `softReset` zeroes the entry on the next flush.
       if (!views && !duration) continue
 
-      if (!data[clientId]) {
-        data[clientId] = { views, duration, hosts: [hostname] }
-      } else {
-        data[clientId].views += views
-        data[clientId].duration += duration
-        data[clientId].hosts.push(hostname)
-      }
+      if (!data[publisherId]) data[publisherId] = { hostnames: {} }
+
+      data[publisherId].hostnames[hostname] = { views, duration }
     }
 
     return data

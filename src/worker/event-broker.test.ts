@@ -10,8 +10,8 @@ describe("eventBroker", () => {
     const first = mock()
     const second = mock()
 
-    eventBroker().on(EVENT.TELEMETRY.PARTNER_ADDED, first).on(EVENT.TELEMETRY.PARTNER_ADDED, second)
-    eventBroker().emit(EVENT.TELEMETRY.PARTNER_ADDED, { clientId: "abc" })
+    eventBroker().on(EVENT.TELEMETRY.PUBLISHER_ADDED, first).on(EVENT.TELEMETRY.PUBLISHER_ADDED, second)
+    eventBroker().emit(EVENT.TELEMETRY.PUBLISHER_ADDED, { clientId: "abc" })
 
     expect(first).toHaveBeenCalledWith({ clientId: "abc" })
     expect(second).toHaveBeenCalledWith({ clientId: "abc" })

@@ -34,7 +34,8 @@ export type SubscriptionExtensionData = {
   extensionToken?: string
   telemetryToken: string
   expiresAt: number // A UNIX timestamp
-  clientId?: string // The "dev" token will contain `clientId` to test their site
+  /** Set only on a developer token, naming the site it was issued to test. */
+  hostname?: string
 }
 
 export type Hostname = string

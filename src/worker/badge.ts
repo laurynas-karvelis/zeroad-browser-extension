@@ -12,8 +12,8 @@ class Badge {
   constructor() {
     eventBroker()
       .on(EVENT.EXTENSION.SYNCED, () => this.setText("ON"))
-      .on<TabTrackActiveTabEventData>(EVENT.TAB_TRACKER.IS_ACTIVE_TAB_PARTNER, ({ tabId, isPartner }) => {
-        if (isPartner) this.setIcon(tabId, BADGE_ICON.ACTIVE)
+      .on<TabTrackActiveTabEventData>(EVENT.TAB_TRACKER.IS_ACTIVE_TAB_PUBLISHER, ({ tabId, isPublisher }) => {
+        if (isPublisher) this.setIcon(tabId, BADGE_ICON.ACTIVE)
         else this.setIcon(tabId, BADGE_ICON.INACTIVE)
       })
   }

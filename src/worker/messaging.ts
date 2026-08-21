@@ -105,8 +105,8 @@ class Messaging {
     onPopupMessage(EVENT.POPUP.IS_EXTENSION_PAUSED, async () => extension().isPaused())
     onPopupMessage(EVENT.POPUP.EXTENSION_PAUSE_REQUEST, () => extension().pause())
     onPopupMessage(EVENT.POPUP.EXTENSION_RESUME_REQUEST, () => extension().resume())
-    onPopupMessage(EVENT.POPUP.CHECK_IF_ACTIVE_TAB_PARTNER_REQUEST, async () =>
-      trackedTabs().notifyIfActiveTabIsPartner()
+    onPopupMessage(EVENT.POPUP.CHECK_IF_ACTIVE_TAB_PUBLISHER_REQUEST, async () =>
+      trackedTabs().notifyIfActiveTabIsPublisher()
     )
   }
 
@@ -121,14 +121,14 @@ class Messaging {
     const reloadPopup = () =>
       chrome.runtime.sendMessage({ event: EVENT.MESSAGING.POPUP_RELOAD_REQUEST }, defaultCallbackFn)
 
-    const proxyIsActiveTabPartnerEvent = (data: TabTrackActiveTabEventData) =>
-      chrome.runtime.sendMessage({ event: EVENT.MESSAGING.IS_ACTIVE_TAB_PARTNER, data }, defaultCallbackFn)
+    const proxyIsActiveTabPublisherEvent = (data: TabTrackActiveTabEventData) =>
+      chrome.runtime.sendMessage({ event: EVENT.MESSAGING.IS_ACTIVE_TAB_PUBLISHER, data }, defaultCallbackFn)
 
     // Send message to the popup
     eventBroker()
       .on(EVENT.EXTENSION.SUBSCRIPTION_ACTIVE, reloadPopup)
       .on(EVENT.EXTENSION.SUBSCRIPTION_EXPIRED, reloadPopup)
-      .on(EVENT.TAB_TRACKER.IS_ACTIVE_TAB_PARTNER, proxyIsActiveTabPartnerEvent)
+      .on(EVENT.TAB_TRACKER.IS_ACTIVE_TAB_PUBLISHER, proxyIsActiveTabPublisherEvent)
   }
 
   async listenToSiteMessages() {

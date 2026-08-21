@@ -56,19 +56,19 @@ describe("headerInjection", () => {
     chromeMock.declarativeNetRequest.updateSessionRuleCalls = []
   })
 
-  describe("installing a rule for a partner hostname", () => {
+  describe("installing a rule for a publisher hostname", () => {
     test("sets the token header, scoped to that hostname alone", async () => {
-      await headerInjection().enableForHostname("partner.test")
+      await headerInjection().enableForHostname("publisher.test")
 
       expect(rules()).toHaveLength(1)
       expect(rules()[0]).toMatchObject({
         priority: 99,
-        condition: { requestDomains: ["partner.test"], resourceTypes: ["main_frame", "media"] },
+        condition: { requestDomains: ["publisher.test"], resourceTypes: ["main_frame", "media"] },
       })
       expect(headerOf(rules()[0])).toEqual({
         operation: "set",
         header: TOKEN_HEADER,
-        value: "token-for-partner.test",
+        value: "token-for-publisher.test",
       })
     })
 
@@ -86,16 +86,16 @@ describe("headerInjection", () => {
     })
 
     test("reuses the same rule id and token when a hostname is enabled twice", async () => {
-      const first = await headerInjection().enableForHostname("partner.test")
-      const second = await headerInjection().enableForHostname("partner.test")
+      const first = await headerInjection().enableForHostname("publisher.test")
+      const second = await headerInjection().enableForHostname("publisher.test")
 
       expect(second).toBe(first as number)
       expect(rules()).toHaveLength(1)
     })
 
     test("replaces a rule in one call, so no request slips through unheadered", async () => {
-      const ruleId = await headerInjection().enableForHostname("partner.test")
-      await headerInjection().enableForHostname("partner.test")
+      const ruleId = await headerInjection().enableForHostname("publisher.test")
+      await headerInjection().enableForHostname("publisher.test")
 
       expect(lastCall()?.removeRuleIds).toEqual([ruleId])
     })
@@ -104,9 +104,9 @@ describe("headerInjection", () => {
       const installed = mock()
       eventBroker().on(EVENT.HEADER_INJECTION.RULE_INSTALLED, installed)
 
-      const ruleId = await headerInjection().enableForHostname("partner.test")
+      const ruleId = await headerInjection().enableForHostname("publisher.test")
 
-      expect(installed).toHaveBeenCalledWith({ hostname: "partner.test", ruleId })
+      expect(installed).toHaveBeenCalledWith({ hostname: "publisher.test", ruleId })
     })
 
     test("tracks which hostnames are carrying a rule", async () => {
@@ -121,14 +121,14 @@ describe("headerInjection", () => {
     test("installs nothing without an active subscription", async () => {
       state.active = false
 
-      expect(await headerInjection().enableForHostname("partner.test")).toBeUndefined()
+      expect(await headerInjection().enableForHostname("publisher.test")).toBeUndefined()
       expect(rules()).toHaveLength(0)
     })
 
     test("installs nothing while paused", async () => {
       state.paused = true
 
-      expect(await headerInjection().enableForHostname("partner.test")).toBeUndefined()
+      expect(await headerInjection().enableForHostname("publisher.test")).toBeUndefined()
       expect(rules()).toHaveLength(0)
     })
 
@@ -140,7 +140,7 @@ describe("headerInjection", () => {
     test("an exhausted pool leaves the visitor looking ordinary rather than erroring", async () => {
       pool.exhausted = true
 
-      expect(await headerInjection().enableForHostname("partner.test")).toBeUndefined()
+      expect(await headerInjection().enableForHostname("publisher.test")).toBeUndefined()
       expect(rules()).toHaveLength(0)
     })
   })

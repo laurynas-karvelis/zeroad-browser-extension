@@ -23,13 +23,13 @@ function subscription(overrides: Partial<SubscriptionExtensionData> = {}): Subsc
   }
 }
 
-function partnerEntry(overrides: Partial<Entry> = {}): Entry {
-  return { clientId: "client-id", views: 1, duration: 0, ...overrides }
+function publisherEntry(overrides: Partial<Entry> = {}): Entry {
+  return { publisherId: "publisher-id", views: 1, duration: 0, ...overrides }
 }
 
 /** Delivers the event the worker pushes at the popup whenever the focused tab changes. */
 function activeTabChangedTo(data: TabTrackActiveTabEventData) {
-  return chromeMock.runtime.onMessage.dispatch({ event: EVENT.MESSAGING.IS_ACTIVE_TAB_PARTNER, data }, {}, () => {})
+  return chromeMock.runtime.onMessage.dispatch({ event: EVENT.MESSAGING.IS_ACTIVE_TAB_PUBLISHER, data }, {}, () => {})
 }
 
 const commandsSent = () => chromeMock.runtime.sentMessages.map((message) => (message as { command: string }).command)
@@ -96,11 +96,11 @@ describe("a member without a subscription", () => {
     expect(textOf(".user.not-subscribed.greeting")).toBe("Hi Member,")
   })
 
-  test("never sees the partner or developer sections, which live inside the subscribed block", async () => {
+  test("never sees the publisher or developer sections, which live inside the subscribed block", async () => {
     await new UserState(member, undefined).render()
-    await activeTabChangedTo({ isPartner: true, url: "https://news.example/a", telemetryEntry: partnerEntry() })
+    await activeTabChangedTo({ isPublisher: true, url: "https://news.example/a", telemetryEntry: publisherEntry() })
 
-    expect(isShown("#partner-features")).toBe(false)
+    expect(isShown("#publisher-features")).toBe(false)
     expect(isShown("#report-site-btn")).toBe(false)
   })
 })
@@ -176,11 +176,11 @@ describe("a member whose token has expired", () => {
 })
 
 describe("a developer token", () => {
-  test("reveals the client id it is scoped to", async () => {
-    await new UserState(member, subscription({ clientId: "acme-client-id" })).render()
+  test("reveals the site it is scoped to", async () => {
+    await new UserState(member, subscription({ hostname: "acme.example" })).render()
 
     expect(isShown("#developer-details")).toBe(true)
-    expect(textOf("#client-id-label span")).toBe("acme-client-id")
+    expect(textOf("#developer-hostname-label span")).toBe("acme.example")
   })
 
   test("stays hidden for an ordinary subscriber", async () => {
@@ -251,101 +251,102 @@ describe("the pause control", () => {
   })
 })
 
-describe("the partner site section", () => {
+describe("the publisher site section", () => {
   const subscribed = (planName = SUBSCRIPTION_PLAN_NAME.CLEAN_WEB) =>
     new UserState(member, subscription({ planName })).render()
 
-  test("stays out of the way on a site that is not a partner", async () => {
+  test("stays out of the way on a site that is not a publisher", async () => {
     await subscribed()
 
-    await activeTabChangedTo({ isPartner: false, url: "https://example.com", telemetryEntry: undefined })
+    await activeTabChangedTo({ isPublisher: false, url: "https://example.com", telemetryEntry: undefined })
 
-    expect(isShown("#partner-features")).toBe(false)
+    expect(isShown("#publisher-features")).toBe(false)
     expect(isShown("#report-site-btn")).toBe(false)
   })
 
-  test("lists everything a participating site provides, once the worker says the tab is a partner", async () => {
+  test("lists everything a participating site provides, once the worker says the tab is a publisher", async () => {
     // One plan means one answer: a participating site provides all of it, so every row is shown and
     // there is nothing to strike through
     await subscribed()
 
     await activeTabChangedTo({
-      isPartner: true,
+      isPublisher: true,
       url: "https://news.example/story",
-      telemetryEntry: partnerEntry(),
+      telemetryEntry: publisherEntry(),
     })
 
-    expect(isShown("#partner-features")).toBe(true)
-    expect(isShown("#partner-features li.clean_web")).toBe(true)
-    expect(isShown("#partner-features li.one_pass")).toBe(true)
+    expect(isShown("#publisher-features")).toBe(true)
+    expect(isShown("#publisher-features li.clean_web")).toBe(true)
+    expect(isShown("#publisher-features li.one_pass")).toBe(true)
   })
 
   test("leaves every row plain and untitled, whatever the plan", async () => {
     await subscribed(SUBSCRIPTION_PLAN_NAME.CLEAN_WEB)
 
     await activeTabChangedTo({
-      isPartner: true,
+      isPublisher: true,
       url: "https://news.example/story",
-      telemetryEntry: partnerEntry(),
+      telemetryEntry: publisherEntry(),
     })
 
-    for (const row of ["#partner-features li.clean_web", "#partner-features li.one_pass"]) {
+    for (const row of ["#publisher-features li.clean_web", "#publisher-features li.one_pass"]) {
       expect(classesOf(row)).not.toContain("text-decoration-line-through")
       expect(titleOf(row)).toBe("")
     }
   })
 
-  test("shows the same rows again when the user moves to another partner site", async () => {
+  test("shows the same rows again when the user moves to another publisher site", async () => {
     // The popup stays open while the user switches tabs, so each event has to re-describe the site
     // from scratch rather than add to what the last one left behind.
     await subscribed(SUBSCRIPTION_PLAN_NAME.FREEDOM)
 
     await activeTabChangedTo({
-      isPartner: true,
+      isPublisher: true,
       url: "https://both.example",
-      telemetryEntry: partnerEntry(),
+      telemetryEntry: publisherEntry(),
     })
     await activeTabChangedTo({
-      isPartner: true,
+      isPublisher: true,
       url: "https://clean.example",
-      telemetryEntry: partnerEntry(),
+      telemetryEntry: publisherEntry(),
     })
 
-    expect(shownCount("#partner-features li")).toBe(2)
+    expect(shownCount("#publisher-features li")).toBe(2)
   })
 
-  test("points Report at the site being reported, client id and page url and all", async () => {
+  test("points Report at the site being reported, hostname and page url and all", async () => {
+    // Sites are addressed by hostname now, and the hostname is right there in the url being viewed
     await subscribed()
 
     await activeTabChangedTo({
-      isPartner: true,
+      isPublisher: true,
       url: "https://news.example/story?ref=a b",
-      telemetryEntry: partnerEntry({ clientId: "acme/client" }),
+      telemetryEntry: publisherEntry(),
     })
 
     const href = new URL(hrefOf("#report-site-btn") as string)
 
     expect(href.origin).toBe(SITE_URL)
-    expect(href.pathname).toBe("/report/site/acme%2Fclient")
+    expect(href.pathname).toBe("/report/site/news.example")
     expect(href.searchParams.get("url")).toBe("https://news.example/story?ref=a b")
   })
 
-  test("re-points Report when the user moves to a different partner site", async () => {
+  test("re-points Report when the user moves to a different publisher site", async () => {
     await subscribed()
 
     await activeTabChangedTo({
-      isPartner: true,
+      isPublisher: true,
       url: "https://first.example/",
-      telemetryEntry: partnerEntry({ clientId: "first" }),
+      telemetryEntry: publisherEntry(),
     })
     await activeTabChangedTo({
-      isPartner: true,
+      isPublisher: true,
       url: "https://second.example/",
-      telemetryEntry: partnerEntry({ clientId: "second" }),
+      telemetryEntry: publisherEntry(),
     })
 
-    expect(hrefOf("#report-site-btn")).toContain("/report/site/second")
-    expect(hrefOf("#report-site-btn")).not.toContain("first")
+    expect(hrefOf("#report-site-btn")).toContain("/report/site/second.example")
+    expect(hrefOf("#report-site-btn")).not.toContain("first.example")
   })
 
   test("leaves Report without a destination rather than one pointing at the home page", async () => {
@@ -354,9 +355,9 @@ describe("the partner site section", () => {
     await subscribed()
 
     await activeTabChangedTo({
-      isPartner: true,
+      isPublisher: true,
       url: "https://news.example/story",
-      telemetryEntry: partnerEntry(),
+      telemetryEntry: publisherEntry(),
     })
 
     expect(hrefOf("#report-site-btn")).toBeUndefined()
@@ -365,7 +366,7 @@ describe("the partner site section", () => {
   test("asks the worker which tab is active once the section is wired up", async () => {
     await subscribed()
 
-    expect(commandsSent()).toContain(EVENT.POPUP.CHECK_IF_ACTIVE_TAB_PARTNER_REQUEST)
+    expect(commandsSent()).toContain(EVENT.POPUP.CHECK_IF_ACTIVE_TAB_PUBLISHER_REQUEST)
   })
 })
 

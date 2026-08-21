@@ -1,6 +1,7 @@
 import { EVENT, type EventType } from "../worker/event-broker"
 import { log } from "../worker/logger"
 import type { TabTrackActiveTabEventData } from "../worker/tab-tracker"
+import { getHostname } from "../worker/utils"
 import { SUBSCRIPTION_PLAN_LABEL, type SubscriptionExtensionData, type UserExtensionData } from "../worker/types"
 import { from } from "./date"
 import { $ } from "./dom"
@@ -43,38 +44,38 @@ export class UserState {
   private async onMemberWithoutSubscription() {
     // The `clientData` exists, user has account
     $(".user.not-subscribed, .user .not-subscribed").show()
-    await this.setupPartnerSiteUi()
+    await this.setupPublisherSiteUi()
   }
 
-  private buildReportButtonUrl(baseUrl: string, partnerUrl: string, clientId: string) {
+  private buildReportButtonUrl(baseUrl: string, visitedUrl: string, hostname: string) {
+    // Reports address a site by hostname - that is what identifies it now, and it is right there in
+    // the url the user is looking at
     const url = new URL(baseUrl)
-    url.pathname = `${url.pathname.replace(/\/$/, "")}/${encodeURIComponent(clientId)}`
-    url.searchParams.set("url", partnerUrl)
+    url.pathname = `${url.pathname.replace(/\/$/, "")}/${encodeURIComponent(hostname)}`
+    url.searchParams.set("url", visitedUrl)
     return url.toString()
   }
 
-  private async setupPartnerSiteUi() {
-    worker.on<TabTrackActiveTabEventData>(EVENT.MESSAGING.IS_ACTIVE_TAB_PARTNER, (data) => {
-      const { isPartner, url, telemetryEntry } = data
+  private async setupPublisherSiteUi() {
+    worker.on<TabTrackActiveTabEventData>(EVENT.MESSAGING.IS_ACTIVE_TAB_PUBLISHER, (data) => {
+      const { isPublisher, url, telemetryEntry } = data
 
-      const $reportBtn = $("#report-site-btn").toggle(isPartner)
-      const $partnerFeatures = $("#partner-features").toggle(isPartner)
+      const $reportBtn = $("#report-site-btn").toggle(isPublisher)
+      const $publisherFeatures = $("#publisher-features").toggle(isPublisher)
 
-      if (!isPartner) {
+      if (!isPublisher) {
         return
       }
 
       // One plan, so a participating site provides everything - there is nothing to strike through
-      const { clientId } = telemetryEntry
-
-      $partnerFeatures.$("li").show()
+      $publisherFeatures.$("li").show()
 
       // set up report button
       const reportBaseUrl = $reportBtn.data("href")
-      if (reportBaseUrl) $reportBtn.href(this.buildReportButtonUrl(reportBaseUrl, url, clientId))
+      if (reportBaseUrl) $reportBtn.href(this.buildReportButtonUrl(reportBaseUrl, url, getHostname(url)))
     })
 
-    await worker.sendCommand(EVENT.POPUP.CHECK_IF_ACTIVE_TAB_PARTNER_REQUEST)
+    await worker.sendCommand(EVENT.POPUP.CHECK_IF_ACTIVE_TAB_PUBLISHER_REQUEST)
   }
 
   private async onMemberWithSubscription() {
@@ -95,13 +96,13 @@ export class UserState {
 
     $(`.${this.subscription.planName}`).show()
 
-    if (this.subscription.clientId) {
+    if (this.subscription.hostname) {
       $("#developer-details").show()
-      $("#client-id-label span").text(this.subscription.clientId)
+      $("#developer-hostname-label span").text(this.subscription.hostname)
     }
 
     await this.setupPauseResumeButtons()
-    await this.setupPartnerSiteUi()
+    await this.setupPublisherSiteUi()
   }
 
   private async setupPauseResumeButtons() {

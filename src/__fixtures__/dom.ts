@@ -34,7 +34,7 @@ function first(selector: string): HTMLElement | null {
 
 /**
  * Whether the user can actually see the first match. Ancestors count: the template nests the
- * partner and developer sections inside `.user.subscribed`, so un-hiding one of them means
+ * publisher and developer sections inside `.user.subscribed`, so un-hiding one of them means
  * nothing while that wrapper is still hidden.
  */
 export function isShown(selector: string): boolean {

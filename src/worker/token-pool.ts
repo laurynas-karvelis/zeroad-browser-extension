@@ -8,7 +8,7 @@ import { httpPost } from "./utils"
  * The client half of the token protocol.
  *
  * The platform signs throwaway public keys without ever learning what they will be used for. This
- * module holds the matching private keys, which never leave the browser, and spends one per partner
+ * module holds the matching private keys, which never leave the browser, and spends one per publisher
  * site: on first contact with a site it signs that site's hostname, producing a token only that site
  * can accept. A site therefore receives a public key and a signature over its own name, and can no
  * more present it elsewhere than it could log in with somebody's SSH public key.

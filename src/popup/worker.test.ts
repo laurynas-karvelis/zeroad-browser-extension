@@ -66,15 +66,15 @@ describe("worker.on", () => {
 
   test("passes the data of a matching event to the callback", async () => {
     const callback = mock()
-    worker.on("MESSAGING:IS_ACTIVE_TAB_PARTNER", callback)
+    worker.on("MESSAGING:IS_ACTIVE_TAB_PUBLISHER", callback)
 
     await chromeMock.runtime.onMessage.dispatch(
-      { event: "MESSAGING:IS_ACTIVE_TAB_PARTNER", data: { isPartner: true } },
+      { event: "MESSAGING:IS_ACTIVE_TAB_PUBLISHER", data: { isPublisher: true } },
       {},
       () => {}
     )
 
-    expect(callback).toHaveBeenCalledWith({ isPartner: true })
+    expect(callback).toHaveBeenCalledWith({ isPublisher: true })
   })
 
   test("ignores other events", async () => {
