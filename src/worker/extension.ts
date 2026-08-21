@@ -51,26 +51,23 @@ class Extension {
     return this.state.subscription?.telemetryToken
   }
 
-  getExtensionToken() {
-    return this.state.subscription?.extensionToken
-  }
-
   isSubscriptionActive() {
     if (!this.state.subscription) return false
-    if (!this.state.subscription?.extensionToken) return false
     if (!this.state.subscription?.expiresAt) return false
 
+    // No longer gated on a server-minted token: there is none. What makes injection possible is a
+    // stocked token pool, and `headerInjection` already declines when the pool is empty.
     return this.state.subscription.expiresAt > Date.now()
   }
 
   pause() {
     this.state.isHeaderInjectionPaused = true
-    return headerInjection().removeBaseRule()
+    return headerInjection().removeAllRules()
   }
 
   resume() {
     this.state.isHeaderInjectionPaused = false
-    return headerInjection().enableBaseRule()
+    return headerInjection().reset()
   }
 
   isPaused() {

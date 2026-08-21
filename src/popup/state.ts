@@ -37,9 +37,10 @@ export class UserState {
       FIRST_NAME: this.user.firstName || "Member",
     })
 
-    const rendered = this.subscription?.extensionToken
-      ? this.onMemberWithSubscription()
-      : this.onMemberWithoutSubscription()
+    // The subscription record itself is the signal now. There is no server-minted token to check for -
+    // tokens are built locally from credentials - and an expired record is handled further in, where
+    // the expiry notice replaces the countdown.
+    const rendered = this.subscription ? this.onMemberWithSubscription() : this.onMemberWithoutSubscription()
 
     return rendered.catch(reportFailure)
   }
@@ -106,7 +107,6 @@ export class UserState {
       $(".valid-until").text(from(this.subscription.expiresAt, new Date(), { withoutSuffix: true }))
     }
 
-    // The `extensionToken` exists
     $("#link-pricing").hide()
     $("#subscription-label span").text(SUBSCRIPTION_PLAN_LABEL[this.subscription.planName])
 

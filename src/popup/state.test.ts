@@ -96,14 +96,6 @@ describe("a member without a subscription", () => {
     expect(textOf(".user.not-subscribed.greeting")).toBe("Hi Member,")
   })
 
-  test("counts as unsubscribed while a subscription record exists but carries no token", async () => {
-    // The record survives a lapsed payment; the token is what actually grants anything.
-    await new UserState(member, subscription({ extensionToken: "" })).render()
-
-    expect(isShown("a.user.not-subscribed.btn")).toBe(true)
-    expect(isShown(".user.subscribed")).toBe(false)
-  })
-
   test("never sees the partner or developer sections, which live inside the subscribed block", async () => {
     await new UserState(member, undefined).render()
     await activeTabChangedTo({ isPartner: true, url: "https://news.example/a", telemetryEntry: partnerEntry() })

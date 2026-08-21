@@ -36,7 +36,8 @@ export type UserExtensionData = {
 
 export type SubscriptionExtensionData = {
   planName: SUBSCRIPTION_PLAN_NAME
-  extensionToken: string
+  /** Vestigial. Tokens are minted locally from credentials now - see `token-pool.ts`. */
+  extensionToken?: string
   telemetryToken: string
   expiresAt: number // A UNIX timestamp
   clientId?: string // The "dev" token will contain `clientId` to test their site

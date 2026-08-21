@@ -33,6 +33,7 @@ export async function getConfig() {
     BASE_URL: buildUrl(""),
     GENERIC: {
       EXTENSION_SYNC_URL: buildUrl("/extension/sync"),
+      EXTENSION_CREDENTIALS_URL: buildUrl("/extension/credentials"),
       UNINSTALL_URL: buildUrl("/extension/uninstall"),
       ONBOARDING_URL: buildUrl("/extension/onboarding"),
     },

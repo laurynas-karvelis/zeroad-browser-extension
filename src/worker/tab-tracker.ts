@@ -1,13 +1,14 @@
-import { decodeServerHeader, type FEATURE, SERVER_HEADER } from "@zeroad.network/token/browser"
 import { EVENT, eventBroker } from "./event-broker"
+import { headerInjection } from "./header-injection"
 import { type Entry, telemetry } from "./telemetry"
 import { isValidUrl } from "./utils"
 
 type BrowserTab = chrome.tabs.Tab & { partner: boolean }
 
 export type TabTrackerPartnerDetectedData = {
-  clientId: string
-  features: (keyof typeof FEATURE)[]
+  publisherId: string
+  /** Protocol version the publisher announced, so a newer one can be skipped rather than mis-served. */
+  version: number
   source: "header" | "meta"
   url: string
 }
@@ -129,25 +130,59 @@ class TrackedTabs {
 const singleton = new TrackedTabs()
 export const trackedTabs = () => singleton
 
-const helpers = {
-  PARTNER_SITE_HEADER_NAME: SERVER_HEADER.WELCOME.toLocaleLowerCase(),
-  testPartnerWelcomeHeaderValue(url: string, welcomeHeaderValue: string | undefined, source: "header" | "meta") {
-    const decodedValue = decodeServerHeader(welcomeHeaderValue)
+/** Must match `PUBLISHER_HEADER` and `PROTOCOL_VERSION` in @zeroad.network/token. */
+const PUBLISHER_HEADER = "Better-Web-Publisher"
+const SUPPORTED_PROTOCOL_VERSION = 1
 
-    if (decodedValue) {
-      eventBroker().emit<TabTrackerPartnerDetectedData>(EVENT.TAB_TRACKER.PARTNER_DETECTED, {
-        clientId: decodedValue.clientId,
-        features: decodedValue.features,
-        source,
-        url,
-      })
-    }
+/**
+ * Reads a `Better-Web-Publisher` value: the publisher id, optionally followed by `; v=N`.
+ * A bare id predates the version parameter and is read as version 1.
+ */
+export function parsePublisherHeader(headerValue: string | null | undefined) {
+  if (!headerValue) return undefined
+
+  const [rawId, ...parameters] = headerValue.split(";")
+  const publisherId = rawId.trim()
+
+  if (!/^[\x21-\x7e]{1,128}$/.test(publisherId)) return undefined
+
+  let version = SUPPORTED_PROTOCOL_VERSION
+
+  for (const parameter of parameters) {
+    const [name, value] = parameter.split("=", 2)
+    if (name?.trim().toLowerCase() !== "v") continue
+
+    const parsed = Number(value?.trim())
+    if (!Number.isSafeInteger(parsed) || parsed < 1) return undefined
+
+    version = parsed
+  }
+
+  return { publisherId, version }
+}
+
+const helpers = {
+  PARTNER_SITE_HEADER_NAME: PUBLISHER_HEADER.toLocaleLowerCase(),
+  testPartnerHeaderValue(url: string, headerValue: string | undefined, source: "header" | "meta") {
+    const decodedValue = parsePublisherHeader(headerValue)
+    if (!decodedValue) return
+
+    // A publisher announcing a format this extension predates gets left alone rather than sent a
+    // token it cannot read
+    if (decodedValue.version !== SUPPORTED_PROTOCOL_VERSION) return
+
+    eventBroker().emit<TabTrackerPartnerDetectedData>(EVENT.TAB_TRACKER.PARTNER_DETECTED, {
+      publisherId: decodedValue.publisherId,
+      version: decodedValue.version,
+      source,
+      url,
+    })
   },
 
   async testHtmlMetaTags(tab: chrome.tabs.Tab) {
     if (!tab.id || !tab.url) return
 
-    let welcomeHeaderValue: string | undefined
+    let headerValue: string | undefined
     try {
       const [{ result: metaContentValue }] = await chrome.scripting.executeScript({
         target: { tabId: tab.id },
@@ -160,20 +195,20 @@ const helpers = {
         args: [this.PARTNER_SITE_HEADER_NAME],
       })
 
-      welcomeHeaderValue = metaContentValue || undefined
+      headerValue = metaContentValue || undefined
     } catch (_err) {
       // Ignore
     }
 
-    helpers.testPartnerWelcomeHeaderValue(tab.url, welcomeHeaderValue, "meta")
+    helpers.testPartnerHeaderValue(tab.url, headerValue, "meta")
   },
 
   testWebRequestHeaders(url: string, headers: chrome.webRequest.HttpHeader[]) {
-    const welcomeHeaderValue = headers.find(
+    const headerValue = headers.find(
       (header) => header.name.toLocaleLowerCase() === helpers.PARTNER_SITE_HEADER_NAME
     )?.value
 
-    helpers.testPartnerWelcomeHeaderValue(url, welcomeHeaderValue, "header")
+    helpers.testPartnerHeaderValue(url, headerValue, "header")
   },
 }
 
@@ -216,6 +251,17 @@ chrome.tabs.onRemoved.addListener((tabId) => trackedTabs().delete(tabId))
 chrome.windows.onRemoved.addListener((windowId) => trackedTabs().deleteByWindowId(windowId))
 
 eventBroker().on(EVENT.TELEMETRY.PARTNER_ADDED, () => trackedTabs().refreshPartnerFlags())
+
+// Phase D, the discovery loop: the first response from a participating site is what reveals it takes
+// part. From then on it gets a token bound to its hostname, so the visit after this one arrives
+// identified. Nothing is spent on a site that never announced itself.
+eventBroker().on<TabTrackerPartnerDetectedData>(EVENT.TAB_TRACKER.PARTNER_DETECTED, async ({ url }) => {
+  try {
+    await headerInjection().enableForHostname(new URL(url).hostname)
+  } catch (_err) {
+    // A malformed url or an exhausted pool must not break tab tracking
+  }
+})
 
 chrome.webRequest.onCompleted.addListener(
   async (details) => {

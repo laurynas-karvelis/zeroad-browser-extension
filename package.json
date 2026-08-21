@@ -31,9 +31,9 @@
     "@types/firefox-webext-browser": "^143.0.0",
     "bootstrap": "^5.3.8",
     "chokidar": "^5.0.0",
-    "happy-dom": "^20.11.5",
-    "hono": "^4.13.2",
-    "json-e": "^4.8.2",
-    "sass": "^1.102.0"
+    "happy-dom": "^20.11.6",
+    "hono": "^4.13.3",
+    "json-e": "^4.8.4",
+    "sass": "^1.103.0"
   }
 }

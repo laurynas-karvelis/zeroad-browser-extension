@@ -40,10 +40,10 @@ describe("eventBroker", () => {
   test("dispatches synchronously, so an emit is observable on the next line", () => {
     let seen = false
 
-    eventBroker().on(EVENT.HEADER_INJECTION.BASE_RULE_INSTALLED, () => {
+    eventBroker().on(EVENT.HEADER_INJECTION.RULE_INSTALLED, () => {
       seen = true
     })
-    eventBroker().emit(EVENT.HEADER_INJECTION.BASE_RULE_INSTALLED)
+    eventBroker().emit(EVENT.HEADER_INJECTION.RULE_INSTALLED)
 
     expect(seen).toBe(true)
   })

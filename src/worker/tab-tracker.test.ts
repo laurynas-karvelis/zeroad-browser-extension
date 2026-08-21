@@ -1,6 +1,4 @@
 import { beforeEach, describe, expect, mock, test } from "bun:test"
-import { encodeServerHeader } from "@zeroad.network/token"
-import { FEATURE, SERVER_HEADER } from "@zeroad.network/token/browser"
 import { chromeMock } from "../__fixtures__/chrome"
 
 // A hostname-keyed stand-in for the telemetry store: tab-tracker only ever asks it whether a URL
@@ -278,7 +276,7 @@ describe("trackedTabs", () => {
 })
 
 describe("welcome-header detection", () => {
-  const welcomeValue = encodeServerHeader("client-abc", [FEATURE.CLEAN_WEB, FEATURE.ONE_PASS])
+  const publisherValue = "client-abc; v=1"
 
   const partnerDetections = () => {
     const seen: unknown[] = []
@@ -301,11 +299,11 @@ describe("welcome-header detection", () => {
     test("decodes the welcome header and announces the partner", async () => {
       const seen = partnerDetections()
 
-      await complete("https://partner.test/", [{ name: SERVER_HEADER.WELCOME, value: welcomeValue }])
+      await complete("https://partner.test/", [{ name: "Better-Web-Publisher", value: publisherValue }])
 
       expect(seen.at(-1)).toEqual({
-        clientId: "client-abc",
-        features: ["CLEAN_WEB", "ONE_PASS"],
+        publisherId: "client-abc",
+        version: 1,
         source: "header",
         url: "https://partner.test/",
       })
@@ -314,26 +312,46 @@ describe("welcome-header detection", () => {
     test("matches the header name case-insensitively, as HTTP requires", async () => {
       const seen = partnerDetections()
 
-      await complete("https://partner.test/", [{ name: "x-better-web-welcome", value: welcomeValue }])
+      await complete("https://partner.test/", [{ name: "better-web-publisher", value: publisherValue }])
 
       expect(seen).toHaveLength(1)
     })
 
-    test("ignores responses with no welcome header, a malformed one, or no headers at all", async () => {
+    test("ignores responses with no publisher header, a malformed one, or no headers at all", async () => {
       const seen = partnerDetections()
 
       await complete("https://plain.test/", [{ name: "content-type", value: "text/html" }])
-      await complete("https://plain.test/", [{ name: SERVER_HEADER.WELCOME, value: "garbage" }])
-      await complete("https://plain.test/", [{ name: SERVER_HEADER.WELCOME, value: "" }])
+      await complete("https://plain.test/", [{ name: "Better-Web-Publisher", value: "" }])
+      await complete("https://plain.test/", [{ name: "Better-Web-Publisher", value: "has space" }])
+      await complete("https://plain.test/", [{ name: "Better-Web-Publisher", value: "pub_a; v=0" }])
       await chromeMock.webRequest.onCompleted.dispatch({ url: "https://plain.test/" })
 
       expect(seen).toEqual([])
     })
 
+    test("leaves a publisher announcing a newer protocol alone", async () => {
+      // Sending a v1 token to a site expecting v2 would just be rejected. Skipping it keeps the
+      // credential in the pool and lets an extension update sort it out.
+      const seen = partnerDetections()
+
+      await complete("https://future.test/", [{ name: "Better-Web-Publisher", value: "pub_a; v=2" }])
+
+      expect(seen).toEqual([])
+    })
+
+    test("accepts a bare publisher id, which predates the version parameter", async () => {
+      const seen = partnerDetections()
+
+      await complete("https://bare.test/", [{ name: "Better-Web-Publisher", value: "pub_bare" }])
+
+      expect(seen).toHaveLength(1)
+      expect(seen.at(-1)).toMatchObject({ publisherId: "pub_bare", version: 1 })
+    })
+
     test("skips URLs a browser serves for its own pages", async () => {
       const seen = partnerDetections()
 
-      await complete("chrome://extensions", [{ name: SERVER_HEADER.WELCOME, value: welcomeValue }])
+      await complete("chrome://extensions", [{ name: "Better-Web-Publisher", value: publisherValue }])
 
       expect(seen).toEqual([])
     })
@@ -344,18 +362,18 @@ describe("welcome-header detection", () => {
       chromeMock.tabs.onUpdated.dispatch(t.id as number, { status: "complete" }, t)
 
     test("reads the welcome value out of the page head and announces the partner", async () => {
-      chromeMock.scripting.executeScriptResult = [{ result: welcomeValue }]
+      chromeMock.scripting.executeScriptResult = [{ result: publisherValue }]
       const seen = partnerDetections()
 
       await finishLoading(tab(1, "https://meta.test/"))
 
-      expect(seen.at(-1)).toMatchObject({ clientId: "client-abc", source: "meta", url: "https://meta.test/" })
+      expect(seen.at(-1)).toMatchObject({ publisherId: "client-abc", source: "meta", url: "https://meta.test/" })
       expect(chromeMock.scripting.executeScriptCalls.at(-1)).toMatchObject({ target: { tabId: 1 } })
     })
 
     test("counts the very first page view of a meta-tag partner", async () => {
       // The meta lookup is asynchronous; not awaiting it means the first visit is never counted.
-      chromeMock.scripting.executeScriptResult = [{ result: welcomeValue }]
+      chromeMock.scripting.executeScriptResult = [{ result: publisherValue }]
       eventBroker().on(EVENT.TAB_TRACKER.PARTNER_DETECTED, () => makePartner("meta.test"))
 
       await finishLoading(tab(1, "https://meta.test/"))

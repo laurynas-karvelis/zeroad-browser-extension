@@ -8,10 +8,10 @@ mock.module("./credentials", () => ({ credentials: () => ({ enableRenewal, cance
 const push = mock<() => Promise<void>>(async () => {})
 mock.module("./telemetry-sync", () => ({ telemetrySync: () => ({ push }) }))
 
-const removeBaseRule = mock<() => Promise<void>>(async () => {})
-const enableBaseRule = mock<() => Promise<void>>(async () => {})
+const removeAllRules = mock<() => Promise<void>>(async () => {})
+const reset = mock<() => Promise<void>>(async () => {})
 mock.module("./header-injection", () => ({
-  headerInjection: () => ({ removeBaseRule, enableBaseRule, reset: mock() }),
+  headerInjection: () => ({ removeAllRules, reset }),
 }))
 
 const { EVENT, eventBroker } = await import("./event-broker")
@@ -32,7 +32,7 @@ describe("Extension", () => {
     await chromeMock.storage.sync.clear()
     await chromeMock.storage.local.clear()
     await chromeMock.alarms.clearAll()
-    for (const spy of [enableRenewal, cancelRenewal, push, removeBaseRule, enableBaseRule]) spy.mockClear()
+    for (const spy of [enableRenewal, cancelRenewal, push, removeAllRules, reset]) spy.mockClear()
   })
 
   describe("isSubscriptionActive", () => {
@@ -60,14 +60,17 @@ describe("Extension", () => {
       expect(extension().isSubscriptionActive()).toBe(false)
     })
 
-    test("is false when the extension token is missing, however fresh the expiry is", async () => {
+    test("is true on expiry alone, since no server-minted token exists any more", async () => {
+      // Tokens are built locally from credentials now, so nothing arrives in the sync payload that
+      // could gate this. An empty pool is handled where it matters - `headerInjection` simply
+      // declines to install a rule - rather than by declaring the subscription dead.
       eventBroker().emit(EVENT.EXTENSION.PAYLOAD_RECEIVED, {
         user: user(),
         subscription: { ...subscription(), extensionToken: "" },
       })
       await Bun.sleep(0)
 
-      expect(extension().isSubscriptionActive()).toBe(false)
+      expect(extension().isSubscriptionActive()).toBe(true)
     })
   })
 
@@ -80,7 +83,6 @@ describe("Extension", () => {
       await Bun.sleep(0)
 
       expect(chromeMock.storage.sync.peek().user).toEqual(user())
-      expect(extension().getExtensionToken()).toBe("ext-new")
       expect(extension().getTelemetryToken()).toBe("tel-1")
       expect(extension().getRefreshToken()).toBe("refresh-1")
       expect(synced).toHaveBeenCalled()
@@ -109,7 +111,6 @@ describe("Extension", () => {
       await Bun.sleep(0)
 
       expect(extension().isSubscriptionActive()).toBe(false)
-      expect(extension().getExtensionToken()).toBeUndefined()
       expect(chromeMock.storage.sync.peek().subscription).toBeUndefined()
     })
 
@@ -135,7 +136,7 @@ describe("Extension", () => {
       eventBroker().emit(EVENT.EXTENSION.PAYLOAD_RECEIVED, { user: { firstName: "Ada" } })
       await Bun.sleep(0)
 
-      expect(extension().getExtensionToken()).toBe("ext-keep")
+      expect(extension().getTelemetryToken()).toBe("tel-1")
     })
 
     test("pushes pending telemetry before switching to a different user", async () => {
@@ -183,11 +184,11 @@ describe("Extension", () => {
     test("pause takes the header rule down and resume puts it back", async () => {
       await extension().pause()
       expect(extension().isPaused()).toBe(true)
-      expect(removeBaseRule).toHaveBeenCalled()
+      expect(removeAllRules).toHaveBeenCalled()
 
       await extension().resume()
       expect(extension().isPaused()).toBe(false)
-      expect(enableBaseRule).toHaveBeenCalled()
+      expect(reset).toHaveBeenCalled()
     })
 
     test("a sync clears the paused state, so the popup and the rule agree again", async () => {

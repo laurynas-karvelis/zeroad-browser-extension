@@ -3,6 +3,7 @@ import { getConfig } from "./config"
 import { EVENT, eventBroker } from "./event-broker"
 import { extension } from "./extension"
 import { log } from "./logger"
+import { tokenPool } from "./token-pool"
 import type { ExtensionSyncData } from "./types"
 import { httpPost } from "./utils"
 
@@ -61,7 +62,10 @@ class Credentials {
     )
 
     if ((payload?.subscription?.expiresAt || 0) < Date.now()) throw new Error("Replied with old subscription")
-    if (!payload?.subscription?.extensionToken) throw new Error("Extension token wasn't provided")
+
+    // Sync says who the subscriber is and until when. The credentials that actually let sites be
+    // addressed are fetched separately, against keys generated here, so the platform never sees them
+    if (await tokenPool().needsRefresh()) await tokenPool().refresh()
 
     return payload
   }
