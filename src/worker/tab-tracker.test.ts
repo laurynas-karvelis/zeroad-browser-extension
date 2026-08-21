@@ -3,7 +3,7 @@ import { chromeMock } from "../__fixtures__/chrome"
 
 // A hostname-keyed stand-in for the telemetry store: tab-tracker only ever asks it whether a URL
 // belongs to a partner and tells it how long the user stayed.
-const partners = new Map<string, { clientId: string; features: string[]; views: number; duration: number }>()
+const partners = new Map<string, { clientId: string; views: number; duration: number }>()
 const addDuration = mock<(url: string | undefined, duration: number) => void>()
 const addViews = mock<(url: string | undefined) => void>()
 const hostOf = (url: string | undefined) => {
@@ -37,7 +37,7 @@ const TAB_REGISTER_SOURCE = {
 type Source = (typeof TAB_REGISTER_SOURCE)[keyof typeof TAB_REGISTER_SOURCE]
 
 const makePartner = (hostname: string, clientId = `client-${hostname}`) =>
-  partners.set(hostname, { clientId, features: ["CLEAN_WEB"], views: 0, duration: 0 })
+  partners.set(hostname, { clientId, views: 0, duration: 0 })
 
 const tab = (id: number, url: string, extra: Partial<chrome.tabs.Tab> = {}) =>
   ({ id, url, active: true, windowId: 1, ...extra }) as chrome.tabs.Tab
@@ -216,7 +216,7 @@ describe("trackedTabs", () => {
         isPartner: true,
         url: "https://partner.test/page",
         tabId: 7,
-        telemetryEntry: { clientId: "client-x", features: ["CLEAN_WEB"], views: 0, duration: 0 },
+        telemetryEntry: { clientId: "client-x", views: 0, duration: 0 },
       })
     })
 

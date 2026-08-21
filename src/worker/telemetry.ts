@@ -2,11 +2,11 @@ import { EVENT, type EventType, eventBroker } from "./event-broker"
 import { extension } from "./extension"
 import type { TabTrackerPartnerDetectedData } from "./tab-tracker"
 import type { Hostname } from "./types"
-import { arraysEqual, getHostname } from "./utils"
+import { getHostname } from "./utils"
 
 export type Entry = {
-  clientId: TabTrackerPartnerDetectedData["clientId"]
-  features: TabTrackerPartnerDetectedData["features"]
+  /** The publisher this hostname belongs to, for crediting the visit. */
+  clientId: TabTrackerPartnerDetectedData["publisherId"]
   views: number
   duration: number
 }
@@ -33,8 +33,8 @@ export class Telemetry {
     this.ready = this.load()
 
     eventBroker()
-      .on<TabTrackerPartnerDetectedData>(EVENT.TAB_TRACKER.PARTNER_DETECTED, ({ clientId, url, features }) =>
-        this.addEntry(clientId, url, features)
+      .on<TabTrackerPartnerDetectedData>(EVENT.TAB_TRACKER.PARTNER_DETECTED, ({ publisherId, url }) =>
+        this.addEntry(publisherId, url)
       )
       .on(EVENT.TELEMETRY.FLUSH, () => this.softReset())
       .on(EVENT.EXTENSION.SUBSCRIPTION_EXPIRED, () => this.softReset())
@@ -87,13 +87,13 @@ export class Telemetry {
     this.save()
   }
 
-  private addEntry(clientId: Entry["clientId"], url: string, features: Entry["features"]) {
+  private addEntry(clientId: Entry["clientId"], url: string) {
     const hostname = getHostname(url)
 
     if (!hostname || !clientId) return
 
     if (!this.map.has(hostname)) {
-      this.map.set(hostname, { clientId, features, views: 0, duration: 0 })
+      this.map.set(hostname, { clientId, views: 0, duration: 0 })
       this.save()
 
       eventBroker().emit(EVENT.TELEMETRY.PARTNER_ADDED, { clientId })
@@ -101,23 +101,12 @@ export class Telemetry {
       const entry = this.map.get(hostname)
       if (!entry) return
 
-      let shouldSave = false
-
       if (entry.clientId !== clientId) {
         // The hostname changed hands: adopt the new owner and drop counters the old one earned.
         entry.clientId = clientId
         entry.views = 0
         entry.duration = 0
 
-        shouldSave = true
-      }
-
-      if (!arraysEqual(features, entry.features || [])) {
-        entry.features = features
-        shouldSave = true
-      }
-
-      if (shouldSave) {
         this.save()
       }
     }

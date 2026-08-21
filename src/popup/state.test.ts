@@ -24,7 +24,7 @@ function subscription(overrides: Partial<SubscriptionExtensionData> = {}): Subsc
 }
 
 function partnerEntry(overrides: Partial<Entry> = {}): Entry {
-  return { clientId: "client-id", features: ["CLEAN_WEB"], views: 1, duration: 0, ...overrides }
+  return { clientId: "client-id", views: 1, duration: 0, ...overrides }
 }
 
 /** Delivers the event the worker pushes at the popup whenever the focused tab changes. */
@@ -264,61 +264,38 @@ describe("the partner site section", () => {
     expect(isShown("#report-site-btn")).toBe(false)
   })
 
-  test("lists what the site offers once the worker says the tab is a partner", async () => {
+  test("lists everything a participating site provides, once the worker says the tab is a partner", async () => {
+    // One plan means one answer: a participating site provides all of it, so every row is shown and
+    // there is nothing to strike through
     await subscribed()
 
     await activeTabChangedTo({
       isPartner: true,
       url: "https://news.example/story",
-      telemetryEntry: partnerEntry({ features: ["CLEAN_WEB"] }),
+      telemetryEntry: partnerEntry(),
     })
 
     expect(isShown("#partner-features")).toBe(true)
     expect(isShown("#partner-features li.clean_web")).toBe(true)
-    expect(isShown("#partner-features li.one_pass")).toBe(false)
+    expect(isShown("#partner-features li.one_pass")).toBe(true)
   })
 
-  test("leaves a feature the plan covers plain and untitled", async () => {
+  test("leaves every row plain and untitled, whatever the plan", async () => {
     await subscribed(SUBSCRIPTION_PLAN_NAME.CLEAN_WEB)
 
     await activeTabChangedTo({
       isPartner: true,
       url: "https://news.example/story",
-      telemetryEntry: partnerEntry({ features: ["CLEAN_WEB"] }),
+      telemetryEntry: partnerEntry(),
     })
 
-    expect(classesOf("#partner-features li.clean_web")).not.toContain("text-decoration-line-through")
-    expect(titleOf("#partner-features li.clean_web")).toBe("")
+    for (const row of ["#partner-features li.clean_web", "#partner-features li.one_pass"]) {
+      expect(classesOf(row)).not.toContain("text-decoration-line-through")
+      expect(titleOf(row)).toBe("")
+    }
   })
 
-  test("strikes through what the site offers but the plan does not buy, and says why", async () => {
-    await subscribed(SUBSCRIPTION_PLAN_NAME.CLEAN_WEB)
-
-    await activeTabChangedTo({
-      isPartner: true,
-      url: "https://news.example/story",
-      telemetryEntry: partnerEntry({ features: ["CLEAN_WEB", "ONE_PASS"] }),
-    })
-
-    expect(classesOf("#partner-features li.one_pass")).toContain("text-decoration-line-through")
-    expect(titleOf("#partner-features li.one_pass")).toBe("This feature isn't included in your plan")
-    expect(classesOf("#partner-features li.clean_web")).not.toContain("text-decoration-line-through")
-  })
-
-  test("strikes nothing through on the plan that buys everything", async () => {
-    await subscribed(SUBSCRIPTION_PLAN_NAME.FREEDOM)
-
-    await activeTabChangedTo({
-      isPartner: true,
-      url: "https://news.example/story",
-      telemetryEntry: partnerEntry({ features: ["CLEAN_WEB", "ONE_PASS"] }),
-    })
-
-    expect(shownCount("#partner-features li")).toBe(2)
-    expect(classesOf("#partner-features li.one_pass")).not.toContain("text-decoration-line-through")
-  })
-
-  test("drops a row that the previous tab had and this one does not", async () => {
+  test("shows the same rows again when the user moves to another partner site", async () => {
     // The popup stays open while the user switches tabs, so each event has to re-describe the site
     // from scratch rather than add to what the last one left behind.
     await subscribed(SUBSCRIPTION_PLAN_NAME.FREEDOM)
@@ -326,33 +303,15 @@ describe("the partner site section", () => {
     await activeTabChangedTo({
       isPartner: true,
       url: "https://both.example",
-      telemetryEntry: partnerEntry({ features: ["CLEAN_WEB", "ONE_PASS"] }),
+      telemetryEntry: partnerEntry(),
     })
     await activeTabChangedTo({
       isPartner: true,
       url: "https://clean.example",
-      telemetryEntry: partnerEntry({ features: ["CLEAN_WEB"] }),
+      telemetryEntry: partnerEntry(),
     })
 
-    expect(isShown("#partner-features li.clean_web")).toBe(true)
-    expect(isShown("#partner-features li.one_pass")).toBe(false)
-  })
-
-  test("ignores a feature the popup has no row for, rather than breaking the rest", async () => {
-    // The site declares features; a site running ahead of the installed extension can name one it
-    // has never heard of.
-    await subscribed(SUBSCRIPTION_PLAN_NAME.FREEDOM)
-
-    await activeTabChangedTo({
-      isPartner: true,
-      url: "https://ahead.example",
-      telemetryEntry: partnerEntry({
-        features: ["CLEAN_WEB", "SOMETHING_NEW"] as Entry["features"],
-      }),
-    })
-
-    expect(isShown("#partner-features li.clean_web")).toBe(true)
-    expect(shownCount("#partner-features li")).toBe(1)
+    expect(shownCount("#partner-features li")).toBe(2)
   })
 
   test("points Report at the site being reported, client id and page url and all", async () => {

@@ -1,12 +1,7 @@
 import { EVENT, type EventType } from "../worker/event-broker"
 import { log } from "../worker/logger"
 import type { TabTrackActiveTabEventData } from "../worker/tab-tracker"
-import {
-  PLAN_NAME_TO_FEATURE_NAMES,
-  SUBSCRIPTION_PLAN_LABEL,
-  type SubscriptionExtensionData,
-  type UserExtensionData,
-} from "../worker/types"
+import { SUBSCRIPTION_PLAN_LABEL, type SubscriptionExtensionData, type UserExtensionData } from "../worker/types"
 import { from } from "./date"
 import { $ } from "./dom"
 import { worker } from "./worker"
@@ -59,9 +54,6 @@ export class UserState {
   }
 
   private async setupPartnerSiteUi() {
-    const planFeatureNames =
-      (this.subscription?.planName && PLAN_NAME_TO_FEATURE_NAMES[this.subscription.planName]) || []
-
     worker.on<TabTrackActiveTabEventData>(EVENT.MESSAGING.IS_ACTIVE_TAB_PARTNER, (data) => {
       const { isPartner, url, telemetryEntry } = data
 
@@ -72,19 +64,10 @@ export class UserState {
         return
       }
 
-      const { features, clientId } = telemetryEntry
-      const unavailableFeatureClassList = ["text-decoration-line-through"]
+      // One plan, so a participating site provides everything - there is nothing to strike through
+      const { clientId } = telemetryEntry
 
-      $partnerFeatures.$("li").hide()
-
-      features.forEach((featureName) => {
-        const planEnablesFeature = planFeatureNames.includes(featureName)
-
-        $(`#partner-features li.${featureName.toLowerCase()}`)
-          .title(planEnablesFeature ? "" : "This feature isn't included in your plan")
-          .toggleClass(unavailableFeatureClassList, !planEnablesFeature)
-          .show()
-      })
+      $partnerFeatures.$("li").show()
 
       // set up report button
       const reportBaseUrl = $reportBtn.data("href")

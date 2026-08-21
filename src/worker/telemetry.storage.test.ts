@@ -10,8 +10,8 @@ const { Telemetry } = await import("./telemetry")
 // the lifetime of the module registry - a second instance would race this one's debounced writes.
 const SAVE_DEBOUNCE_DELAY = 5
 
-const detectPartner = (clientId: string, url: string) =>
-  eventBroker().emit(EVENT.TAB_TRACKER.PARTNER_DETECTED, { clientId, url, features: ["CLEAN_WEB"] })
+const detectPartner = (publisherId: string, url: string) =>
+  eventBroker().emit(EVENT.TAB_TRACKER.PARTNER_DETECTED, { publisherId, url, version: 1 })
 
 const storedTelemetry = () => chromeMock.storage.local.peek().telemetry as Record<string, unknown> | undefined
 
@@ -36,7 +36,7 @@ describe("Telemetry persistence", () => {
     await settle()
 
     expect(storedTelemetry()).toEqual({
-      "a.test": { clientId: "client-a", features: ["CLEAN_WEB"], views: 1, duration: 750 },
+      "a.test": { clientId: "client-a", views: 1, duration: 750 },
     })
   })
 
@@ -54,7 +54,6 @@ describe("Telemetry persistence", () => {
 
     expect(restarted.map.get("a.test")).toEqual({
       clientId: "client-a",
-      features: ["CLEAN_WEB"],
       views: 1,
       duration: 750,
     })
@@ -62,7 +61,7 @@ describe("Telemetry persistence", () => {
 
   test("a flush is persisted, so a pushed batch is never counted twice", async () => {
     await chromeMock.storage.local.seed({
-      telemetry: { "a.test": { clientId: "client-a", features: ["CLEAN_WEB"], views: 2, duration: 200 } },
+      telemetry: { "a.test": { clientId: "client-a", views: 2, duration: 200 } },
     })
     const telemetry = new Telemetry(SAVE_DEBOUNCE_DELAY)
     await telemetry.ready
@@ -71,13 +70,13 @@ describe("Telemetry persistence", () => {
     await settle()
 
     expect(storedTelemetry()).toEqual({
-      "a.test": { clientId: "client-a", features: ["CLEAN_WEB"], views: 0, duration: 0 },
+      "a.test": { clientId: "client-a", views: 0, duration: 0 },
     })
   })
 
   test("`ready` resolves only after the stored map is in place", async () => {
     await chromeMock.storage.local.seed({
-      telemetry: { "a.test": { clientId: "client-a", features: [], views: 1, duration: 1 } },
+      telemetry: { "a.test": { clientId: "client-a", views: 1, duration: 1 } },
     })
 
     const telemetry = new Telemetry(SAVE_DEBOUNCE_DELAY)

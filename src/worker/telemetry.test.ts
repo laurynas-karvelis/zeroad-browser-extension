@@ -16,7 +16,7 @@ const { Telemetry } = await import("./telemetry")
 // the same mutation to its own map) but not for storage ones - those live in telemetry.storage.test.ts.
 const SAVE_DEBOUNCE_DELAY = 5
 
-type StoredMap = Record<string, { clientId: string; features: string[]; views: number; duration: number }>
+type StoredMap = Record<string, { clientId: string; views: number; duration: number }>
 
 const seedStored = (telemetry: StoredMap) => chromeMock.storage.local.seed({ telemetry })
 
@@ -29,7 +29,6 @@ async function createTelemetry() {
 
 const entry = (clientId: string, views = 0, duration = 0) => ({
   clientId,
-  features: ["CLEAN_WEB"],
   views,
   duration,
 })
@@ -75,9 +74,8 @@ describe("Telemetry", () => {
       eventBroker().on(EVENT.TELEMETRY.PARTNER_ADDED, partnerAdded)
 
       eventBroker().emit(EVENT.TAB_TRACKER.PARTNER_DETECTED, {
-        clientId: "client-a",
+        publisherId: "client-a",
         url: "https://a.test/some/page?q=1",
-        features: ["CLEAN_WEB"],
       })
 
       expect(telemetry.map.get("a.test")).toEqual(entry("client-a"))
@@ -88,7 +86,7 @@ describe("Telemetry", () => {
       const telemetry = await createTelemetry()
 
       for (const url of ["https://a.test/one", "https://a.test/two", "http://a.test:8080/three"]) {
-        eventBroker().emit(EVENT.TAB_TRACKER.PARTNER_DETECTED, { clientId: "client-a", url, features: [] })
+        eventBroker().emit(EVENT.TAB_TRACKER.PARTNER_DETECTED, { publisherId: "client-a", url, version: 1 })
       }
 
       expect(telemetry.map.size).toBe(1)
@@ -97,8 +95,8 @@ describe("Telemetry", () => {
     test("ignores detections with no usable hostname or no clientId", async () => {
       const telemetry = await createTelemetry()
 
-      eventBroker().emit(EVENT.TAB_TRACKER.PARTNER_DETECTED, { clientId: "c", url: "not a url", features: [] })
-      eventBroker().emit(EVENT.TAB_TRACKER.PARTNER_DETECTED, { clientId: "", url: "https://a.test/", features: [] })
+      eventBroker().emit(EVENT.TAB_TRACKER.PARTNER_DETECTED, { publisherId: "c", url: "not a url", version: 1 })
+      eventBroker().emit(EVENT.TAB_TRACKER.PARTNER_DETECTED, { publisherId: "", url: "https://a.test/", version: 1 })
 
       expect(telemetry.map.size).toBe(0)
     })
@@ -108,9 +106,8 @@ describe("Telemetry", () => {
       const telemetry = await createTelemetry()
 
       eventBroker().emit(EVENT.TAB_TRACKER.PARTNER_DETECTED, {
-        clientId: "client-a",
+        publisherId: "client-a",
         url: "https://a.test/",
-        features: ["CLEAN_WEB"],
       })
 
       expect(telemetry.map.get("a.test")).toEqual(entry("client-a", 3, 500))
@@ -122,43 +119,11 @@ describe("Telemetry", () => {
       const telemetry = await createTelemetry()
 
       eventBroker().emit(EVENT.TAB_TRACKER.PARTNER_DETECTED, {
-        clientId: "new-client",
+        publisherId: "new-client",
         url: "https://a.test/",
-        features: ["CLEAN_WEB"],
       })
 
       expect(telemetry.map.get("a.test")).toEqual(entry("new-client"))
-    })
-
-    test("updated features are recorded without resetting the counters", async () => {
-      seedStored({ "a.test": entry("client-a", 3, 500) })
-      const telemetry = await createTelemetry()
-
-      eventBroker().emit(EVENT.TAB_TRACKER.PARTNER_DETECTED, {
-        clientId: "client-a",
-        url: "https://a.test/",
-        features: ["CLEAN_WEB", "ONE_PASS"],
-      })
-
-      expect(telemetry.map.get("a.test")).toMatchObject({
-        features: ["CLEAN_WEB", "ONE_PASS"],
-        views: 3,
-        duration: 500,
-      })
-    })
-  })
-
-  describe("counting", () => {
-    test("addViews increments a known partner and announces it", async () => {
-      seedStored({ "a.test": entry("client-a", 1, 10) })
-      const telemetry = await createTelemetry()
-      const viewsAdded = mock()
-      eventBroker().on(EVENT.TELEMETRY.VIEWS_ADDED, viewsAdded)
-
-      telemetry.addViews("https://a.test/page")
-
-      expect(telemetry.map.get("a.test")?.views).toBe(2)
-      expect(viewsAdded).toHaveBeenCalledWith({ clientId: "client-a", views: 1 })
     })
 
     test("addDuration accumulates milliseconds", async () => {
@@ -176,9 +141,8 @@ describe("Telemetry", () => {
       // page load is seen; reporting duration with zero views would be nonsense.
       const telemetry = await createTelemetry()
       eventBroker().emit(EVENT.TAB_TRACKER.PARTNER_DETECTED, {
-        clientId: "client-a",
+        publisherId: "client-a",
         url: "https://a.test/",
-        features: ["CLEAN_WEB"],
       })
 
       telemetry.addDuration("https://a.test/", 400)
@@ -247,9 +211,8 @@ describe("Telemetry", () => {
     test("skips partners with no activity at all", async () => {
       const telemetry = await createTelemetry()
       eventBroker().emit(EVENT.TAB_TRACKER.PARTNER_DETECTED, {
-        clientId: "client-a",
+        publisherId: "client-a",
         url: "https://a.test/",
-        features: [],
       })
 
       expect(telemetry.export()).toEqual({})

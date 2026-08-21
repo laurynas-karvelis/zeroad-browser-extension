@@ -18,12 +18,6 @@ export const SUBSCRIPTION_PLAN_LABEL = {
   [SUBSCRIPTION_PLAN_NAME.FREEDOM]: "Freedom",
 }
 
-export const PLAN_NAME_TO_FEATURE_NAMES = {
-  [SUBSCRIPTION_PLAN_NAME.CLEAN_WEB]: ["CLEAN_WEB"],
-  [SUBSCRIPTION_PLAN_NAME.ONE_PASS]: ["ONE_PASS"],
-  [SUBSCRIPTION_PLAN_NAME.FREEDOM]: ["CLEAN_WEB", "ONE_PASS"],
-}
-
 export type ExtensionSyncData = {
   user: UserExtensionData
   subscription?: SubscriptionExtensionData
