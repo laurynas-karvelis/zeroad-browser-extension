@@ -152,7 +152,10 @@ describe("trackedTabs", () => {
     })
 
     test("ignores a tab with no id", () => {
-      register({ url: "https://publisher.test/", active: true } as chrome.tabs.Tab, TAB_REGISTER_SOURCE.ON_TAB_ACTIVATED)
+      register(
+        { url: "https://publisher.test/", active: true } as chrome.tabs.Tab,
+        TAB_REGISTER_SOURCE.ON_TAB_ACTIVATED
+      )
 
       expect(trackedTabs().map.size).toBe(0)
     })
