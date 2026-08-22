@@ -1,6 +1,6 @@
 import JSONe from "json-e"
-import template from "./manifest.json"
-import packageJson from "./package.json"
+import template from "../manifest.json"
+import packageJson from "../package.json"
 
 const target = process.argv[2] as keyof typeof template | undefined
 

@@ -9,7 +9,7 @@
 
 Under project's root directory install required dependencies:
 
-```shell
+```sh
 bun install
 ```
 
@@ -17,13 +17,13 @@ bun install
 
 To build all final browser extensions, run:
 
-```shell
+```sh
 bun run build
 ```
 
 To create final zip artifact files:
 
-```
+```sh
 bun run package
 ```
 
