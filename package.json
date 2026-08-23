@@ -27,7 +27,7 @@
     "@zeroad.network/token": "^0.14.0"
   },
   "devDependencies": {
-    "@types/chrome": "^0.2.6",
+    "@types/chrome": "^0.2.7",
     "@types/firefox-webext-browser": "^143.0.0",
     "bootstrap": "^5.3.8",
     "chokidar": "^5.0.0",
