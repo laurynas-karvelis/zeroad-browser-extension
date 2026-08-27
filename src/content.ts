@@ -24,7 +24,8 @@
 
     if (event.data?.direction === "SITE_TO_EXTENSION") {
       const response = await browser.runtime.sendMessage(event.data.payload)
-      window.postMessage({ direction: "EXTENSION_TO_SITE", payload: response }, event.origin)
+      // Echo the request id back so the site can match this reply to the call it came from.
+      window.postMessage({ direction: "EXTENSION_TO_SITE", id: event.data.id, payload: response }, event.origin)
     }
   })
 })()
