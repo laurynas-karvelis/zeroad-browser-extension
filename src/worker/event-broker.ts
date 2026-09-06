@@ -64,5 +64,6 @@ export const EVENT = {
   WEBSITE: {
     PING: "PING",
     SYNC_CLIENT_DATA: "SYNC_CLIENT_DATA",
+    VERIFY_SITE: "VERIFY_SITE",
   },
 } as const

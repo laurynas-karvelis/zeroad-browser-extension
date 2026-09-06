@@ -7,7 +7,7 @@
     "icons": {
       "512": "images/dove.png"
     },
-    "permissions": ["scripting", "declarativeNetRequest", "webRequest", "storage", "alarms", "activeTab"],
+    "permissions": ["scripting", "declarativeNetRequest", "webRequest", "storage", "alarms", "tabs", "activeTab"],
     "popup": {
       "default_popup": "popup.html",
       "default_icon": "images/dove-gray-128.png"

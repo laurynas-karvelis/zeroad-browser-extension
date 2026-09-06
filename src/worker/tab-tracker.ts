@@ -1,5 +1,7 @@
 import { EVENT, eventBroker } from "./event-broker"
 import { headerInjection } from "./header-injection"
+import { readMetaPublisherValue } from "./page-scan"
+import { PUBLISHER_HEADER, SUPPORTED_PROTOCOL_VERSION, parsePublisherHeader } from "./publisher-id"
 import { type Entry, telemetry } from "./telemetry"
 import { isValidUrl } from "./utils"
 
@@ -130,37 +132,6 @@ class TrackedTabs {
 const singleton = new TrackedTabs()
 export const trackedTabs = () => singleton
 
-/** Must match `PUBLISHER_HEADER` and `PROTOCOL_VERSION` in @zeroad.network/token. */
-const PUBLISHER_HEADER = "Better-Web-Publisher"
-const SUPPORTED_PROTOCOL_VERSION = 1
-
-/**
- * Reads a `Better-Web-Publisher` value: the publisher id, optionally followed by `; v=N`.
- * A bare id predates the version parameter and is read as version 1.
- */
-export function parsePublisherHeader(headerValue: string | null | undefined) {
-  if (!headerValue) return undefined
-
-  const [rawId, ...parameters] = headerValue.split(";")
-  const publisherId = rawId.trim()
-
-  if (!/^[\x21-\x7e]{1,128}$/.test(publisherId)) return undefined
-
-  let version = SUPPORTED_PROTOCOL_VERSION
-
-  for (const parameter of parameters) {
-    const [name, value] = parameter.split("=", 2)
-    if (name?.trim().toLowerCase() !== "v") continue
-
-    const parsed = Number(value?.trim())
-    if (!Number.isSafeInteger(parsed) || parsed < 1) return undefined
-
-    version = parsed
-  }
-
-  return { publisherId, version }
-}
-
 const helpers = {
   PUBLISHER_SITE_HEADER_NAME: PUBLISHER_HEADER.toLocaleLowerCase(),
   testPublisherHeaderValue(url: string, headerValue: string | undefined, source: "header" | "meta") {
@@ -182,25 +153,8 @@ const helpers = {
   async testHtmlMetaTags(tab: chrome.tabs.Tab) {
     if (!tab.id || !tab.url) return
 
-    let headerValue: string | undefined
-    try {
-      const [{ result: metaContentValue }] = await chrome.scripting.executeScript({
-        target: { tabId: tab.id },
-        func: (lookupHeaderName: string) => {
-          return Array.from(document.head.querySelectorAll("meta[name][content]"))
-            .find((el) => el.getAttribute("name")?.trim().toLocaleLowerCase() === lookupHeaderName)
-            ?.getAttribute("content")
-            ?.trim()
-        },
-        args: [this.PUBLISHER_SITE_HEADER_NAME],
-      })
-
-      headerValue = metaContentValue || undefined
-    } catch (_err) {
-      // Ignore
-    }
-
-    helpers.testPublisherHeaderValue(tab.url, headerValue, "meta")
+    const metaValue = await readMetaPublisherValue(tab.id)
+    helpers.testPublisherHeaderValue(tab.url, metaValue, "meta")
   },
 
   testWebRequestHeaders(url: string, headers: chrome.webRequest.HttpHeader[]) {

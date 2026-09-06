@@ -2,6 +2,7 @@ import { getConfig } from "./config"
 import { EVENT, type EventType, eventBroker } from "./event-broker"
 import { extension } from "./extension"
 import { log } from "./logger"
+import { type VerifySiteRequest, verifySite } from "./site-verification"
 import { type TabTrackActiveTabEventData, trackedTabs } from "./tab-tracker"
 import { telemetry } from "./telemetry"
 import type { ExtensionSyncData } from "./types"
@@ -147,6 +148,12 @@ class Messaging {
 
       return false
     })
+
+    // Opens the entered address in a background tab and reports whether it carries this publisher's id
+    // as a response header, meta tag, or page content, so the site can register and activate it.
+    onSiteMessage<{ payload: VerifySiteRequest }>(EVENT.WEBSITE.VERIFY_SITE, async (message) =>
+      verifySite(message.payload)
+    )
   }
 }
 

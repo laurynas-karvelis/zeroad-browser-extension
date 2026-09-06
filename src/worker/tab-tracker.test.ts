@@ -279,7 +279,8 @@ describe("trackedTabs", () => {
 })
 
 describe("welcome-header detection", () => {
-  const publisherValue = "client-abc; v=1"
+  const publisherId = "ZERO_AD:PUB_ID:AbCdEfGhIjKlMnOpQrStUvWx"
+  const publisherValue = `${publisherId}; v=1`
 
   const publisherDetections = () => {
     const seen: unknown[] = []
@@ -305,7 +306,7 @@ describe("welcome-header detection", () => {
       await complete("https://publisher.test/", [{ name: "Better-Web-Publisher", value: publisherValue }])
 
       expect(seen.at(-1)).toEqual({
-        publisherId: "client-abc",
+        publisherId,
         version: 1,
         source: "header",
         url: "https://publisher.test/",
@@ -337,7 +338,7 @@ describe("welcome-header detection", () => {
       // credential in the pool and lets an extension update sort it out.
       const seen = publisherDetections()
 
-      await complete("https://future.test/", [{ name: "Better-Web-Publisher", value: "pub_a; v=2" }])
+      await complete("https://future.test/", [{ name: "Better-Web-Publisher", value: `${publisherId}; v=2` }])
 
       expect(seen).toEqual([])
     })
@@ -345,10 +346,10 @@ describe("welcome-header detection", () => {
     test("accepts a bare publisher id, which predates the version parameter", async () => {
       const seen = publisherDetections()
 
-      await complete("https://bare.test/", [{ name: "Better-Web-Publisher", value: "pub_bare" }])
+      await complete("https://bare.test/", [{ name: "Better-Web-Publisher", value: publisherId }])
 
       expect(seen).toHaveLength(1)
-      expect(seen.at(-1)).toMatchObject({ publisherId: "pub_bare", version: 1 })
+      expect(seen.at(-1)).toMatchObject({ publisherId, version: 1 })
     })
 
     test("skips URLs a browser serves for its own pages", async () => {
@@ -370,7 +371,7 @@ describe("welcome-header detection", () => {
 
       await finishLoading(tab(1, "https://meta.test/"))
 
-      expect(seen.at(-1)).toMatchObject({ publisherId: "client-abc", source: "meta", url: "https://meta.test/" })
+      expect(seen.at(-1)).toMatchObject({ publisherId, source: "meta", url: "https://meta.test/" })
       expect(chromeMock.scripting.executeScriptCalls.at(-1)).toMatchObject({ target: { tabId: 1 } })
     })
 
