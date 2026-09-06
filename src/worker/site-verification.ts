@@ -1,5 +1,5 @@
 import { readBodyPublisherId, readMetaPublisherValue } from "./page-scan"
-import { PUBLISHER_HEADER, isValidPublisherId, parsePublisherHeader, publisherIdsMatch } from "./publisher-id"
+import { isValidPublisherId, PUBLISHER_HEADER, parsePublisherHeader, publisherIdsMatch } from "./publisher-id"
 import { isValidUrl } from "./utils"
 
 /**
@@ -157,7 +157,8 @@ export async function verifySite(request: VerifySiteRequest): Promise<VerifySite
       success: false,
       method: null,
       finalUrl,
-      error: "We reached the page but couldn't find your publisher id in a response header, a meta tag, or the page content.",
+      error:
+        "We reached the page but couldn't find your publisher id in a response header, a meta tag, or the page content.",
     }
   } catch (error) {
     return {

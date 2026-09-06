@@ -37,7 +37,11 @@ function onSiteMessage<T = unknown, P = unknown>(
   eventName: EventType,
   callback: (message: T & { command: typeof eventName }) => Promise<P>
 ) {
-  if (typeof browser !== "undefined" && typeof browser.runtime !== "undefined") {
+  // Detect by capability, not by the `browser` global: recent Chrome also defines `browser`, which
+  // sent us down the Firefox path and left `onMessageExternal` unregistered, so site pings got
+  // "receiving end does not exist". Firefox has no `onMessageExternal` (it lacks externally_connectable
+  // for pages), so its absence is the reliable "this is Firefox, bridge via content.js" signal.
+  if (!chrome.runtime.onMessageExternal) {
     // Firefox extension - has to communicate via `content.js` (facepalm)
     chrome.runtime.onMessage.addListener((message, sender) => {
       // Verify sender is our content script, running on a site we actually trust
@@ -52,14 +56,16 @@ function onSiteMessage<T = unknown, P = unknown>(
       }
 
       if (message?.command === eventName) {
+        log("debug", "[messaging]", "site message", eventName, "from", sender.url)
         return callback(message)
       }
     })
   } else {
     // Chrome and Microsoft Edge into site's `window` context
-    chrome.runtime.onMessageExternal.addListener((message, _sender, sendResponse) => {
+    chrome.runtime.onMessageExternal.addListener((message, sender, sendResponse) => {
       if (message?.command !== eventName) return false
 
+      log("debug", "[messaging]", "external message", eventName, "from", sender?.origin || sender?.url)
       respondWith(callback(message), sendResponse)
       return true
     })
@@ -133,12 +139,24 @@ class Messaging {
   }
 
   async listenToSiteMessages() {
+    const isFirefox = !chrome.runtime.onMessageExternal
+    log(
+      "debug",
+      "[messaging]",
+      isFirefox ? "Firefox content-script bridge" : "Chrome external messaging",
+      "ready for site messages"
+    )
+
     // Messages from https://zeroad.network site
-    onSiteMessage(EVENT.WEBSITE.PING, async () => ({
-      version: chrome.runtime.getManifest().version,
-      userAgent: navigator.userAgent,
-      reply: "PONG",
-    }))
+    onSiteMessage(EVENT.WEBSITE.PING, async () => {
+      const response = {
+        version: chrome.runtime.getManifest().version,
+        userAgent: navigator.userAgent,
+        reply: "PONG" as const,
+      }
+      log("debug", "[messaging]", "PING -> PONG", response.version)
+      return response
+    })
 
     onSiteMessage<{ payload: ExtensionSyncData }>(EVENT.WEBSITE.SYNC_CLIENT_DATA, async (message) => {
       if (message?.payload) {
@@ -151,9 +169,11 @@ class Messaging {
 
     // Opens the entered address in a background tab and reports whether it carries this publisher's id
     // as a response header, meta tag, or page content, so the site can register and activate it.
-    onSiteMessage<{ payload: VerifySiteRequest }>(EVENT.WEBSITE.VERIFY_SITE, async (message) =>
-      verifySite(message.payload)
-    )
+    onSiteMessage<{ payload: VerifySiteRequest }>(EVENT.WEBSITE.VERIFY_SITE, async (message) => {
+      const response = await verifySite(message.payload)
+      log("debug", "[messaging]", "verifySite", response)
+      return response
+    })
   }
 }
 
