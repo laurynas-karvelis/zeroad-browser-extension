@@ -139,13 +139,13 @@ export async function verifySite(request: VerifySiteRequest): Promise<VerifySite
 
     const finalUrl = capture.finalUrlFor(tabId) || url
 
-    if (publisherIdsMatch(parsePublisherHeader(capture.headerFor(tabId))?.publisherId, publisherId)) {
+    if (publisherIdsMatch(parsePublisherHeader(capture.headerFor(tabId)), publisherId)) {
       return { success: true, method: "header", finalUrl }
     }
 
     const [metaValue, bodyId] = await Promise.all([readMetaPublisherValue(tabId), readBodyPublisherId(tabId)])
 
-    if (publisherIdsMatch(parsePublisherHeader(metaValue)?.publisherId, publisherId)) {
+    if (publisherIdsMatch(parsePublisherHeader(metaValue), publisherId)) {
       return { success: true, method: "meta", finalUrl }
     }
 

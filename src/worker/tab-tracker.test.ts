@@ -279,8 +279,8 @@ describe("trackedTabs", () => {
 })
 
 describe("welcome-header detection", () => {
-  const publisherId = "ZERO_AD:PUB_ID:AbCdEfGhIjKlMnOpQrStUvWx"
-  const publisherValue = `${publisherId}; v=1`
+  const publisherId = "zapub_AbCdEfGhIjKlMnOpQrStUvWx"
+  const publisherValue = publisherId
 
   const publisherDetections = () => {
     const seen: unknown[] = []
@@ -307,7 +307,6 @@ describe("welcome-header detection", () => {
 
       expect(seen.at(-1)).toEqual({
         publisherId,
-        version: 1,
         source: "header",
         url: "https://publisher.test/",
       })
@@ -327,29 +326,20 @@ describe("welcome-header detection", () => {
       await complete("https://plain.test/", [{ name: "content-type", value: "text/html" }])
       await complete("https://plain.test/", [{ name: "Better-Web-Publisher", value: "" }])
       await complete("https://plain.test/", [{ name: "Better-Web-Publisher", value: "has space" }])
-      await complete("https://plain.test/", [{ name: "Better-Web-Publisher", value: "pub_a; v=0" }])
+      await complete("https://plain.test/", [{ name: "Better-Web-Publisher", value: "pub_a" }])
       await chromeMock.webRequest.onCompleted.dispatch({ url: "https://plain.test/" })
 
       expect(seen).toEqual([])
     })
 
-    test("leaves a publisher announcing a newer protocol alone", async () => {
-      // Sending a v1 token to a site expecting v2 would just be rejected. Skipping it keeps the
-      // credential in the pool and lets an extension update sort it out.
+    test("tolerates a legacy trailing parameter on the header", async () => {
+      // A publisher whose header still carries the old `; v=1` parameter continues to resolve
       const seen = publisherDetections()
 
-      await complete("https://future.test/", [{ name: "Better-Web-Publisher", value: `${publisherId}; v=2` }])
-
-      expect(seen).toEqual([])
-    })
-
-    test("accepts a bare publisher id, which predates the version parameter", async () => {
-      const seen = publisherDetections()
-
-      await complete("https://bare.test/", [{ name: "Better-Web-Publisher", value: publisherId }])
+      await complete("https://legacy.test/", [{ name: "Better-Web-Publisher", value: `${publisherId}; v=1` }])
 
       expect(seen).toHaveLength(1)
-      expect(seen.at(-1)).toMatchObject({ publisherId, version: 1 })
+      expect(seen.at(-1)).toMatchObject({ publisherId })
     })
 
     test("skips URLs a browser serves for its own pages", async () => {

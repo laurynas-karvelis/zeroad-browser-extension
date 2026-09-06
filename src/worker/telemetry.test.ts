@@ -86,7 +86,7 @@ describe("Telemetry", () => {
       const telemetry = await createTelemetry()
 
       for (const url of ["https://a.test/one", "https://a.test/two", "http://a.test:8080/three"]) {
-        eventBroker().emit(EVENT.TAB_TRACKER.PUBLISHER_DETECTED, { publisherId: "client-a", url, version: 1 })
+        eventBroker().emit(EVENT.TAB_TRACKER.PUBLISHER_DETECTED, { publisherId: "client-a", url })
       }
 
       expect(telemetry.map.size).toBe(1)
@@ -95,8 +95,8 @@ describe("Telemetry", () => {
     test("ignores detections with no usable hostname or no publisherId", async () => {
       const telemetry = await createTelemetry()
 
-      eventBroker().emit(EVENT.TAB_TRACKER.PUBLISHER_DETECTED, { publisherId: "c", url: "not a url", version: 1 })
-      eventBroker().emit(EVENT.TAB_TRACKER.PUBLISHER_DETECTED, { publisherId: "", url: "https://a.test/", version: 1 })
+      eventBroker().emit(EVENT.TAB_TRACKER.PUBLISHER_DETECTED, { publisherId: "c", url: "not a url" })
+      eventBroker().emit(EVENT.TAB_TRACKER.PUBLISHER_DETECTED, { publisherId: "", url: "https://a.test/" })
 
       expect(telemetry.map.size).toBe(0)
     })

@@ -1,7 +1,7 @@
 import { EVENT, eventBroker } from "./event-broker"
 import { headerInjection } from "./header-injection"
 import { readMetaPublisherValue } from "./page-scan"
-import { PUBLISHER_HEADER, SUPPORTED_PROTOCOL_VERSION, parsePublisherHeader } from "./publisher-id"
+import { PUBLISHER_HEADER, parsePublisherHeader } from "./publisher-id"
 import { type Entry, telemetry } from "./telemetry"
 import { isValidUrl } from "./utils"
 
@@ -9,8 +9,6 @@ type BrowserTab = chrome.tabs.Tab & { publisher: boolean }
 
 export type TabTrackerPublisherDetectedData = {
   publisherId: string
-  /** Protocol version the publisher announced, so a newer one can be skipped rather than mis-served. */
-  version: number
   source: "header" | "meta"
   url: string
 }
@@ -135,16 +133,11 @@ export const trackedTabs = () => singleton
 const helpers = {
   PUBLISHER_SITE_HEADER_NAME: PUBLISHER_HEADER.toLocaleLowerCase(),
   testPublisherHeaderValue(url: string, headerValue: string | undefined, source: "header" | "meta") {
-    const decodedValue = parsePublisherHeader(headerValue)
-    if (!decodedValue) return
-
-    // A publisher announcing a format this extension predates gets left alone rather than sent a
-    // token it cannot read
-    if (decodedValue.version !== SUPPORTED_PROTOCOL_VERSION) return
+    const publisherId = parsePublisherHeader(headerValue)
+    if (!publisherId) return
 
     eventBroker().emit<TabTrackerPublisherDetectedData>(EVENT.TAB_TRACKER.PUBLISHER_DETECTED, {
-      publisherId: decodedValue.publisherId,
-      version: decodedValue.version,
+      publisherId,
       source,
       url,
     })

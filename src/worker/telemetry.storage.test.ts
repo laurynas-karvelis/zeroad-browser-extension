@@ -11,7 +11,7 @@ const { Telemetry } = await import("./telemetry")
 const SAVE_DEBOUNCE_DELAY = 5
 
 const detectPublisher = (publisherId: string, url: string) =>
-  eventBroker().emit(EVENT.TAB_TRACKER.PUBLISHER_DETECTED, { publisherId, url, version: 1 })
+  eventBroker().emit(EVENT.TAB_TRACKER.PUBLISHER_DETECTED, { publisherId, url })
 
 const storedTelemetry = () => chromeMock.storage.local.peek().telemetry as Record<string, unknown> | undefined
 
