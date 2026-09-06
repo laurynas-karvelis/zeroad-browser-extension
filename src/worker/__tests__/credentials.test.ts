@@ -1,19 +1,19 @@
 import { afterEach, beforeEach, describe, expect, mock, spyOn, test } from "bun:test"
-import { chromeMock } from "../__fixtures__/chrome"
+import { chromeMock } from "../../__fixtures__/chrome"
 
 const state = { refreshToken: "refresh-1" as string | undefined }
-mock.module("./extension", () => ({ extension: () => ({ getRefreshToken: () => state.refreshToken }) }))
+mock.module("../extension", () => ({ extension: () => ({ getRefreshToken: () => state.refreshToken }) }))
 
 const pool = { needsRefresh: true, refresh: mock(async () => 250) }
-mock.module("./token-pool", () => ({
+mock.module("../token-pool", () => ({
   tokenPool: () => ({
     needsRefresh: async () => pool.needsRefresh,
     refresh: pool.refresh,
   }),
 }))
 
-const { EVENT, eventBroker } = await import("./event-broker")
-const { credentials } = await import("./credentials")
+const { EVENT, eventBroker } = await import("../event-broker")
+const { credentials } = await import("../credentials")
 
 const EXPIRY_ALARM = "EXTENSION_TOKEN_EXPIRATION_ALARM"
 const RETRY_ALARM = "EXTENSION_TOKEN_RENEWAL_ATTEMPT_ALARM"

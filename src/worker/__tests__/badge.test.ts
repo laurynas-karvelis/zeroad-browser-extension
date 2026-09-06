@@ -1,8 +1,8 @@
 import { beforeEach, describe, expect, test } from "bun:test"
-import { chromeMock } from "../__fixtures__/chrome"
+import { chromeMock } from "../../__fixtures__/chrome"
 
-const { EVENT, eventBroker } = await import("./event-broker")
-const { badge } = await import("./badge")
+const { EVENT, eventBroker } = await import("../event-broker")
+const { badge } = await import("../badge")
 
 const ACTIVE_ICON = "chrome-extension://test-extension-id/images/dove-128.png"
 const INACTIVE_ICON = "chrome-extension://test-extension-id/images/dove-gray-128.png"

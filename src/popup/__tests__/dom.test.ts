@@ -1,6 +1,6 @@
 import { beforeEach, describe, expect, mock, test } from "bun:test"
-import { classesOf, hrefOf, mountPopup, textOf, titleOf } from "../__fixtures__/dom"
-import { $, applyBootstrapTheme, setVersion, updateUrls } from "./dom"
+import { classesOf, hrefOf, mountPopup, textOf, titleOf } from "../../__fixtures__/dom"
+import { $, applyBootstrapTheme, setVersion, updateUrls } from "../dom"
 
 const SITE_URL = "https://zeroad.network"
 

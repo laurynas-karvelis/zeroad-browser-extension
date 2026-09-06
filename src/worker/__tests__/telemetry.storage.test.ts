@@ -1,10 +1,10 @@
 import { beforeEach, describe, expect, mock, test } from "bun:test"
-import { chromeMock } from "../__fixtures__/chrome"
+import { chromeMock } from "../../__fixtures__/chrome"
 
-mock.module("./extension", () => ({ extension: () => ({ isSubscriptionActive: () => true }) }))
+mock.module("../extension", () => ({ extension: () => ({ isSubscriptionActive: () => true }) }))
 
-const { EVENT, eventBroker } = await import("./event-broker")
-const { Telemetry } = await import("./telemetry")
+const { EVENT, eventBroker } = await import("../event-broker")
+const { Telemetry } = await import("../telemetry")
 
 // Persistence lives in its own file because instances stay subscribed to the shared event bus for
 // the lifetime of the module registry - a second instance would race this one's debounced writes.

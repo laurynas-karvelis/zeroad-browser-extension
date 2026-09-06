@@ -1,21 +1,21 @@
 import { beforeEach, describe, expect, mock, test } from "bun:test"
-import { chromeMock } from "../__fixtures__/chrome"
+import { chromeMock } from "../../__fixtures__/chrome"
 
 const enableRenewal = mock<(when: number) => Promise<void>>(async () => {})
 const cancelRenewal = mock<() => Promise<void>>(async () => {})
-mock.module("./credentials", () => ({ credentials: () => ({ enableRenewal, cancelRenewal }) }))
+mock.module("../credentials", () => ({ credentials: () => ({ enableRenewal, cancelRenewal }) }))
 
 const push = mock<() => Promise<void>>(async () => {})
-mock.module("./telemetry-sync", () => ({ telemetrySync: () => ({ push }) }))
+mock.module("../telemetry-sync", () => ({ telemetrySync: () => ({ push }) }))
 
 const removeAllRules = mock<() => Promise<void>>(async () => {})
 const reset = mock<() => Promise<void>>(async () => {})
-mock.module("./header-injection", () => ({
+mock.module("../header-injection", () => ({
   headerInjection: () => ({ removeAllRules, reset }),
 }))
 
-const { EVENT, eventBroker } = await import("./event-broker")
-const { extension } = await import("./extension")
+const { EVENT, eventBroker } = await import("../event-broker")
+const { extension } = await import("../extension")
 
 const HOUR = 60 * 60 * 1000
 

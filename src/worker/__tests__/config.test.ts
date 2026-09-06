@@ -1,10 +1,10 @@
 import { describe, expect, test } from "bun:test"
-import { chromeMock } from "../__fixtures__/chrome"
+import { chromeMock } from "../../__fixtures__/chrome"
 
 chromeMock.management.installType = "normal"
 chromeMock.runtime.manifestVersion = "1.2.3"
 
-const { getConfig } = await import("./config")
+const { getConfig } = await import("../config")
 
 describe("getConfig", () => {
   test("points at production hosts for a store-installed extension", async () => {

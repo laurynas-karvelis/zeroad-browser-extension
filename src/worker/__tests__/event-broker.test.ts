@@ -1,5 +1,5 @@
 import { describe, expect, mock, test } from "bun:test"
-import { EVENT, eventBroker } from "./event-broker"
+import { EVENT, eventBroker } from "../event-broker"
 
 describe("eventBroker", () => {
   test("is a singleton, so every worker module shares one bus", () => {

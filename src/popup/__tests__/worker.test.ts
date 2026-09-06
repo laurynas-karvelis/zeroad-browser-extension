@@ -1,7 +1,7 @@
 import { beforeEach, describe, expect, mock, test } from "bun:test"
-import { chromeMock } from "../__fixtures__/chrome"
+import { chromeMock } from "../../__fixtures__/chrome"
 
-const { worker } = await import("./worker")
+const { worker } = await import("../worker")
 
 describe("worker.sendCommand", () => {
   beforeEach(() => {

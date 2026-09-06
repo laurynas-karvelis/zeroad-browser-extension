@@ -1,8 +1,8 @@
 import { afterEach, beforeEach, describe, expect, mock, spyOn, test } from "bun:test"
-import { chromeMock } from "../__fixtures__/chrome"
-import { click, isShown, mountPopup } from "../__fixtures__/dom"
-import { EVENT } from "../worker/event-broker"
-import { enableDevTools } from "./dev-tools"
+import { chromeMock } from "../../__fixtures__/chrome"
+import { click, isShown, mountPopup } from "../../__fixtures__/dom"
+import { EVENT } from "../../worker/event-broker"
+import { enableDevTools } from "../dev-tools"
 
 const commandsSent = () => chromeMock.runtime.sentMessages.map((message) => (message as { command: string }).command)
 

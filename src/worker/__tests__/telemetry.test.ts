@@ -1,15 +1,15 @@
 import { afterEach, beforeEach, describe, expect, mock, test } from "bun:test"
-import { chromeMock } from "../__fixtures__/chrome"
+import { chromeMock } from "../../__fixtures__/chrome"
 
 // `telemetry` refuses to count anything while the subscription is inactive, and the real
 // `extension` singleton drags in half the worker - stub it down to just that decision.
 let subscriptionActive = true
-mock.module("./extension", () => ({
+mock.module("../extension", () => ({
   extension: () => ({ isSubscriptionActive: () => subscriptionActive }),
 }))
 
-const { EVENT, eventBroker } = await import("./event-broker")
-const { Telemetry } = await import("./telemetry")
+const { EVENT, eventBroker } = await import("../event-broker")
+const { Telemetry } = await import("../telemetry")
 
 // Every instance built here subscribes to the shared event bus and stays subscribed, so instances
 // from earlier tests still react to later emits. That is harmless for map assertions (each applies

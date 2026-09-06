@@ -1,5 +1,5 @@
 import { beforeEach, describe, expect, mock, test } from "bun:test"
-import { chromeMock } from "../__fixtures__/chrome"
+import { chromeMock } from "../../__fixtures__/chrome"
 
 // On Firefox the site cannot talk to the worker directly - `content.js` relays for it, so site
 // messages arrive on the ordinary runtime channel and must be told apart from popup messages.
@@ -10,13 +10,18 @@ import { chromeMock } from "../__fixtures__/chrome"
   version: "1.0.0",
   content_scripts: [{ matches: ["https://zeroad.network/*", "http://localhost/*"], js: ["js/content.js"] }],
 })
+// Firefox has no `onMessageExternal` (pages can't use externally_connectable), and messaging.ts uses
+// exactly that absence to decide it must bridge site messages through content.js. Remove it before
+// importing messaging so the Firefox relay path is the one that registers.
+// biome-ignore lint/suspicious/noExplicitAny: deleting an optional capability off the mock
+delete (chromeMock.runtime as any).onMessageExternal
 
-mock.module("./extension", () => ({ extension: () => ({ getExtensionData: () => ({}), isPaused: () => false }) }))
-mock.module("./tab-tracker", () => ({ trackedTabs: () => ({ notifyIfActiveTabIsPublisher: mock() }) }))
-mock.module("./telemetry", () => ({ telemetry: () => ({ map: new Map(), export: () => ({}) }) }))
+mock.module("../extension", () => ({ extension: () => ({ getExtensionData: () => ({}), isPaused: () => false }) }))
+mock.module("../tab-tracker", () => ({ trackedTabs: () => ({ notifyIfActiveTabIsPublisher: mock() }) }))
+mock.module("../telemetry", () => ({ telemetry: () => ({ map: new Map(), export: () => ({}) }) }))
 
-const { EVENT, eventBroker } = await import("./event-broker")
-await import("./messaging")
+const { EVENT, eventBroker } = await import("../event-broker")
+await import("../messaging")
 
 const relayFromSite = (message: object, sender: object) =>
   chromeMock.runtime.onMessage.dispatch(message, sender, () => {})

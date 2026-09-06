@@ -1,8 +1,8 @@
 import { afterEach, beforeEach, describe, expect, mock, spyOn, test } from "bun:test"
-import { chromeMock } from "../__fixtures__/chrome"
+import { chromeMock } from "../../__fixtures__/chrome"
 
 const state = { active: true, telemetryToken: "tel-1" as string | undefined }
-mock.module("./extension", () => ({
+mock.module("../extension", () => ({
   extension: () => ({
     isSubscriptionActive: () => state.active,
     getTelemetryToken: () => state.telemetryToken,
@@ -12,7 +12,7 @@ mock.module("./extension", () => ({
 let exported: Record<string, { views: number; duration: number; hosts: string[] }> = {}
 let readyResolved = false
 let ready = Promise.resolve()
-mock.module("./telemetry", () => ({
+mock.module("../telemetry", () => ({
   telemetry: () => ({
     get ready() {
       return ready
@@ -21,8 +21,8 @@ mock.module("./telemetry", () => ({
   }),
 }))
 
-const { EVENT, eventBroker } = await import("./event-broker")
-const { telemetrySync } = await import("./telemetry-sync")
+const { EVENT, eventBroker } = await import("../event-broker")
+const { telemetrySync } = await import("../telemetry-sync")
 
 const PUSH_ALARM = "telemetry-push"
 

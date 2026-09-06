@@ -1,8 +1,8 @@
 import { beforeEach, describe, expect, mock, test } from "bun:test"
-import { chromeMock } from "../__fixtures__/chrome"
+import { chromeMock } from "../../__fixtures__/chrome"
 
 const state = { active: true, paused: false }
-mock.module("./extension", () => ({
+mock.module("../extension", () => ({
   extension: () => ({
     isSubscriptionActive: () => state.active,
     isPaused: () => state.paused,
@@ -15,7 +15,7 @@ const pool = {
   exhausted: false,
 }
 
-mock.module("./token-pool", () => ({
+mock.module("../token-pool", () => ({
   tokenPool: () => ({
     async tokenFor(hostname: string) {
       if (pool.exhausted) return undefined
@@ -32,8 +32,8 @@ mock.module("./token-pool", () => ({
   }),
 }))
 
-const { EVENT, eventBroker } = await import("./event-broker")
-const { headerInjection } = await import("./header-injection")
+const { EVENT, eventBroker } = await import("../event-broker")
+const { headerInjection } = await import("../header-injection")
 
 const TOKEN_HEADER = "Better-Web-Token"
 

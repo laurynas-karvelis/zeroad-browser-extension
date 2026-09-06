@@ -1,5 +1,5 @@
 import { beforeEach, describe, expect, mock, test } from "bun:test"
-import { chromeMock } from "../__fixtures__/chrome"
+import { chromeMock } from "../../__fixtures__/chrome"
 
 // A hostname-keyed stand-in for the telemetry store: tab-tracker only ever asks it whether a URL
 // belongs to a publisher and tells it how long the user stayed.
@@ -21,12 +21,12 @@ const telemetryStub = {
   addDuration,
 }
 
-mock.module("./telemetry", () => ({ telemetry: () => telemetryStub }))
+mock.module("../telemetry", () => ({ telemetry: () => telemetryStub }))
 
-const { EVENT, eventBroker } = await import("./event-broker")
-const { trackedTabs } = await import("./tab-tracker")
+const { EVENT, eventBroker } = await import("../event-broker")
+const { trackedTabs } = await import("../tab-tracker")
 
-type TabTrackActiveTabEventData = import("./tab-tracker").TabTrackActiveTabEventData
+type TabTrackActiveTabEventData = import("../tab-tracker").TabTrackActiveTabEventData
 
 const TAB_REGISTER_SOURCE = {
   ON_TAB_ACTIVATED: "tabs.onActivated",

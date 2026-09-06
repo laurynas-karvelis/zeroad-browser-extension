@@ -1,5 +1,5 @@
 import { beforeEach, describe, expect, mock, test } from "bun:test"
-import { chromeMock } from "../__fixtures__/chrome"
+import { chromeMock } from "../../__fixtures__/chrome"
 
 // No `browser` global, so `messaging` takes the Chrome path: sites reach the worker directly
 // through `onMessageExternal`, which the browser gates with `externally_connectable`.
@@ -9,15 +9,15 @@ const extensionStub = {
   pause: mock(async () => "paused"),
   resume: mock(async () => "resumed"),
 }
-mock.module("./extension", () => ({ extension: () => extensionStub }))
+mock.module("../extension", () => ({ extension: () => extensionStub }))
 
 const notifyIfActiveTabIsPublisher = mock()
-mock.module("./tab-tracker", () => ({ trackedTabs: () => ({ notifyIfActiveTabIsPublisher }) }))
+mock.module("../tab-tracker", () => ({ trackedTabs: () => ({ notifyIfActiveTabIsPublisher }) }))
 
-mock.module("./telemetry", () => ({ telemetry: () => ({ map: new Map(), export: () => ({}) }) }))
+mock.module("../telemetry", () => ({ telemetry: () => ({ map: new Map(), export: () => ({}) }) }))
 
-const { EVENT, eventBroker } = await import("./event-broker")
-await import("./messaging")
+const { EVENT, eventBroker } = await import("../event-broker")
+await import("../messaging")
 
 /** Sends a message the way the popup does and resolves with whatever the worker replies. */
 async function askPopupChannel(command: string) {

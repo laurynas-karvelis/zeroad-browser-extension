@@ -1,6 +1,6 @@
 import { afterEach, beforeEach, describe, expect, spyOn, test } from "bun:test"
-import { ExtensionError } from "./error"
-import { arraysEqual, getHostname, httpPost, isValidUrl } from "./utils"
+import { ExtensionError } from "../error"
+import { arraysEqual, getHostname, httpPost, isValidUrl } from "../utils"
 
 describe("arraysEqual", () => {
   test("compares by identity, length and element order", () => {

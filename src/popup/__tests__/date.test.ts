@@ -1,5 +1,5 @@
 import { describe, expect, test } from "bun:test"
-import { from } from "./date"
+import { from } from "../date"
 
 const SECOND = 1000
 const MINUTE = 60 * SECOND

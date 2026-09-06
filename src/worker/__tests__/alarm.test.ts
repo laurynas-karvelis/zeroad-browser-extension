@@ -1,7 +1,7 @@
 import { beforeEach, describe, expect, mock, test } from "bun:test"
-import { chromeMock } from "../__fixtures__/chrome"
+import { chromeMock } from "../../__fixtures__/chrome"
 
-const { schedule } = await import("./alarm")
+const { schedule } = await import("../alarm")
 
 describe("schedule", () => {
   beforeEach(async () => {
