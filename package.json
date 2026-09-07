@@ -23,17 +23,14 @@
     "postbuild": "dirs=(\"chrome\"); for d in \"${dirs[@]}\"; do (cd \"targets/$d\" && rm js/content.js); done",
     "package": "version=$(jq -r '.version' ./package.json) dirs=(\"chrome\" \"firefox\"); for d in \"${dirs[@]}\"; do (cd \"targets/$d\" && zip -r $d-$version.zip manifest.json js popup.html css images); done"
   },
-  "dependencies": {
-    "@zeroad.network/token": "^0.14.0"
-  },
   "devDependencies": {
-    "@types/chrome": "^0.2.7",
+    "@types/chrome": "^0.2.9",
     "@types/firefox-webext-browser": "^143.0.0",
     "bootstrap": "^5.3.8",
     "chokidar": "^5.0.0",
-    "happy-dom": "^20.11.15",
-    "hono": "^4.13.5",
+    "happy-dom": "^20.14.0",
+    "hono": "^4.13.7",
     "json-e": "^4.8.4",
-    "sass": "^1.103.0"
+    "sass": "^1.104.0"
   }
 }
