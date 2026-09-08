@@ -1,5 +1,5 @@
 import { enableDevTools } from "./popup/dev-tools"
-import { applyBootstrapTheme, setVersion, updateUrls } from "./popup/dom"
+import { setVersion, updateUrls } from "./popup/dom"
 import { UserState } from "./popup/state"
 import { worker } from "./popup/worker"
 import type { GetConfigResult } from "./worker/config"
@@ -22,7 +22,6 @@ function listenToReloadRequests() {
 }
 
 document.addEventListener("DOMContentLoaded", async () => {
-  applyBootstrapTheme()
   listenToReloadRequests()
 
   const config = await getConfig()

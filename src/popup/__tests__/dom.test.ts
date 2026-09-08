@@ -1,6 +1,6 @@
 import { beforeEach, describe, expect, mock, test } from "bun:test"
 import { classesOf, hrefOf, mountPopup, textOf, titleOf } from "../../__fixtures__/dom"
-import { $, applyBootstrapTheme, setVersion, updateUrls } from "../dom"
+import { $, setVersion, updateUrls } from "../dom"
 
 const SITE_URL = "https://zeroad.network"
 
@@ -220,62 +220,6 @@ describe("updateUrls", () => {
     updateUrls("http://localhost:3000")
 
     expect(hrefOf("#choose-plan-btn")).toBe("http://localhost:3000/dashboard")
-  })
-})
-
-describe("applyBootstrapTheme", () => {
-  function stubColourScheme(prefersDark: boolean) {
-    const listeners: (() => void)[] = []
-    const query = {
-      matches: prefersDark,
-      addEventListener: (_event: string, listener: () => void) => void listeners.push(listener),
-    }
-
-    ;(window as unknown as { matchMedia: unknown }).matchMedia = () => query
-
-    return {
-      switchTo(dark: boolean) {
-        query.matches = dark
-        for (const listener of listeners) listener()
-      },
-    }
-  }
-
-  const theme = () => document.documentElement.getAttribute("data-bs-theme")
-
-  test('resolves the template\'s "auto" against the OS preference', () => {
-    stubColourScheme(true)
-
-    applyBootstrapTheme()
-
-    expect(theme()).toBe("dark")
-  })
-
-  test("resolves it the other way when the OS is light", () => {
-    stubColourScheme(false)
-
-    applyBootstrapTheme()
-
-    expect(theme()).toBe("light")
-  })
-
-  test("follows the OS while the popup stays open", () => {
-    const scheme = stubColourScheme(false)
-    applyBootstrapTheme()
-
-    scheme.switchTo(true)
-
-    expect(theme()).toBe("dark")
-  })
-
-  test("leaves an explicitly authored theme as it is", () => {
-    document.documentElement.setAttribute("data-bs-theme", "light")
-    const scheme = stubColourScheme(true)
-
-    applyBootstrapTheme()
-    scheme.switchTo(true)
-
-    expect(theme()).toBe("light")
   })
 })
 

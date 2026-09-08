@@ -1,15 +1,25 @@
-@import "./settings";
-@import "./bootstrap";
+// Bootstrap 6 popup styling. The whole framework is pulled in here and PurgeCSS (scripts/purge-css.ts,
+// run right after this compiles) strips everything the popup markup does not use - the same approach
+// the frontend app takes, so the two stay on one styling engine.
+@use "bootstrap/scss/bootstrap";
+
+// Bootstrap 6 resolves its palette with light-dark(), so the popup follows the OS light/dark setting
+// on its own via the `color-scheme` meta tag in popup.tsx - no theme attribute and no JS needed.
+:root {
+  // Match the frontend's typography: Inter (loaded from rsms.me in popup.tsx), at the popup's denser
+  // base size. These are Bootstrap 6 CSS-variable tokens, unprefixed.
+  --body-font-family: "InterVariable, Inter, system-ui, sans-serif, 'Apple Color Emoji', 'Segoe UI Emoji', 'Segoe UI Symbol', 'Noto Color Emoji'";
+  --body-font-size: 0.85rem;
+}
 
 body {
+  width: 430px;
   font-optical-sizing: auto;
   text-rendering: optimizelegibility;
   -webkit-font-smoothing: antialiased;
-  width: 430px;
 }
 
 .navbar {
-  font-family: $headings-font-family;
   flex-wrap: nowrap;
   justify-content: flex-start;
 
@@ -25,17 +35,13 @@ body {
 
 .greeting {
   margin-bottom: 1rem;
-  color: $text-muted;
+  color: var(--fg-2);
 }
 
 hr {
   border: 0;
-  border-top: 2px dotted $gray-500;
-  margin: $spacer 0;
-}
-
-[hidden] {
-  display: none !important;
+  border-top: 2px dotted var(--gray-500);
+  margin: var(--spacer) 0;
 }
 
 .text-small {
@@ -50,11 +56,11 @@ ul.unstyled-icon {
   --icon: url("../images/svg/green-check-mark-icon.svg");
 
   li {
+    position: relative;
     margin-left: 1em;
     padding: 0.3rem 0;
     padding-left: 1.5rem;
-    line-height: $line-height-base;
-    position: relative;
+    line-height: var(--body-line-height);
 
     &::before {
       content: "";
@@ -70,11 +76,11 @@ ul.unstyled-icon {
   }
 }
 
-.btn img {
+// The button icons are <img> SVGs, so they size to the button's own font-size via `em` and need no
+// colour (an <img> is not tinted by `color`). One `em` box keeps them aligned with the label text.
+.btn-solid img {
   display: inline-block;
-  vertical-align: -0.125em;
-  font-size: var(--bs-btn-font-size);
   width: 1em;
   height: 1em;
-  color: var(--bs-btn-color);
+  vertical-align: -0.125em;
 }

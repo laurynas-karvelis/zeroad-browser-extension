@@ -14,7 +14,7 @@
     "manifest:build": "bun run ./scripts/build-manifest.ts",
     "popup:build": "bun run ./scripts/build-popup.ts",
     "assets:build": "rsync -a --delete src/images/ build/images/",
-    "styles:build": "sass --no-charset --no-source-map --quiet --style=compressed src/styles/main.scss build/css/main.css",
+    "styles:build": "sass --no-charset --no-source-map --quiet --style=compressed --load-path=node_modules src/styles/main.scss build/css/main.css && bun run ./scripts/purge-css.ts",
     "scripts:build": "bun build src/*.ts --outdir=build/js/ --target=browser",
     "targets:build": "dirs=(\"chrome\" \"firefox\"); for d in \"${dirs[@]}\"; do (rsync -a --delete --mkpath build/ targets/$d/ && bun manifest:build $d > targets/$d/manifest.json); done",
     "watch": "bun run ./scripts/watch.ts",
@@ -24,13 +24,18 @@
     "package": "version=$(jq -r '.version' ./package.json) dirs=(\"chrome\" \"firefox\"); for d in \"${dirs[@]}\"; do (cd \"targets/$d\" && zip -r $d-$version.zip manifest.json js popup.html css images); done"
   },
   "devDependencies": {
+    "@fullhuman/postcss-purgecss": "^8.0.0",
     "@types/chrome": "^0.2.9",
     "@types/firefox-webext-browser": "^143.0.0",
-    "bootstrap": "^5.3.8",
+    "bootstrap": "github:twbs/bootstrap#v6-dev",
     "chokidar": "^5.0.0",
+    "cssnano": "^9.0.4",
     "happy-dom": "^20.14.0",
     "hono": "^4.13.7",
     "json-e": "^4.8.4",
+    "postcss": "^8.5.28",
+    "postcss-prune-var": "^1.1.2",
+    "postcss-variable-compress": "^3.0.0",
     "sass": "^1.104.0"
   }
 }

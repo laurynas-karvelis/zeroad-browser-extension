@@ -76,7 +76,7 @@ function UnsubscribedSection() {
         hidden
       >
         <p>
-          Sign up and activate a subscription to <b class="text-success">unlock</b> your ad-free and enhanced browsing
+          Sign up and activate a subscription to <b class="fg-success">unlock</b> your ad-free and enhanced browsing
           experience:
         </p>
       </div>
@@ -85,7 +85,7 @@ function UnsubscribedSection() {
         hidden
       >
         <p>
-          Activate a subscription to <b class="text-success">begin enjoying</b> an ad-free and enhanced web experience:
+          Activate a subscription to <b class="fg-success">begin enjoying</b> an ad-free and enhanced web experience:
         </p>
       </div>
       <ul class="list-unstyled unstyled-icon">
@@ -99,14 +99,14 @@ function UnsubscribedSection() {
       </ul>
       <div class="d-grid">
         <a
-          class="guest btn btn-lg btn-primary"
+          class="guest btn-solid btn-lg theme-primary"
           hidden
           href="/login"
         >
           Join us now {raw("&rarr;")}
         </a>
         <a
-          class="user not-subscribed btn btn-lg btn-primary"
+          class="user not-subscribed btn-solid btn-lg theme-primary"
           hidden
           href="/checkout"
         >
@@ -127,15 +127,15 @@ function ValidSubscription() {
         class="clean-web"
         hidden
       >
-        Your have the <b class="text-success">Clean Web</b> plan active for <b class="valid-until text-success"></b>.
-        <span class="text-muted ms-1">Enjoy a completely ad-free experience and fewer interruptions.</span>
+        Your have the <b class="fg-success">Clean Web</b> plan active for <b class="valid-until fg-success"></b>.
+        <span class="fg-secondary ms-1">Enjoy a completely ad-free experience and fewer interruptions.</span>
       </p>
       <p
         class="one-pass"
         hidden
       >
-        Your have the <b class="text-success">One Pass</b> plan active for <b class="valid-until text-success"></b>.
-        <span class="text-muted ms-1">
+        Your have the <b class="fg-success">One Pass</b> plan active for <b class="valid-until fg-success"></b>.
+        <span class="fg-secondary ms-1">
           Access content behind paywalls and unlocked free access to subscriptions and streaming services.
         </span>
       </p>
@@ -143,11 +143,11 @@ function ValidSubscription() {
         class="freedom"
         hidden
       >
-        Your have the <b class="text-success">Freedom</b> plan active for <b class="valid-until text-success"></b>.
-        <span class="text-muted ms-1">Enjoy a completely ad-free experience and fewer interruptions.</span>
+        Your have the <b class="fg-success">Freedom</b> plan active for <b class="valid-until fg-success"></b>.
+        <span class="fg-secondary ms-1">Enjoy a completely ad-free experience and fewer interruptions.</span>
         {/* A nested <p> would be auto-closed by the parser, hoisting this line out of the hidden
             .freedom paragraph and showing it to every plan. A block span stays put. */}
-        <span class="text-muted d-block">
+        <span class="fg-secondary d-block">
           Access content behind paywalls and unlocked free access to subscriptions and streaming services.
         </span>
       </p>
@@ -162,12 +162,12 @@ function ExpiredSubscription() {
       hidden
     >
       <h5>
-        Your plan is now <span class="text-danger">expired</span>.
+        Your plan is now <span class="fg-danger">expired</span>.
       </h5>
-      <p class="text-muted">
+      <p class="fg-secondary">
         No action needed {raw("&mdash;")} we'll automatically refresh your token while your subscription is active.
       </p>
-      <p class="text-muted">
+      <p class="fg-secondary">
         If not, you can renew your subscription anytime from your dashboard to keep enjoying an ad-free web experience.
       </p>
     </div>
@@ -183,7 +183,7 @@ function PublisherFeatures() {
     >
       <hr />
       <h5>
-        The active tab <span class="text-success">site offers</span>:
+        The active tab <span class="fg-success">site offers</span>:
       </h5>
       <ul class="list-unstyled unstyled-icon">
         <li
@@ -213,19 +213,19 @@ function DeveloperDetails() {
       <h5>Developer token overview:</h5>
       <span
         id="developer-token-label"
-        class="badge text-bg-warning me-1"
+        class="badge theme-warning me-1"
       >
         Type: Developer Token
       </span>
       <span
         id="subscription-label"
-        class="badge text-bg-warning me-1"
+        class="badge theme-warning me-1"
       >
         Subscription: <span></span>
       </span>
       <span
         id="developer-hostname-label"
-        class="badge text-bg-warning"
+        class="badge theme-warning"
       >
         Site: <span></span>
       </span>
@@ -238,7 +238,7 @@ function SubscriberControls() {
     <div class="d-flex gap-2">
       <a
         id="choose-plan-btn"
-        class="btn btn-primary flex-grow-1"
+        class="btn-solid theme-primary flex-grow-1"
         href="/dashboard"
         title="Open my dashboard"
       >
@@ -253,7 +253,7 @@ function SubscriberControls() {
           turns out to be a publisher site - see `updateUrls` in `dom.ts`. */}
       <a
         id="report-site-btn"
-        class="btn btn-danger"
+        class="btn-solid theme-danger"
         hidden
         data-href="/report/site"
         title="Report publishered site Issue"
@@ -266,7 +266,7 @@ function SubscriberControls() {
       <button
         type="button"
         id="pause-btn"
-        class="btn btn-warning"
+        class="btn-solid theme-warning"
         hidden
         title="Pause the extension"
       >
@@ -278,7 +278,7 @@ function SubscriberControls() {
       <button
         type="button"
         id="resume-btn"
-        class="btn btn-success"
+        class="btn-solid theme-success"
         hidden
         title="Resume the extension"
       >
@@ -310,7 +310,7 @@ function SubscribedSection() {
 function Footer() {
   return (
     <footer class="mt-3">
-      <div class="d-flex flex-row justify-content-end text-muted gap-2 mt-3">
+      <div class="d-flex flex-row justify-content-end fg-secondary gap-2 mt-3">
         <small
           id="debug-menu"
           class="d-flex d-row gap-1"
@@ -352,10 +352,7 @@ function Footer() {
 
 export function Popup() {
   return (
-    <html
-      lang="en"
-      data-bs-theme="auto"
-    >
+    <html lang="en">
       <head>
         <meta charset="UTF-8" />
         <meta
@@ -365,6 +362,21 @@ export function Popup() {
         <meta
           content="en-GB"
           http-equiv="content-language"
+        />
+        {/* Bootstrap 6 resolves its palette with light-dark(); this lets the popup follow the OS
+            light/dark setting on its own, no theme attribute and no JS. */}
+        <meta
+          name="color-scheme"
+          content="light dark"
+        />
+        <link
+          rel="preconnect"
+          href="https://rsms.me"
+          crossorigin="anonymous"
+        />
+        <link
+          rel="stylesheet"
+          href="https://rsms.me/inter/inter.css"
         />
         <link
           rel="stylesheet"
@@ -381,7 +393,7 @@ export function Popup() {
           <main>
             <div
               id="extension-paused"
-              class="alert alert-warning text-center"
+              class="alert theme-warning text-center"
               hidden
             >
               NOTE: Extension functionality is currently paused!

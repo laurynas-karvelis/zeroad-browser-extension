@@ -61,7 +61,7 @@ describe("a guest", () => {
     await new UserState().render()
 
     expect(isShown(".guest.greeting")).toBe(true)
-    expect(isShown("a.guest.btn")).toBe(true)
+    expect(isShown("a.guest.btn-solid")).toBe(true)
     expect(isShown(".user.not-subscribed.greeting")).toBe(false)
     expect(isShown(".user.subscribed")).toBe(false)
   })
@@ -84,8 +84,8 @@ describe("a member without a subscription", () => {
     await new UserState(member, undefined).render()
 
     expect(textOf(".user.not-subscribed.greeting")).toBe("Hi Ada,")
-    expect(isShown("a.user.not-subscribed.btn")).toBe(true)
-    expect(isShown("a.guest.btn")).toBe(false)
+    expect(isShown("a.user.not-subscribed.btn-solid")).toBe(true)
+    expect(isShown("a.guest.btn-solid")).toBe(false)
   })
 
   test('falls back to "Member" when the account carries no first name', async () => {

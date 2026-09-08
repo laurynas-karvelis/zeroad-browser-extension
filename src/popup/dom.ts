@@ -95,16 +95,3 @@ export function updateUrls(baseUrl: string) {
     if (anchor.dataset.href) anchor.dataset.href = new URL(anchor.dataset.href, baseUrl).toString()
   })
 }
-
-export function applyBootstrapTheme() {
-  const root = document.documentElement
-
-  // Only "auto" follows the OS - an explicit choice in the template is left as authored.
-  if (root.getAttribute("data-bs-theme") !== "auto") return
-
-  const prefersDark = window.matchMedia("(prefers-color-scheme: dark)")
-  const applyTheme = () => root.setAttribute("data-bs-theme", prefersDark.matches ? "dark" : "light")
-
-  applyTheme()
-  prefersDark.addEventListener("change", applyTheme)
-}
