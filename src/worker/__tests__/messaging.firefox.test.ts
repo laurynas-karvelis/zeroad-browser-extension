@@ -37,7 +37,7 @@ describe("site messages relayed by the Firefox content script", () => {
   })
 
   test("accepts a sync payload relayed from the account site", async () => {
-    const payload = { user: { refreshToken: "r" } }
+    const payload = { user: { extensionToken: "r" } }
 
     const results = await relayFromSite(
       { command: EVENT.WEBSITE.SYNC_CLIENT_DATA, payload },
@@ -50,7 +50,7 @@ describe("site messages relayed by the Firefox content script", () => {
 
   test("accepts the local development origin", async () => {
     await relayFromSite(
-      { command: EVENT.WEBSITE.SYNC_CLIENT_DATA, payload: { user: { refreshToken: "r" } } },
+      { command: EVENT.WEBSITE.SYNC_CLIENT_DATA, payload: { user: { extensionToken: "r" } } },
       contentScriptSender("http://localhost:3000/extension/sync")
     )
 
@@ -67,7 +67,7 @@ describe("site messages relayed by the Firefox content script", () => {
     // This message hands the extension a refresh token, so the worker checks the origin itself
     // rather than trusting the content script to be the only thing that ever calls it.
     await relayFromSite(
-      { command: EVENT.WEBSITE.SYNC_CLIENT_DATA, payload: { user: { refreshToken: "stolen" } } },
+      { command: EVENT.WEBSITE.SYNC_CLIENT_DATA, payload: { user: { extensionToken: "stolen" } } },
       contentScriptSender("https://evil.test/")
     )
 
@@ -76,7 +76,7 @@ describe("site messages relayed by the Firefox content script", () => {
 
   test("rejects a look-alike hostname that merely contains the trusted one", async () => {
     await relayFromSite(
-      { command: EVENT.WEBSITE.SYNC_CLIENT_DATA, payload: { user: { refreshToken: "stolen" } } },
+      { command: EVENT.WEBSITE.SYNC_CLIENT_DATA, payload: { user: { extensionToken: "stolen" } } },
       contentScriptSender("https://zeroad.network.evil.test/")
     )
 
@@ -84,14 +84,14 @@ describe("site messages relayed by the Firefox content script", () => {
   })
 
   test("rejects a sender that is not a tab, which is how the popup arrives", async () => {
-    await relayFromSite({ command: EVENT.WEBSITE.SYNC_CLIENT_DATA, payload: { user: { refreshToken: "x" } } }, {})
+    await relayFromSite({ command: EVENT.WEBSITE.SYNC_CLIENT_DATA, payload: { user: { extensionToken: "x" } } }, {})
 
     expect(received).not.toHaveBeenCalled()
   })
 
   test("rejects a tab sender with no URL to check", async () => {
     await relayFromSite(
-      { command: EVENT.WEBSITE.SYNC_CLIENT_DATA, payload: { user: { refreshToken: "x" } } },
+      { command: EVENT.WEBSITE.SYNC_CLIENT_DATA, payload: { user: { extensionToken: "x" } } },
       {
         tab: { id: 1 },
       }

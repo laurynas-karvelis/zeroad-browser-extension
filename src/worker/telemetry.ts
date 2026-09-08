@@ -7,6 +7,8 @@ import { getHostname } from "./utils"
 export type Entry = {
   /** The publisher this hostname announced itself as belonging to, for crediting the visit. */
   publisherId: TabTrackerPublisherDetectedData["publisherId"]
+  /** Where the id was found. Decides the monetization tier server-side, so it has to travel with the visit. */
+  source: TabTrackerPublisherDetectedData["source"]
   views: number
   duration: number
 }
@@ -14,13 +16,22 @@ export type Entry = {
 type StoredTelemetryMap = Record<Hostname, Entry>
 
 /**
- * What gets sent: every hostname visited, grouped under the publisher that claimed it, with the views
- * and dwell time for each one kept separate.
+ * What gets sent: a flat list of observations, one per hostname visited, each self-identifying with the
+ * publisher it announced, where that id was found, and the views and dwell time earned there.
  *
  * Per hostname rather than per publisher total, because a publisher with several sites needs each of
  * them credited on its own, and this is the only place that knows which site the time was spent on.
+ * The shape is exactly what `POST /extension/telemetry` accepts - see `ExtensionTelemetryObservation`.
  */
-export type TelemetryExportData = Record<string, { hostnames: Record<Hostname, { views: number; duration: number }> }>
+export type TelemetryObservation = {
+  publisherId: string
+  source: TabTrackerPublisherDetectedData["source"]
+  hostname: Hostname
+  views: number
+  duration: number
+}
+
+export type TelemetryExportData = TelemetryObservation[]
 
 const SAVE_DEBOUNCE_DELAY = 5000
 
@@ -41,8 +52,8 @@ export class Telemetry {
     this.ready = this.load()
 
     eventBroker()
-      .on<TabTrackerPublisherDetectedData>(EVENT.TAB_TRACKER.PUBLISHER_DETECTED, ({ publisherId, url }) =>
-        this.addEntry(publisherId, url)
+      .on<TabTrackerPublisherDetectedData>(EVENT.TAB_TRACKER.PUBLISHER_DETECTED, ({ publisherId, source, url }) =>
+        this.addEntry(publisherId, source, url)
       )
       .on(EVENT.TELEMETRY.FLUSH, () => this.softReset())
       .on(EVENT.EXTENSION.SUBSCRIPTION_EXPIRED, () => this.softReset())
@@ -95,28 +106,33 @@ export class Telemetry {
     this.save()
   }
 
-  private addEntry(publisherId: Entry["publisherId"], url: string) {
+  private addEntry(publisherId: Entry["publisherId"], source: Entry["source"], url: string) {
     const hostname = getHostname(url)
 
     if (!hostname || !publisherId) return
 
-    if (!this.map.has(hostname)) {
-      this.map.set(hostname, { publisherId, views: 0, duration: 0 })
+    const entry = this.map.get(hostname)
+
+    if (!entry) {
+      this.map.set(hostname, { publisherId, source, views: 0, duration: 0 })
       this.save()
 
       eventBroker().emit(EVENT.TELEMETRY.PUBLISHER_ADDED, { publisherId })
-    } else {
-      const entry = this.map.get(hostname)
-      if (!entry) return
+      return
+    }
 
-      if (entry.publisherId !== publisherId) {
-        // The hostname changed hands: adopt the new owner and drop counters the old one earned.
-        entry.publisherId = publisherId
-        entry.views = 0
-        entry.duration = 0
+    if (entry.publisherId !== publisherId) {
+      // The hostname changed hands: adopt the new owner and drop counters the old one earned.
+      entry.publisherId = publisherId
+      entry.source = source
+      entry.views = 0
+      entry.duration = 0
 
-        this.save()
-      }
+      this.save()
+    } else if (source === "header" && entry.source !== "header") {
+      // A stronger proof arrived for the same publisher - a response header outranks a meta tag.
+      entry.source = source
+      this.save()
     }
   }
 
@@ -161,19 +177,17 @@ export class Telemetry {
   }
 
   export(): TelemetryExportData {
-    const data: TelemetryExportData = {}
+    const observations: TelemetryExportData = []
 
-    for (const [hostname, { publisherId, views, duration }] of this.map) {
+    for (const [hostname, { publisherId, source, views, duration }] of this.map) {
       // Anything with activity ships. A view with no dwell time is still a visit, and if it is
       // dropped here it is never reported at all - `softReset` zeroes the entry on the next flush.
       if (!views && !duration) continue
 
-      if (!data[publisherId]) data[publisherId] = { hostnames: {} }
-
-      data[publisherId].hostnames[hostname] = { views, duration }
+      observations.push({ publisherId, source, hostname, views, duration })
     }
 
-    return data
+    return observations
   }
 }
 

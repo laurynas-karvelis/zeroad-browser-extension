@@ -132,15 +132,15 @@ class TokenPool {
    * expiry, and mixing the two would leave sites seeing tokens from two different anonymity sets.
    */
   async refresh() {
-    const refreshToken = extension().getRefreshToken()
-    if (!refreshToken) throw new Error("Cannot refresh the token pool without a refresh token")
+    const extensionToken = extension().getExtensionToken()
+    if (!extensionToken) throw new Error("Cannot refresh the token pool without an extension token")
 
     const keyPairs = await Promise.all(Array.from({ length: BATCH_SIZE }, () => generateEphemeralKeyPair()))
     const config = await getConfig()
 
     const { payload } = await httpPost<{
       payload: { version: number; plan: number; expiresAt: number; signatures: string[] }
-    }>(config.GENERIC.EXTENSION_CREDENTIALS_URL, refreshToken, { publicKeys: keyPairs.map((pair) => pair.publicKey) })
+    }>(config.GENERIC.EXTENSION_CREDENTIALS_URL, extensionToken, { publicKeys: keyPairs.map((pair) => pair.publicKey) })
 
     if (payload?.version !== PROTOCOL_VERSION) {
       throw new Error(`Platform issued protocol version ${payload?.version}, which this extension cannot use`)

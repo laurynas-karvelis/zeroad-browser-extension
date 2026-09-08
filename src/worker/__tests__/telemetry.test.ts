@@ -16,7 +16,8 @@ const { Telemetry } = await import("../telemetry")
 // the same mutation to its own map) but not for storage ones - those live in telemetry.storage.test.ts.
 const SAVE_DEBOUNCE_DELAY = 5
 
-type StoredMap = Record<string, { publisherId: string; views: number; duration: number }>
+type Source = "header" | "meta"
+type StoredMap = Record<string, { publisherId: string; source: Source; views: number; duration: number }>
 
 const seedStored = (telemetry: StoredMap) => chromeMock.storage.local.seed({ telemetry })
 
@@ -27,8 +28,17 @@ async function createTelemetry() {
   return instance
 }
 
-const entry = (publisherId: string, views = 0, duration = 0) => ({
+const entry = (publisherId: string, views = 0, duration = 0, source: Source = "header") => ({
   publisherId,
+  source,
+  views,
+  duration,
+})
+
+const observation = (publisherId: string, hostname: string, views: number, duration: number, source: Source = "header") => ({
+  publisherId,
+  source,
+  hostname,
   views,
   duration,
 })
@@ -73,7 +83,7 @@ describe("Telemetry", () => {
       const publisherAdded = mock()
       eventBroker().on(EVENT.TELEMETRY.PUBLISHER_ADDED, publisherAdded)
 
-      eventBroker().emit(EVENT.TAB_TRACKER.PUBLISHER_DETECTED, {
+      eventBroker().emit(EVENT.TAB_TRACKER.PUBLISHER_DETECTED, { source: "header",
         publisherId: "client-a",
         url: "https://a.test/some/page?q=1",
       })
@@ -86,7 +96,7 @@ describe("Telemetry", () => {
       const telemetry = await createTelemetry()
 
       for (const url of ["https://a.test/one", "https://a.test/two", "http://a.test:8080/three"]) {
-        eventBroker().emit(EVENT.TAB_TRACKER.PUBLISHER_DETECTED, { publisherId: "client-a", url })
+        eventBroker().emit(EVENT.TAB_TRACKER.PUBLISHER_DETECTED, { source: "header", publisherId: "client-a", url })
       }
 
       expect(telemetry.map.size).toBe(1)
@@ -95,8 +105,8 @@ describe("Telemetry", () => {
     test("ignores detections with no usable hostname or no publisherId", async () => {
       const telemetry = await createTelemetry()
 
-      eventBroker().emit(EVENT.TAB_TRACKER.PUBLISHER_DETECTED, { publisherId: "c", url: "not a url" })
-      eventBroker().emit(EVENT.TAB_TRACKER.PUBLISHER_DETECTED, { publisherId: "", url: "https://a.test/" })
+      eventBroker().emit(EVENT.TAB_TRACKER.PUBLISHER_DETECTED, { source: "header", publisherId: "c", url: "not a url" })
+      eventBroker().emit(EVENT.TAB_TRACKER.PUBLISHER_DETECTED, { source: "header", publisherId: "", url: "https://a.test/" })
 
       expect(telemetry.map.size).toBe(0)
     })
@@ -105,7 +115,7 @@ describe("Telemetry", () => {
       seedStored({ "a.test": entry("client-a", 3, 500) })
       const telemetry = await createTelemetry()
 
-      eventBroker().emit(EVENT.TAB_TRACKER.PUBLISHER_DETECTED, {
+      eventBroker().emit(EVENT.TAB_TRACKER.PUBLISHER_DETECTED, { source: "header",
         publisherId: "client-a",
         url: "https://a.test/",
       })
@@ -118,7 +128,7 @@ describe("Telemetry", () => {
       seedStored({ "a.test": entry("old-client", 9, 900) })
       const telemetry = await createTelemetry()
 
-      eventBroker().emit(EVENT.TAB_TRACKER.PUBLISHER_DETECTED, {
+      eventBroker().emit(EVENT.TAB_TRACKER.PUBLISHER_DETECTED, { source: "header",
         publisherId: "new-client",
         url: "https://a.test/",
       })
@@ -140,7 +150,7 @@ describe("Telemetry", () => {
       // A publisher tab already open when the subscription activates accrues time before any
       // page load is seen; reporting duration with zero views would be nonsense.
       const telemetry = await createTelemetry()
-      eventBroker().emit(EVENT.TAB_TRACKER.PUBLISHER_DETECTED, {
+      eventBroker().emit(EVENT.TAB_TRACKER.PUBLISHER_DETECTED, { source: "header",
         publisherId: "client-a",
         url: "https://a.test/",
       })
@@ -194,16 +204,12 @@ describe("Telemetry", () => {
       })
       const telemetry = await createTelemetry()
 
-      // Each hostname keeps its own counters - a publisher with several sites needs each credited
-      expect(telemetry.export()).toEqual({
-        "client-a": {
-          hostnames: {
-            "a.test": { views: 2, duration: 200 },
-            "blog.a.test": { views: 3, duration: 300 },
-          },
-        },
-        "client-b": { hostnames: { "b.test": { views: 1, duration: 100 } } },
-      })
+      // One observation per hostname - a publisher with several sites needs each credited on its own
+      expect(telemetry.export()).toEqual([
+        observation("client-a", "a.test", 2, 200),
+        observation("client-a", "blog.a.test", 3, 300),
+        observation("client-b", "b.test", 1, 100),
+      ])
     })
 
     test("includes a publisher that was viewed but never dwelled on", async () => {
@@ -211,17 +217,38 @@ describe("Telemetry", () => {
       seedStored({ "a.test": entry("client-a", 4, 0) })
       const telemetry = await createTelemetry()
 
-      expect(telemetry.export()).toEqual({ "client-a": { hostnames: { "a.test": { views: 4, duration: 0 } } } })
+      expect(telemetry.export()).toEqual([observation("client-a", "a.test", 4, 0)])
     })
 
-    test("skips publishers with no activity at all", async () => {
+    test("carries the detection source through to the observation", async () => {
+      // The source decides the monetization tier server-side, so it must survive to the payload.
+      seedStored({ "meta.test": entry("client-a", 1, 100, "meta") })
       const telemetry = await createTelemetry()
+
+      expect(telemetry.export()).toEqual([observation("client-a", "meta.test", 1, 100, "meta")])
+    })
+
+    test("upgrades a meta detection to a header one when the stronger proof arrives", async () => {
+      seedStored({ "a.test": entry("client-a", 1, 100, "meta") })
+      const telemetry = await createTelemetry()
+
       eventBroker().emit(EVENT.TAB_TRACKER.PUBLISHER_DETECTED, {
+        source: "header",
         publisherId: "client-a",
         url: "https://a.test/",
       })
 
-      expect(telemetry.export()).toEqual({})
+      expect(telemetry.map.get("a.test")?.source).toBe("header")
+    })
+
+    test("skips publishers with no activity at all", async () => {
+      const telemetry = await createTelemetry()
+      eventBroker().emit(EVENT.TAB_TRACKER.PUBLISHER_DETECTED, { source: "header",
+        publisherId: "client-a",
+        url: "https://a.test/",
+      })
+
+      expect(telemetry.export()).toEqual([])
     })
   })
 
@@ -233,7 +260,7 @@ describe("Telemetry", () => {
       eventBroker().emit(EVENT.TELEMETRY.FLUSH)
 
       expect(telemetry.map.get("a.test")).toEqual(entry("client-a"))
-      expect(telemetry.export()).toEqual({})
+      expect(telemetry.export()).toEqual([])
     })
 
     test("an expired subscription and a reset request both flush", async () => {

@@ -28,14 +28,14 @@ class TelemetrySync {
       return
     }
 
-    const telemetryToken = extension().getTelemetryToken()
-    if (!telemetryToken) {
-      log("warn", "[telemetry-sync]", "Telemetry token is empty. Skip telemetry push.")
+    const extensionToken = extension().getExtensionToken()
+    if (!extensionToken) {
+      log("warn", "[telemetry-sync]", "Extension token is empty. Skip telemetry push.")
       return
     }
 
-    const telemetryData = telemetry().export()
-    if (!Object.keys(telemetryData).length) {
+    const observations = telemetry().export()
+    if (!observations.length) {
       log("warn", "[telemetry-sync]", "No useful telemetry data. Skip telemetry push.")
       return
     }
@@ -46,13 +46,13 @@ class TelemetrySync {
         extension: { version: chrome.runtime.getManifest().version },
       },
       data: {
-        publishers: telemetryData,
+        observations,
       },
     }
 
     try {
       const config = await getConfig()
-      await httpPost(config.DATA_INGEST.INGEST_URL, telemetryToken, payload)
+      await httpPost(config.DATA_INGEST.INGEST_URL, extensionToken, payload)
       eventBroker().emit(EVENT.TELEMETRY.FLUSH)
 
       log("info", "[telemetry-sync]", "Telemetry pushed.")

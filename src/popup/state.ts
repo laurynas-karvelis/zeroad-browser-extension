@@ -23,7 +23,7 @@ export class UserState {
 
   /** Resolves once the popup has settled, having reported rather than thrown any worker failure. */
   render(): Promise<void> {
-    if (!this.user?.refreshToken) {
+    if (!this.user?.extensionToken) {
       // User is brand new or not signed in
       $(".guest, .guest.greeting").show()
       return Promise.resolve()

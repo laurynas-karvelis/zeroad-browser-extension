@@ -19,11 +19,9 @@ const { extension } = await import("../extension")
 
 const HOUR = 60 * 60 * 1000
 
-const user = (refreshToken = "refresh-1") => ({ firstName: "Ada", refreshToken })
-const subscription = (extensionToken = "ext-1", expiresAt = Date.now() + HOUR) => ({
+const user = (extensionToken = "ext-token-1") => ({ firstName: "Ada", extensionToken })
+const subscription = (expiresAt = Date.now() + HOUR) => ({
   planName: "clean-web",
-  extensionToken,
-  telemetryToken: "tel-1",
   expiresAt,
 })
 
@@ -32,6 +30,12 @@ describe("Extension", () => {
     await chromeMock.storage.sync.clear()
     await chromeMock.storage.local.clear()
     await chromeMock.alarms.clearAll()
+
+    // The singleton keeps its state in memory between tests, so wipe it back to a clean slate -
+    // otherwise a token stored by an earlier test makes a later "first sync" look like a repeat.
+    eventBroker().emit(EVENT.EXTENSION.REQUEST_RESET)
+    await Bun.sleep(0)
+
     for (const spy of [enableRenewal, cancelRenewal, push, removeAllRules, reset]) spy.mockClear()
   })
 
@@ -43,7 +47,7 @@ describe("Extension", () => {
       expect(extension().isSubscriptionActive()).toBe(false)
     })
 
-    test("is true for an unexpired subscription that carries a token", async () => {
+    test("is true for an unexpired subscription", async () => {
       eventBroker().emit(EVENT.EXTENSION.PAYLOAD_RECEIVED, { user: user(), subscription: subscription() })
       await Bun.sleep(0)
 
@@ -53,51 +57,51 @@ describe("Extension", () => {
     test("is false once the expiry has passed", async () => {
       eventBroker().emit(EVENT.EXTENSION.PAYLOAD_RECEIVED, {
         user: user(),
-        subscription: subscription("ext-1", Date.now() - 1000),
+        subscription: subscription(Date.now() - 1000),
       })
       await Bun.sleep(0)
 
       expect(extension().isSubscriptionActive()).toBe(false)
     })
-
-    test("is true on expiry alone, since no server-minted token exists any more", async () => {
-      // Tokens are built locally from credentials now, so nothing arrives in the sync payload that
-      // could gate this. An empty pool is handled where it matters - `headerInjection` simply
-      // declines to install a rule - rather than by declaring the subscription dead.
-      eventBroker().emit(EVENT.EXTENSION.PAYLOAD_RECEIVED, {
-        user: user(),
-        subscription: { ...subscription(), extensionToken: "" },
-      })
-      await Bun.sleep(0)
-
-      expect(extension().isSubscriptionActive()).toBe(true)
-    })
   })
 
   describe("receiving a sync payload", () => {
-    test("stores the payload and announces the new token", async () => {
+    test("stores the payload and announces the sync", async () => {
       const synced = mock()
       eventBroker().on(EVENT.EXTENSION.SYNCED, synced)
 
-      eventBroker().emit(EVENT.EXTENSION.PAYLOAD_RECEIVED, { user: user(), subscription: subscription("ext-new") })
+      eventBroker().emit(EVENT.EXTENSION.PAYLOAD_RECEIVED, { user: user(), subscription: subscription() })
       await Bun.sleep(0)
 
       expect(chromeMock.storage.sync.peek().user).toEqual(user())
-      expect(extension().getTelemetryToken()).toBe("tel-1")
-      expect(extension().getRefreshToken()).toBe("refresh-1")
+      expect(extension().getExtensionToken()).toBe("ext-token-1")
       expect(synced).toHaveBeenCalled()
     })
 
     test("does not re-announce a token that has not changed", async () => {
-      eventBroker().emit(EVENT.EXTENSION.PAYLOAD_RECEIVED, { user: user(), subscription: subscription("ext-1") })
+      // The badge's "ON" confirmation should only kick in on a first install or a switch of user -
+      // a repeat sync of the same token is not news.
+      eventBroker().emit(EVENT.EXTENSION.PAYLOAD_RECEIVED, { user: user(), subscription: subscription() })
       await Bun.sleep(0)
       const synced = mock()
       eventBroker().on(EVENT.EXTENSION.SYNCED, synced)
 
-      eventBroker().emit(EVENT.EXTENSION.PAYLOAD_RECEIVED, { user: user(), subscription: subscription("ext-1") })
+      eventBroker().emit(EVENT.EXTENSION.PAYLOAD_RECEIVED, { user: user(), subscription: subscription() })
       await Bun.sleep(0)
 
       expect(synced).not.toHaveBeenCalled()
+    })
+
+    test("announces again when the token changes, e.g. a different user signs in", async () => {
+      eventBroker().emit(EVENT.EXTENSION.PAYLOAD_RECEIVED, { user: user("ext-token-1"), subscription: subscription() })
+      await Bun.sleep(0)
+      const synced = mock()
+      eventBroker().on(EVENT.EXTENSION.SYNCED, synced)
+
+      eventBroker().emit(EVENT.EXTENSION.PAYLOAD_RECEIVED, { user: user("ext-token-2"), subscription: subscription() })
+      await Bun.sleep(0)
+
+      expect(synced).toHaveBeenCalled()
     })
 
     test("a payload without a subscription takes the live one down", async () => {
@@ -115,12 +119,12 @@ describe("Extension", () => {
     })
 
     test("an expired subscription in the payload is applied rather than ignored", async () => {
-      eventBroker().emit(EVENT.EXTENSION.PAYLOAD_RECEIVED, { user: user(), subscription: subscription("ext-1") })
+      eventBroker().emit(EVENT.EXTENSION.PAYLOAD_RECEIVED, { user: user(), subscription: subscription() })
       await Bun.sleep(0)
 
       eventBroker().emit(EVENT.EXTENSION.PAYLOAD_RECEIVED, {
         user: user(),
-        subscription: subscription("ext-2", Date.now() - 1000),
+        subscription: subscription(Date.now() - 1000),
       })
       await Bun.sleep(0)
 
@@ -129,14 +133,14 @@ describe("Extension", () => {
 
     test("ignores a malformed payload instead of throwing out the current state", async () => {
       // The Chrome path takes this straight off an external site message.
-      eventBroker().emit(EVENT.EXTENSION.PAYLOAD_RECEIVED, { user: user(), subscription: subscription("ext-keep") })
+      eventBroker().emit(EVENT.EXTENSION.PAYLOAD_RECEIVED, { user: user(), subscription: subscription() })
       await Bun.sleep(0)
 
       eventBroker().emit(EVENT.EXTENSION.PAYLOAD_RECEIVED, {})
       eventBroker().emit(EVENT.EXTENSION.PAYLOAD_RECEIVED, { user: { firstName: "Ada" } })
       await Bun.sleep(0)
 
-      expect(extension().getTelemetryToken()).toBe("tel-1")
+      expect(extension().getExtensionToken()).toBe("ext-token-1")
     })
 
     test("pushes pending telemetry before switching to a different user", async () => {
@@ -166,13 +170,13 @@ describe("Extension", () => {
   describe("renewal scheduling", () => {
     test("schedules renewal for the moment an active subscription expires", async () => {
       const expiresAt = Date.now() + HOUR
-      eventBroker().emit(EVENT.EXTENSION.PAYLOAD_RECEIVED, { user: user(), subscription: subscription("e", expiresAt) })
+      eventBroker().emit(EVENT.EXTENSION.PAYLOAD_RECEIVED, { user: user(), subscription: subscription(expiresAt) })
       await Bun.sleep(0)
 
       expect(enableRenewal).toHaveBeenCalledWith(expiresAt)
     })
 
-    test("cancels renewal when there is no refresh token left to renew with", async () => {
+    test("cancels renewal when there is no extension token left to renew with", async () => {
       eventBroker().emit(EVENT.EXTENSION.REQUEST_RESET)
       await Bun.sleep(0)
 

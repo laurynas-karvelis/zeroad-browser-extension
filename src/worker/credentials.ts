@@ -51,13 +51,13 @@ class Credentials {
   }
 
   private async request() {
-    const refreshToken = extension().getRefreshToken()
-    if (!refreshToken) throw new Error("Client refresh token doesn't exist")
+    const extensionToken = extension().getExtensionToken()
+    if (!extensionToken) throw new Error("Client extension token doesn't exist")
 
     const config = await getConfig()
     const { payload } = await httpPost<{ payload: ExtensionSyncData }>(
       config.GENERIC.EXTENSION_SYNC_URL,
-      refreshToken,
+      extensionToken,
       {}
     )
 
@@ -71,7 +71,7 @@ class Credentials {
   }
 
   private async attemptToRenewToken() {
-    if (!extension().getRefreshToken()) {
+    if (!extension().getExtensionToken()) {
       eventBroker().emit(EVENT.EXTENSION.REQUEST_RESET)
       return
     }

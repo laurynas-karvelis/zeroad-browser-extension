@@ -11,7 +11,7 @@ const { Telemetry } = await import("../telemetry")
 const SAVE_DEBOUNCE_DELAY = 5
 
 const detectPublisher = (publisherId: string, url: string) =>
-  eventBroker().emit(EVENT.TAB_TRACKER.PUBLISHER_DETECTED, { publisherId, url })
+  eventBroker().emit(EVENT.TAB_TRACKER.PUBLISHER_DETECTED, { publisherId, source: "header", url })
 
 const storedTelemetry = () => chromeMock.storage.local.peek().telemetry as Record<string, unknown> | undefined
 
@@ -36,7 +36,7 @@ describe("Telemetry persistence", () => {
     await settle()
 
     expect(storedTelemetry()).toEqual({
-      "a.test": { publisherId: "client-a", views: 1, duration: 750 },
+      "a.test": { publisherId: "client-a", source: "header", views: 1, duration: 750 },
     })
   })
 
@@ -54,6 +54,7 @@ describe("Telemetry persistence", () => {
 
     expect(restarted.map.get("a.test")).toEqual({
       publisherId: "client-a",
+      source: "header",
       views: 1,
       duration: 750,
     })
@@ -61,7 +62,7 @@ describe("Telemetry persistence", () => {
 
   test("a flush is persisted, so a pushed batch is never counted twice", async () => {
     await chromeMock.storage.local.seed({
-      telemetry: { "a.test": { publisherId: "client-a", views: 2, duration: 200 } },
+      telemetry: { "a.test": { publisherId: "client-a", source: "header", views: 2, duration: 200 } },
     })
     const telemetry = new Telemetry(SAVE_DEBOUNCE_DELAY)
     await telemetry.ready
@@ -70,21 +71,23 @@ describe("Telemetry persistence", () => {
     await settle()
 
     expect(storedTelemetry()).toEqual({
-      "a.test": { publisherId: "client-a", views: 0, duration: 0 },
+      "a.test": { publisherId: "client-a", source: "header", views: 0, duration: 0 },
     })
   })
 
   test("`ready` resolves only after the stored map is in place", async () => {
     await chromeMock.storage.local.seed({
-      telemetry: { "a.test": { publisherId: "client-a", views: 1, duration: 1 } },
+      telemetry: { "a.test": { publisherId: "client-a", source: "header", views: 1, duration: 1 } },
     })
 
     const telemetry = new Telemetry(SAVE_DEBOUNCE_DELAY)
     // Reading before awaiting `ready` is exactly the empty-export bug telemetry-sync guards against.
-    expect(telemetry.export()).toEqual({})
+    expect(telemetry.export()).toEqual([])
 
     await telemetry.ready
 
-    expect(telemetry.export()).toEqual({ "client-a": { hostnames: { "a.test": { views: 1, duration: 1 } } } })
+    expect(telemetry.export()).toEqual([
+      { publisherId: "client-a", source: "header", hostname: "a.test", views: 1, duration: 1 },
+    ])
   })
 })

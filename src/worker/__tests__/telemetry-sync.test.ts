@@ -1,15 +1,16 @@
 import { afterEach, beforeEach, describe, expect, mock, spyOn, test } from "bun:test"
 import { chromeMock } from "../../__fixtures__/chrome"
 
-const state = { active: true, telemetryToken: "tel-1" as string | undefined }
+const state = { active: true, extensionToken: "ext-1" as string | undefined }
 mock.module("../extension", () => ({
   extension: () => ({
     isSubscriptionActive: () => state.active,
-    getTelemetryToken: () => state.telemetryToken,
+    getExtensionToken: () => state.extensionToken,
   }),
 }))
 
-let exported: Record<string, { views: number; duration: number; hosts: string[] }> = {}
+type Observation = { publisherId: string; source: string; hostname: string; views: number; duration: number }
+let exported: Observation[] = []
 let readyResolved = false
 let ready = Promise.resolve()
 mock.module("../telemetry", () => ({
@@ -17,7 +18,7 @@ mock.module("../telemetry", () => ({
     get ready() {
       return ready
     },
-    export: () => (readyResolved ? exported : {}),
+    export: () => (readyResolved ? exported : []),
   }),
 }))
 
@@ -34,8 +35,8 @@ describe("telemetrySync", () => {
 
   beforeEach(() => {
     state.active = true
-    state.telemetryToken = "tel-1"
-    exported = { "client-a": { hostnames: { "a.test": { views: 3, duration: 900 } } } }
+    state.extensionToken = "ext-1"
+    exported = [{ publisherId: "client-a", source: "header", hostname: "a.test", views: 3, duration: 900 }]
     readyResolved = true
     ready = Promise.resolve()
     chromeMock.runtime.manifestVersion = "0.9.3"
@@ -55,10 +56,10 @@ describe("telemetrySync", () => {
 
     const [url, init] = fetchSpy.mock.calls[0] as [string, RequestInit]
     expect(url).toBe("https://api.zeroad.network/extension/telemetry")
-    expect((init.headers as Record<string, string>).Authorization).toBe("Bearer tel-1")
+    expect((init.headers as Record<string, string>).Authorization).toBe("Bearer ext-1")
     expect(JSON.parse(init.body as string)).toEqual({
       client: { source: "extension", extension: { version: "0.9.3" } },
-      data: { publishers: { "client-a": { hostnames: { "a.test": { views: 3, duration: 900 } } } } },
+      data: { observations: [{ publisherId: "client-a", source: "header", hostname: "a.test", views: 3, duration: 900 }] },
     })
   })
 
@@ -118,8 +119,8 @@ describe("telemetrySync", () => {
       expect(flush).toHaveBeenCalledTimes(1)
     })
 
-    test("a missing telemetry token skips the push but keeps the data", async () => {
-      state.telemetryToken = undefined
+    test("a missing extension token skips the push but keeps the data", async () => {
+      state.extensionToken = undefined
       const flush = mock()
       eventBroker().on(EVENT.TELEMETRY.FLUSH, flush)
 
@@ -130,7 +131,7 @@ describe("telemetrySync", () => {
     })
 
     test("an empty batch is not sent", async () => {
-      exported = {}
+      exported = []
 
       await telemetrySync().push()
 

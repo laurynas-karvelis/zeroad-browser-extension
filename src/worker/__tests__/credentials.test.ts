@@ -1,8 +1,8 @@
 import { afterEach, beforeEach, describe, expect, mock, spyOn, test } from "bun:test"
 import { chromeMock } from "../../__fixtures__/chrome"
 
-const state = { refreshToken: "refresh-1" as string | undefined }
-mock.module("../extension", () => ({ extension: () => ({ getRefreshToken: () => state.refreshToken }) }))
+const state = { extensionToken: "refresh-1" as string | undefined }
+mock.module("../extension", () => ({ extension: () => ({ getExtensionToken: () => state.extensionToken }) }))
 
 const pool = { needsRefresh: true, refresh: mock(async () => 250) }
 mock.module("../token-pool", () => ({
@@ -19,10 +19,10 @@ const EXPIRY_ALARM = "EXTENSION_TOKEN_EXPIRATION_ALARM"
 const RETRY_ALARM = "EXTENSION_TOKEN_RENEWAL_ATTEMPT_ALARM"
 const HOUR = 60 * 60 * 1000
 
-const syncPayload = (expiresAt = Date.now() + HOUR, extensionToken = "ext-new") => ({
+const syncPayload = (expiresAt = Date.now() + HOUR) => ({
   payload: {
-    user: { firstName: "Ada", refreshToken: "refresh-1" },
-    subscription: { planName: "clean-web", extensionToken, telemetryToken: "tel", expiresAt },
+    user: { firstName: "Ada", extensionToken: "ext-1" },
+    subscription: { planName: "clean-web", expiresAt },
   },
 })
 
@@ -36,7 +36,7 @@ describe("credentials", () => {
   let fetchSpy: ReturnType<typeof spyOn<typeof globalThis, "fetch">>
 
   beforeEach(async () => {
-    state.refreshToken = "refresh-1"
+    state.extensionToken = "refresh-1"
     pool.needsRefresh = true
     pool.refresh.mockClear()
     await chromeMock.alarms.clearAll()
@@ -134,7 +134,7 @@ describe("credentials", () => {
     })
 
     test("asks for a reset instead of renewing when there is no refresh token", async () => {
-      state.refreshToken = undefined
+      state.extensionToken = undefined
       const reset = mock()
       eventBroker().on(EVENT.EXTENSION.REQUEST_RESET, reset)
 
@@ -148,7 +148,7 @@ describe("credentials", () => {
   describe("rejecting a bad renewal", () => {
     const cases: [string, unknown][] = [
       ["a subscription that is already expired", syncPayload(Date.now() - 1000)],
-      ["a payload with no subscription", { payload: { user: { refreshToken: "refresh-1" } } }],
+      ["a payload with no subscription", { payload: { user: { extensionToken: "refresh-1" } } }],
     ]
 
     for (const [description, body] of cases) {

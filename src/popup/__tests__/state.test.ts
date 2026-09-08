@@ -11,20 +11,18 @@ import { UserState } from "../state"
 const SITE_URL = "https://zeroad.network"
 const DAY = 24 * 60 * 60 * 1000
 
-const member: UserExtensionData = { firstName: "Ada", refreshToken: "refresh-token" }
+const member: UserExtensionData = { firstName: "Ada", extensionToken: "refresh-token" }
 
 function subscription(overrides: Partial<SubscriptionExtensionData> = {}): SubscriptionExtensionData {
   return {
     planName: SUBSCRIPTION_PLAN_NAME.CLEAN_WEB,
-    extensionToken: "extension-token",
-    telemetryToken: "telemetry-token",
     expiresAt: Date.now() + 20 * DAY,
     ...overrides,
   }
 }
 
 function publisherEntry(overrides: Partial<Entry> = {}): Entry {
-  return { publisherId: "publisher-id", views: 1, duration: 0, ...overrides }
+  return { publisherId: "publisher-id", source: "header", views: 1, duration: 0, ...overrides }
 }
 
 /** Delivers the event the worker pushes at the popup whenever the focused tab changes. */
@@ -69,7 +67,7 @@ describe("a guest", () => {
   })
 
   test("is anyone without a refresh token, not just a missing user record", async () => {
-    await new UserState({ firstName: "Ada", refreshToken: "" }).render()
+    await new UserState({ firstName: "Ada", extensionToken: "" }).render()
 
     expect(isShown(".guest.greeting")).toBe(true)
   })
@@ -91,7 +89,7 @@ describe("a member without a subscription", () => {
   })
 
   test('falls back to "Member" when the account carries no first name', async () => {
-    await new UserState({ firstName: null, refreshToken: "refresh-token" }, undefined).render()
+    await new UserState({ firstName: null, extensionToken: "refresh-token" }, undefined).render()
 
     expect(textOf(".user.not-subscribed.greeting")).toBe("Hi Member,")
   })

@@ -1,8 +1,8 @@
 import { afterEach, beforeEach, describe, expect, mock, spyOn, test } from "bun:test"
 import { chromeMock } from "../../__fixtures__/chrome"
 
-const state = { refreshToken: "refresh-1" as string | undefined }
-mock.module("../extension", () => ({ extension: () => ({ getRefreshToken: () => state.refreshToken }) }))
+const state = { extensionToken: "refresh-1" as string | undefined }
+mock.module("../extension", () => ({ extension: () => ({ getExtensionToken: () => state.extensionToken }) }))
 
 const { tokenPool } = await import("../token-pool")
 
@@ -69,7 +69,7 @@ function respondWith(build: (publicKeys: string[]) => Promise<unknown> | unknown
 
 describe("tokenPool", () => {
   beforeEach(async () => {
-    state.refreshToken = "refresh-1"
+    state.extensionToken = "refresh-1"
     lastRequestBody = undefined
     await chromeMock.storage.local.clear()
     await tokenPool().clear()
@@ -144,10 +144,10 @@ describe("tokenPool", () => {
       expect(tokenPool().refresh()).rejects.toThrow(/already-expired/)
     })
 
-    test("refuses to refresh with no refresh token", async () => {
-      state.refreshToken = undefined
+    test("refuses to refresh with no extension token", async () => {
+      state.extensionToken = undefined
 
-      expect(tokenPool().refresh()).rejects.toThrow(/refresh token/)
+      expect(tokenPool().refresh()).rejects.toThrow(/extension token/)
     })
 
     test("discards the previous batch, so two anonymity sets never mix", async () => {

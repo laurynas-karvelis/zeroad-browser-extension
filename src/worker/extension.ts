@@ -43,12 +43,8 @@ class Extension {
     return { user: this.state.user, subscription: this.state.subscription }
   }
 
-  getRefreshToken() {
-    return this.state.user?.refreshToken
-  }
-
-  getTelemetryToken() {
-    return this.state.subscription?.telemetryToken
+  getExtensionToken() {
+    return this.state.user?.extensionToken
   }
 
   isSubscriptionActive() {
@@ -86,7 +82,7 @@ class Extension {
       await credentials().enableRenewal(this.state.subscription?.expiresAt || 0)
       eventBroker().emit(EVENT.EXTENSION.SUBSCRIPTION_ACTIVE)
     } else {
-      if (!this.state.user?.refreshToken) await credentials().cancelRenewal()
+      if (!this.state.user?.extensionToken) await credentials().cancelRenewal()
       eventBroker().emit(EVENT.EXTENSION.SUBSCRIPTION_EXPIRED)
     }
   }
@@ -95,18 +91,21 @@ class Extension {
     const { user, subscription } = payload || {}
 
     // A payload can arrive straight from the website, so it is not trusted to be well-formed.
-    if (!user?.refreshToken) {
-      log("warn", "[extension]", "Ignoring a sync payload that carries no refresh token")
+    if (!user?.extensionToken) {
+      log("warn", "[extension]", "Ignoring a sync payload that carries no extension token")
       return
     }
 
-    if (this.state.user?.refreshToken && this.state.user?.refreshToken !== user.refreshToken) {
+    const previousToken = this.state.user?.extensionToken
+
+    if (previousToken && previousToken !== user.extensionToken) {
       // Switching to another user, push telemetry
       await telemetrySync().push()
     }
 
-    const hasNewExtensionToken =
-      !!subscription?.extensionToken && subscription.extensionToken !== this.state.subscription?.extensionToken
+    // Whether this sync brought a token we did not have before - a first install, or a switch to a
+    // different user. A repeat sync of the same token is not news and must not re-announce.
+    const hasNewToken = previousToken !== user.extensionToken
 
     if (subscription) {
       await chrome.storage.sync.set<ExtensionSyncData>({ user, subscription })
@@ -117,11 +116,12 @@ class Extension {
       await chrome.storage.sync.remove(["subscription"])
     }
 
-    if (hasNewExtensionToken) eventBroker().emit(EVENT.EXTENSION.SYNCED)
+    // Only a token that was unset before or has changed is worth announcing - that is what the badge's
+    // "ON" confirmation keys off.
+    if (hasNewToken) eventBroker().emit(EVENT.EXTENSION.SYNCED)
 
-    // Always reload. Reloading only for a brand new token left a cancelled or downgraded
-    // subscription live in memory, so header injection kept running on credentials the
-    // server had already withdrawn.
+    // Always reload. Reloading only on a change left a cancelled or downgraded subscription live in
+    // memory, so header injection kept running on credentials the server had already withdrawn.
     return this.load()
   }
 

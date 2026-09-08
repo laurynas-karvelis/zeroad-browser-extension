@@ -25,14 +25,12 @@ export type ExtensionSyncData = {
 
 export type UserExtensionData = {
   firstName: string | null
-  refreshToken: string
+  /** The single token the extension authenticates every platform call with. Never expires. */
+  extensionToken: string
 }
 
 export type SubscriptionExtensionData = {
   planName: SUBSCRIPTION_PLAN_NAME
-  /** Vestigial. Tokens are minted locally from credentials now - see `token-pool.ts`. */
-  extensionToken?: string
-  telemetryToken: string
   expiresAt: number // A UNIX timestamp
   /** Set only on a developer token, naming the site it was issued to test. */
   hostname?: string

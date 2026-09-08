@@ -4,7 +4,7 @@ import { chromeMock } from "../../__fixtures__/chrome"
 // No `browser` global, so `messaging` takes the Chrome path: sites reach the worker directly
 // through `onMessageExternal`, which the browser gates with `externally_connectable`.
 const extensionStub = {
-  getExtensionData: mock(() => ({ user: { firstName: "Ada", refreshToken: "r" }, subscription: undefined })),
+  getExtensionData: mock(() => ({ user: { firstName: "Ada", extensionToken: "r" }, subscription: undefined })),
   isPaused: mock(() => false),
   pause: mock(async () => "paused"),
   resume: mock(async () => "resumed"),
@@ -52,7 +52,7 @@ describe("popup messages", () => {
   test("returns the stored user and subscription", async () => {
     const { response } = await askPopupChannel(EVENT.POPUP.GET_EXTENSION_DATA)
 
-    expect(response).toEqual({ user: { firstName: "Ada", refreshToken: "r" }, subscription: undefined })
+    expect(response).toEqual({ user: { firstName: "Ada", extensionToken: "r" }, subscription: undefined })
   })
 
   test("reports and changes the paused state", async () => {
@@ -127,7 +127,7 @@ describe("site messages over the Chrome external channel", () => {
   test("hands a sync payload to the worker", async () => {
     const received = mock()
     eventBroker().on(EVENT.EXTENSION.PAYLOAD_RECEIVED, received)
-    const payload = { user: { refreshToken: "r" }, subscription: { extensionToken: "e" } }
+    const payload = { user: { extensionToken: "r" }, subscription: { planName: "clean-web" } }
 
     const response = await askSiteChannel({ command: EVENT.WEBSITE.SYNC_CLIENT_DATA, payload })
 
