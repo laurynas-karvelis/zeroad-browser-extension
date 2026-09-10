@@ -37,13 +37,4 @@ html body {
     margin-block: 1rem;
     border-block-start: 2px dotted var(--fg-4);
   }
-
-  // The button icons are <img> SVGs, so they size to the button's own font-size via `em` and need no
-  // colour (an <img> is not tinted by `color`). One `em` box keeps them aligned with the label text.
-  .btn-solid img {
-    display: inline-block;
-    width: 1em;
-    height: 1em;
-    vertical-align: -0.125em;
-  }
 }

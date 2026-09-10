@@ -5,6 +5,7 @@
 // is why selectors, not props, carry the state - see `dom.ts`.
 
 import { raw } from "hono/html"
+import { Icon } from "./icon"
 
 /** Markers `dom.ts`'s `replace()` substitutes once the worker has answered. */
 const FIRST_NAME = "{FIRST_NAME}"
@@ -241,10 +242,9 @@ function SubscriberControls() {
         href="/dashboard"
         title="Open my dashboard"
       >
-        <img
+        <Icon
+          name="layout-dashboard"
           class="me-2"
-          src="./images/svg/columns-gap.svg"
-          alt=""
         />
         Dashboard
       </a>
@@ -257,10 +257,7 @@ function SubscriberControls() {
         data-href="/report/site"
         title="Report publishered site Issue"
       >
-        <img
-          src="./images/svg/bug.svg"
-          alt=""
-        />
+        <Icon name="bug" />
       </a>
       <button
         type="button"
@@ -269,10 +266,7 @@ function SubscriberControls() {
         hidden
         title="Pause the extension"
       >
-        <img
-          src="./images/svg/pause-circle.svg"
-          alt=""
-        />
+        <Icon name="circle-pause" />
       </button>
       <button
         type="button"
@@ -281,10 +275,7 @@ function SubscriberControls() {
         hidden
         title="Resume the extension"
       >
-        <img
-          src="./images/svg/play-circle.svg"
-          alt=""
-        />
+        <Icon name="circle-play" />
       </button>
     </div>
   )
