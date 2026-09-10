@@ -87,7 +87,7 @@ function UnsubscribedSection() {
           Activate a subscription to <b class="fg-success">begin enjoying</b> an ad-free and enhanced web experience:
         </p>
       </div>
-      <ul class="list-unstyled unstyled-icon">
+      <ul class="list-unstyled check-list d-flex flex-column gap-2 lh-sm">
         <li>Enjoy a completely ad-free experience</li>
         <li>Skip cookie consent pop-ups</li>
         <li>No unnecessary third-party trackers</li>
@@ -184,7 +184,7 @@ function PublisherFeatures() {
       <h5>
         The active tab <span class="fg-success">site offers</span>:
       </h5>
-      <ul class="list-unstyled unstyled-icon">
+      <ul class="list-unstyled check-list d-flex flex-column gap-2 lh-sm">
         <li
           class="clean_web"
           hidden

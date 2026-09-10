@@ -6,6 +6,14 @@
 // light-dark(), so the popup follows the OS light/dark setting via the `color-scheme` meta tag.
 @include meta.load-css("@styles");
 
+// Chrome injects an unlayered `body { font-family: system-ui; font-size: 75% }` into every extension page,
+// and an unlayered rule beats every layer - so both are restated outside the layers. `html body` outranks
+// Chrome's `body` whichever of the two stylesheets loads last.
+html body {
+  font-family: var(--font-sans);
+  font-size: 0.86rem;
+}
+
 @layer features {
   body {
     width: 430px;
@@ -28,23 +36,6 @@
   hr {
     margin-block: 1rem;
     border-block-start: 2px dotted var(--fg-4);
-  }
-
-  ul.unstyled-icon li {
-    position: relative;
-    margin-inline-start: 1em;
-    padding-block: 0.3rem;
-    padding-inline-start: 1.5rem;
-
-    &::before {
-      position: absolute;
-      inset-block-start: 0.48rem;
-      inset-inline-start: 0;
-      width: 0.8rem;
-      height: 0.8rem;
-      content: "";
-      background: url("../images/svg/green-check-mark-icon.svg") center / contain no-repeat;
-    }
   }
 
   // The button icons are <img> SVGs, so they size to the button's own font-size via `em` and need no
