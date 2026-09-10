@@ -363,7 +363,7 @@ export function Popup() {
           content="en-GB"
           http-equiv="content-language"
         />
-        {/* Bootstrap 6 resolves its palette with light-dark(); this lets the popup follow the OS
+        {/* The stylesheet resolves its palette with light-dark(); this lets the popup follow the OS
             light/dark setting on its own, no theme attribute and no JS. */}
         <meta
           name="color-scheme"

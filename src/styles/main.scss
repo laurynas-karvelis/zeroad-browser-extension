@@ -1,86 +1,73 @@
-// Bootstrap 6 popup styling. The whole framework is pulled in here and PurgeCSS (scripts/purge-css.ts,
-// run right after this compiles) strips everything the popup markup does not use - the same approach
-// the frontend app takes, so the two stay on one styling engine.
-@use "bootstrap/scss/bootstrap";
+@use "sass:meta";
 
-// Bootstrap 6 resolves its palette with light-dark(), so the popup follows the OS light/dark setting
-// on its own via the `color-scheme` meta tag in popup.tsx - no theme attribute and no JS needed.
-:root {
-  // Match the frontend's typography: Inter (loaded from rsms.me in popup.tsx), at the popup's denser
-  // base size. These are Bootstrap 6 CSS-variable tokens, unprefixed.
-  --body-font-family: "InterVariable, Inter, system-ui, sans-serif, 'Apple Color Emoji', 'Segoe UI Emoji', 'Segoe UI Symbol', 'Noto Color Emoji'";
-  --body-font-size: 0.85rem;
-}
+// The shared design system (packages/styles in the better-web monorepo), the same one the frontend app
+// uses. Loaded first: it declares the cascade layer order; the popup's own styles go in `features`.
+// scripts/purge-css.ts strips every rule the popup markup does not use. The palette resolves with
+// light-dark(), so the popup follows the OS light/dark setting via the `color-scheme` meta tag.
+@include meta.load-css("@styles");
 
-body {
-  width: 430px;
-  font-optical-sizing: auto;
-  text-rendering: optimizelegibility;
-  -webkit-font-smoothing: antialiased;
-}
-
-.navbar {
-  flex-wrap: nowrap;
-  justify-content: flex-start;
-
-  .navbar-nav {
-    flex-direction: row;
+@layer features {
+  // A fixed-width popup at a denser text size than the website.
+  body {
+    width: 430px;
+    font-size: 0.85rem;
   }
 
-  .navbar-brand {
-    font-weight: 500;
-    font-size: 0.95rem;
-  }
-}
+  .navbar {
+    flex-wrap: nowrap;
+    justify-content: flex-start;
 
-.greeting {
-  margin-bottom: 1rem;
-  color: var(--fg-2);
-}
+    .navbar-nav {
+      flex-direction: row;
+    }
 
-hr {
-  border: 0;
-  border-top: 2px dotted var(--gray-500);
-  margin: var(--spacer) 0;
-}
-
-.text-small {
-  font-size: 0.85rem;
-}
-
-.text-large {
-  font-size: 1rem;
-}
-
-ul.unstyled-icon {
-  --icon: url("../images/svg/green-check-mark-icon.svg");
-
-  li {
-    position: relative;
-    margin-left: 1em;
-    padding: 0.3rem 0;
-    padding-left: 1.5rem;
-    line-height: var(--body-line-height);
-
-    &::before {
-      content: "";
-      position: absolute;
-      left: 0;
-      top: 0.48rem;
-      width: 0.8rem;
-      height: 0.8rem;
-      background-image: var(--icon);
-      background-size: contain;
-      background-repeat: no-repeat;
+    .navbar-brand {
+      font-size: 0.95rem;
+      font-weight: 500;
     }
   }
-}
 
-// The button icons are <img> SVGs, so they size to the button's own font-size via `em` and need no
-// colour (an <img> is not tinted by `color`). One `em` box keeps them aligned with the label text.
-.btn-solid img {
-  display: inline-block;
-  width: 1em;
-  height: 1em;
-  vertical-align: -0.125em;
+  .greeting {
+    margin-block-end: 1rem;
+    color: var(--fg-2);
+  }
+
+  hr {
+    margin-block: 1rem;
+    border-block-start: 2px dotted var(--fg-4);
+  }
+
+  .text-small {
+    font-size: 0.85rem;
+  }
+
+  .text-large {
+    font-size: 1rem;
+  }
+
+  ul.unstyled-icon li {
+    position: relative;
+    margin-inline-start: 1em;
+    padding-block: 0.3rem;
+    padding-inline-start: 1.5rem;
+
+    &::before {
+      position: absolute;
+      inset-block-start: 0.48rem;
+      inset-inline-start: 0;
+      width: 0.8rem;
+      height: 0.8rem;
+      content: "";
+      background: url("../images/svg/green-check-mark-icon.svg") center / contain no-repeat;
+    }
+  }
+
+  // The button icons are <img> SVGs, so they size to the button's own font-size via `em` and need no
+  // colour (an <img> is not tinted by `color`). One `em` box keeps them aligned with the label text.
+  .btn-solid img {
+    display: inline-block;
+    width: 1em;
+    height: 1em;
+    vertical-align: -0.125em;
+  }
 }

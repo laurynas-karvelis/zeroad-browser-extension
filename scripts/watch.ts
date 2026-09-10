@@ -15,6 +15,13 @@ const watchers = [
     cmd: "styles:build",
     label: "STYLES",
   },
+  // The shared design system this popup's stylesheet is built on.
+  {
+    dir: "../../packages/styles/",
+    allowed: (path: string) => /\.scss$/.test(path),
+    cmd: "styles:build",
+    label: "STYLES",
+  },
   {
     dir: "src/",
     allowed: (path: string) => /\.tsx$/.test(path),
@@ -57,7 +64,8 @@ async function runCommand(command: string, args: string[] = []) {
 
 // Initialize watchers
 for (const { dir, allowed, cmd, label } of watchers) {
-  chokidar.watch(`${process.cwd()}/${dir}`, { persistent: true, ignoreInitial: true }).on("all", (_event, path) => {
+  const options = { persistent: true, ignoreInitial: true, ignored: /node_modules/ }
+  chokidar.watch(`${process.cwd()}/${dir}`, options).on("all", (_event, path) => {
     if (allowed(path)) {
       run(cmd, label, path)
     }
