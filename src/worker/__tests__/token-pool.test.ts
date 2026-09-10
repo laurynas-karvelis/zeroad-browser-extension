@@ -56,7 +56,7 @@ let lastRequestBody: { publicKeys: string[] } | undefined
 let fetchSpy: ReturnType<typeof spyOn<typeof globalThis, "fetch">>
 
 function respondWith(build: (publicKeys: string[]) => Promise<unknown> | unknown) {
-  fetchSpy.mockImplementation(async (_url, init) => {
+  fetchSpy.mockImplementation((async (_url, init) => {
     lastRequestBody = JSON.parse(String((init as RequestInit).body))
     const payload = await build(lastRequestBody?.publicKeys ?? [])
 
@@ -64,7 +64,7 @@ function respondWith(build: (publicKeys: string[]) => Promise<unknown> | unknown
       status: 200,
       headers: { "content-type": "application/json" },
     })
-  })
+  }) as typeof fetch)
 }
 
 describe("tokenPool", () => {
@@ -110,7 +110,7 @@ describe("tokenPool", () => {
     test("never sends a private key anywhere", async () => {
       await tokenPool().refresh()
 
-      const body = String((fetchSpy.mock.calls.at(-1)?.[1] as RequestInit).body)
+      const body = String(fetchSpy.mock.calls.at(-1)?.[1]?.body)
 
       expect(Object.keys(JSON.parse(body))).toEqual(["publicKeys"])
       expect(body).not.toContain('"d"')

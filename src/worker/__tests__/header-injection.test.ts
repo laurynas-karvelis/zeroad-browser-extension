@@ -97,7 +97,7 @@ describe("headerInjection", () => {
       const ruleId = await headerInjection().enableForHostname("publisher.test")
       await headerInjection().enableForHostname("publisher.test")
 
-      expect(lastCall()?.removeRuleIds).toEqual([ruleId])
+      expect(lastCall()?.removeRuleIds).toEqual([ruleId as number])
     })
 
     test("announces the hostname it installed a rule for", async () => {

@@ -35,7 +35,13 @@ const entry = (publisherId: string, views = 0, duration = 0, source: Source = "h
   duration,
 })
 
-const observation = (publisherId: string, hostname: string, views: number, duration: number, source: Source = "header") => ({
+const observation = (
+  publisherId: string,
+  hostname: string,
+  views: number,
+  duration: number,
+  source: Source = "header"
+) => ({
   publisherId,
   source,
   hostname,
@@ -83,7 +89,8 @@ describe("Telemetry", () => {
       const publisherAdded = mock()
       eventBroker().on(EVENT.TELEMETRY.PUBLISHER_ADDED, publisherAdded)
 
-      eventBroker().emit(EVENT.TAB_TRACKER.PUBLISHER_DETECTED, { source: "header",
+      eventBroker().emit(EVENT.TAB_TRACKER.PUBLISHER_DETECTED, {
+        source: "header",
         publisherId: "client-a",
         url: "https://a.test/some/page?q=1",
       })
@@ -106,7 +113,11 @@ describe("Telemetry", () => {
       const telemetry = await createTelemetry()
 
       eventBroker().emit(EVENT.TAB_TRACKER.PUBLISHER_DETECTED, { source: "header", publisherId: "c", url: "not a url" })
-      eventBroker().emit(EVENT.TAB_TRACKER.PUBLISHER_DETECTED, { source: "header", publisherId: "", url: "https://a.test/" })
+      eventBroker().emit(EVENT.TAB_TRACKER.PUBLISHER_DETECTED, {
+        source: "header",
+        publisherId: "",
+        url: "https://a.test/",
+      })
 
       expect(telemetry.map.size).toBe(0)
     })
@@ -115,7 +126,8 @@ describe("Telemetry", () => {
       seedStored({ "a.test": entry("client-a", 3, 500) })
       const telemetry = await createTelemetry()
 
-      eventBroker().emit(EVENT.TAB_TRACKER.PUBLISHER_DETECTED, { source: "header",
+      eventBroker().emit(EVENT.TAB_TRACKER.PUBLISHER_DETECTED, {
+        source: "header",
         publisherId: "client-a",
         url: "https://a.test/",
       })
@@ -128,7 +140,8 @@ describe("Telemetry", () => {
       seedStored({ "a.test": entry("old-client", 9, 900) })
       const telemetry = await createTelemetry()
 
-      eventBroker().emit(EVENT.TAB_TRACKER.PUBLISHER_DETECTED, { source: "header",
+      eventBroker().emit(EVENT.TAB_TRACKER.PUBLISHER_DETECTED, {
+        source: "header",
         publisherId: "new-client",
         url: "https://a.test/",
       })
@@ -150,7 +163,8 @@ describe("Telemetry", () => {
       // A publisher tab already open when the subscription activates accrues time before any
       // page load is seen; reporting duration with zero views would be nonsense.
       const telemetry = await createTelemetry()
-      eventBroker().emit(EVENT.TAB_TRACKER.PUBLISHER_DETECTED, { source: "header",
+      eventBroker().emit(EVENT.TAB_TRACKER.PUBLISHER_DETECTED, {
+        source: "header",
         publisherId: "client-a",
         url: "https://a.test/",
       })
@@ -243,7 +257,8 @@ describe("Telemetry", () => {
 
     test("skips publishers with no activity at all", async () => {
       const telemetry = await createTelemetry()
-      eventBroker().emit(EVENT.TAB_TRACKER.PUBLISHER_DETECTED, { source: "header",
+      eventBroker().emit(EVENT.TAB_TRACKER.PUBLISHER_DETECTED, {
+        source: "header",
         publisherId: "client-a",
         url: "https://a.test/",
       })

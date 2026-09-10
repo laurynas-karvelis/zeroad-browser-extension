@@ -59,7 +59,9 @@ describe("telemetrySync", () => {
     expect((init.headers as Record<string, string>).Authorization).toBe("Bearer ext-1")
     expect(JSON.parse(init.body as string)).toEqual({
       client: { source: "extension", extension: { version: "0.9.3" } },
-      data: { observations: [{ publisherId: "client-a", source: "header", hostname: "a.test", views: 3, duration: 900 }] },
+      data: {
+        observations: [{ publisherId: "client-a", source: "header", hostname: "a.test", views: 3, duration: 900 }],
+      },
     })
   })
 

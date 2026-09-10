@@ -137,12 +137,12 @@ describe("httpPost", () => {
 
   test("aborts and reports a timeout when the endpoint hangs", async () => {
     fetchSpy.mockImplementation(
-      (_url, init) =>
+      ((_url, init) =>
         new Promise((_resolve, reject) => {
           ;(init as RequestInit).signal?.addEventListener("abort", () =>
             reject(new DOMException("The operation was aborted.", "AbortError"))
           )
-        })
+        })) as typeof fetch
     )
 
     const error = (await httpPost("https://api.test/slow", "t", {}, 10).catch((e) => e)) as ExtensionError

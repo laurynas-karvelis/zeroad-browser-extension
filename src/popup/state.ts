@@ -58,7 +58,7 @@ export class UserState {
 
   private async setupPublisherSiteUi() {
     worker.on<TabTrackActiveTabEventData>(EVENT.MESSAGING.IS_ACTIVE_TAB_PUBLISHER, (data) => {
-      const { isPublisher, url, telemetryEntry } = data
+      const { isPublisher, url } = data
 
       const $reportBtn = $("#report-site-btn").toggle(isPublisher)
       const $publisherFeatures = $("#publisher-features").toggle(isPublisher)

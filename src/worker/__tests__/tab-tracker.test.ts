@@ -1,9 +1,10 @@
 import { beforeEach, describe, expect, mock, test } from "bun:test"
 import { chromeMock } from "../../__fixtures__/chrome"
+import type { Entry } from "../telemetry"
 
 // A hostname-keyed stand-in for the telemetry store: tab-tracker only ever asks it whether a URL
 // belongs to a publisher and tells it how long the user stayed.
-const publishers = new Map<string, { clientId: string; views: number; duration: number }>()
+const publishers = new Map<string, Entry>()
 const addDuration = mock<(url: string | undefined, duration: number) => void>()
 const addViews = mock<(url: string | undefined) => void>()
 const hostOf = (url: string | undefined) => {
@@ -36,8 +37,8 @@ const TAB_REGISTER_SOURCE = {
 
 type Source = (typeof TAB_REGISTER_SOURCE)[keyof typeof TAB_REGISTER_SOURCE]
 
-const makePublisher = (hostname: string, clientId = `client-${hostname}`) =>
-  publishers.set(hostname, { clientId, views: 0, duration: 0 })
+const makePublisher = (hostname: string, publisherId = `publisher-${hostname}`) =>
+  publishers.set(hostname, { publisherId, source: "header", views: 0, duration: 0 })
 
 const tab = (id: number, url: string, extra: Partial<chrome.tabs.Tab> = {}) =>
   ({ id, url, active: true, windowId: 1, ...extra }) as chrome.tabs.Tab
@@ -210,7 +211,7 @@ describe("trackedTabs", () => {
 
   describe("notifyIfActiveTabIsPublisher", () => {
     test("reports the focused publisher tab with its telemetry entry", () => {
-      makePublisher("publisher.test", "client-x")
+      makePublisher("publisher.test", "publisher-x")
       const seen = activeTabEvents()
 
       register(tab(7, "https://publisher.test/page"), TAB_REGISTER_SOURCE.ON_TAB_ACTIVATED)
@@ -219,7 +220,7 @@ describe("trackedTabs", () => {
         isPublisher: true,
         url: "https://publisher.test/page",
         tabId: 7,
-        telemetryEntry: { clientId: "client-x", views: 0, duration: 0 },
+        telemetryEntry: { publisherId: "publisher-x", source: "header", views: 0, duration: 0 },
       })
     })
 
@@ -271,7 +272,7 @@ describe("trackedTabs", () => {
     const seen = activeTabEvents()
 
     makePublisher("publisher.test")
-    eventBroker().emit(EVENT.TELEMETRY.PUBLISHER_ADDED, { clientId: "client-publisher.test" })
+    eventBroker().emit(EVENT.TELEMETRY.PUBLISHER_ADDED, { publisherId: "publisher-publisher.test" })
 
     expect(seen.at(-1)?.isPublisher).toBe(true)
     expect(trackedTabs().findActiveTab()?.publisher).toBe(true)
