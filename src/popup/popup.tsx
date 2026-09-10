@@ -15,11 +15,10 @@ function Header() {
     <header class="mb-4">
       <nav class="navbar border-bottom">
         <a
-          class="navbar-brand"
+          class="navbar-brand d-flex align-items-center gap-2"
           href="/"
         >
           <img
-            class="d-inline-block me-2"
             src="./images/dove.png"
             width="26"
             height="26"
@@ -27,13 +26,13 @@ function Header() {
           />
           Zero Ad Network
         </a>
-        <ul class="navbar-nav ms-auto">
+        <ul class="nav navbar-nav ms-auto">
           <li
             id="link-pricing"
             class="nav-item"
           >
             <a
-              class="nav-link px-0 pe-4 py-0"
+              class="nav-link px-3"
               href="/#features"
             >
               Features
@@ -41,7 +40,7 @@ function Header() {
           </li>
           <li class="nav-item">
             <a
-              class="nav-link p-0"
+              class="nav-link px-3"
               href="/#pricing"
             >
               Pricing

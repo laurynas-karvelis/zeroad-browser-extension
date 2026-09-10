@@ -7,24 +7,17 @@
 @include meta.load-css("@styles");
 
 @layer features {
-  // A fixed-width popup at a denser text size than the website.
   body {
     width: 430px;
-    font-size: 0.85rem;
   }
 
+  // The popup is always narrow and never collapses its links, so they stay in a row at every width.
   .navbar {
     flex-wrap: nowrap;
-    justify-content: flex-start;
+  }
 
-    .navbar-nav {
-      flex-direction: row;
-    }
-
-    .navbar-brand {
-      font-size: 0.95rem;
-      font-weight: 500;
-    }
+  .navbar-nav {
+    flex-direction: row;
   }
 
   .greeting {
@@ -35,14 +28,6 @@
   hr {
     margin-block: 1rem;
     border-block-start: 2px dotted var(--fg-4);
-  }
-
-  .text-small {
-    font-size: 0.85rem;
-  }
-
-  .text-large {
-    font-size: 1rem;
   }
 
   ul.unstyled-icon li {
