@@ -7,11 +7,17 @@ export const schedule = {
     log("debug", `[alarm] ${name} is re-created:`, options)
   },
 
+  /**
+   * Creates the alarm unless one with the same period already exists. Re-creating it on every worker
+   * start would restart its countdown each time, so a periodic alarm would never fire; but one left over
+   * from an older version with a different period must be replaced, or it keeps the old cadence forever.
+   */
   async create(name: string, options: chrome.alarms.AlarmCreateInfo) {
-    if (!(await this.has(name))) {
-      await chrome.alarms.create(name, options)
-      log("debug", `[alarm] ${name} is created:`, options)
-    }
+    const existing = await chrome.alarms.get(name)
+    if (existing && existing.periodInMinutes === options.periodInMinutes) return
+
+    await chrome.alarms.create(name, options)
+    log("debug", `[alarm] ${name} is created:`, options)
   },
 
   on(name: string | string[], callback: () => unknown | Promise<unknown>) {
@@ -29,9 +35,5 @@ export const schedule = {
 
   async clear(name: string) {
     await chrome.alarms.clear(name)
-  },
-
-  async has(name: string) {
-    return !!(await chrome.alarms.get(name))
   },
 }

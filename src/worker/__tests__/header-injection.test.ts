@@ -4,6 +4,7 @@ import { chromeMock } from "../../__fixtures__/chrome"
 const state = { active: true, paused: false }
 mock.module("../extension", () => ({
   extension: () => ({
+    ready: Promise.resolve(),
     isSubscriptionActive: () => state.active,
     isPaused: () => state.paused,
   }),
@@ -57,13 +58,15 @@ describe("headerInjection", () => {
   })
 
   describe("installing a rule for a publisher hostname", () => {
-    test("sets the token header, scoped to that hostname alone", async () => {
+    test("sets the token header over HTTPS only, for that exact host and none of its subdomains", async () => {
+      // A token is reusable until it expires, so one sent in clear text could be replayed; `^` ends
+      // the match at the host boundary, so `blog.publisher.test` does not match
       await headerInjection().enableForHostname("publisher.test")
 
       expect(rules()).toHaveLength(1)
       expect(rules()[0]).toMatchObject({
         priority: 99,
-        condition: { requestDomains: ["publisher.test"], resourceTypes: ["main_frame", "media"] },
+        condition: { urlFilter: "|https://publisher.test^", resourceTypes: ["main_frame", "media"] },
       })
       expect(headerOf(rules()[0])).toEqual({
         operation: "set",
@@ -156,10 +159,17 @@ describe("headerInjection", () => {
       expect(headerInjection().installedHostnames()).toEqual([])
     })
 
-    test("also clears the old blanket rule, for an extension updating in place", async () => {
+    test("removes rules this worker never installed, since session rules outlive the worker", async () => {
+      // Left by an earlier worker, or the old blanket rule of an extension updating in place
+      chromeMock.declarativeNetRequest.sessionRules = [
+        { id: 1 },
+        { id: 104, condition: { urlFilter: "|https://a.test^" } },
+      ]
+
       await headerInjection().removeAllRules()
 
-      expect(lastCall()?.removeRuleIds).toContain(1)
+      expect(lastCall()?.removeRuleIds).toEqual([1, 104])
+      expect(rules()).toHaveLength(0)
     })
 
     test("removes a single hostname without touching the others", async () => {
@@ -210,6 +220,20 @@ describe("headerInjection", () => {
       await headerInjection().reset()
 
       expect(rules()).toHaveLength(0)
+    })
+  })
+
+  describe("a refreshed token pool", () => {
+    test("rebinds every hostname the replaced batch held, so none keeps sending a dead token", async () => {
+      // A meta-tag publisher is never rediscovered, so without this it would keep the old batch's token
+      await headerInjection().enableForHostname("meta.test")
+      pool.tokens.set("meta.test", "token-from-the-new-batch")
+
+      eventBroker().emit(EVENT.TOKEN_POOL.REFRESHED, { hostnames: ["meta.test"] })
+      await Bun.sleep(0)
+
+      expect(rules()).toHaveLength(1)
+      expect(headerOf(rules()[0]).value).toBe("token-from-the-new-batch")
     })
   })
 })

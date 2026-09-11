@@ -33,6 +33,15 @@ function respondWith<P>(work: Promise<P>, sendResponse: (response: unknown) => v
   })
 }
 
+/**
+ * Popup commands must come from the extension's own pages. On Firefox a site's content script shares
+ * the same `runtime.onMessage` channel, and anything sent from a tab would otherwise reach commands
+ * that hand out the extension token or reset the extension.
+ */
+function isFromExtensionPage(sender: chrome.runtime.MessageSender | undefined) {
+  return !sender?.tab && sender?.id === chrome.runtime.id
+}
+
 function onSiteMessage<T = unknown, P = unknown>(
   eventName: EventType,
   callback: (message: T & { command: typeof eventName }) => Promise<P>
@@ -44,11 +53,8 @@ function onSiteMessage<T = unknown, P = unknown>(
   if (!chrome.runtime.onMessageExternal) {
     // Firefox extension - has to communicate via `content.js` (facepalm)
     chrome.runtime.onMessage.addListener((message, sender) => {
-      // Verify sender is our content script, running on a site we actually trust
-      if (!sender.tab || !sender.url) {
-        log("warn", "[messaging]", "Rejected message from non-tab sender")
-        return
-      }
+      // The popup talks on this channel too; only a tab can be our content script
+      if (!sender.tab || !sender.url) return
 
       if (!trustedSiteHostnames().includes(getHostname(sender.url))) {
         log("warn", "[messaging]", "Rejected message from untrusted origin:", sender.url)
@@ -76,10 +82,15 @@ function onPopupMessage<T = unknown, P = unknown>(
   eventName: EventType,
   callback: (message: T & { command: typeof eventName }) => Promise<P>
 ) {
-  chrome.runtime.onMessage.addListener((message, _sender, sendResponse) => {
+  chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
     // Returning true unconditionally held the reply channel open for commands this listener
     // does not handle, so an unknown command hung until Chrome tore the port down.
     if (message?.command !== eventName) return false
+
+    if (!isFromExtensionPage(sender)) {
+      log("warn", "[messaging]", "Rejected popup command from", sender?.url)
+      return false
+    }
 
     respondWith(callback(message), sendResponse)
     return true
@@ -107,9 +118,16 @@ class Messaging {
     })
 
     onPopupMessage(EVENT.POPUP.GET_CONFIG, getConfig)
-    onPopupMessage(EVENT.POPUP.GET_EXTENSION_DATA, async () => extension().getExtensionData())
+    // Opening the popup can be what wakes the worker, so its state is read only once it is back.
+    onPopupMessage(EVENT.POPUP.GET_EXTENSION_DATA, async () => {
+      await extension().ready
+      return extension().getExtensionData()
+    })
     onPopupMessage(EVENT.POPUP.PUSH_TELEMETRY_REQUEST, async () => eventBroker().emit(EVENT.TELEMETRY.PUSH))
-    onPopupMessage(EVENT.POPUP.IS_EXTENSION_PAUSED, async () => extension().isPaused())
+    onPopupMessage(EVENT.POPUP.IS_EXTENSION_PAUSED, async () => {
+      await extension().ready
+      return extension().isPaused()
+    })
     onPopupMessage(EVENT.POPUP.EXTENSION_PAUSE_REQUEST, () => extension().pause())
     onPopupMessage(EVENT.POPUP.EXTENSION_RESUME_REQUEST, () => extension().resume())
     onPopupMessage(EVENT.POPUP.CHECK_IF_ACTIVE_TAB_PUBLISHER_REQUEST, async () =>

@@ -81,7 +81,7 @@ function createAlarms(onAlarm: MockEvent<[Alarm]>) {
     async create(name: string, options: { when?: number; periodInMinutes?: number; delayInMinutes?: number }) {
       alarms.set(name, {
         name,
-        scheduledTime: options.when ?? Date.now(),
+        scheduledTime: options.when ?? Date.now() + (options.delayInMinutes ?? 0) * 60_000,
         periodInMinutes: options.periodInMinutes,
       })
     },
@@ -145,7 +145,7 @@ export function createChromeMock() {
       },
     },
 
-    storage: { local: createStorageArea(), sync: createStorageArea() },
+    storage: { local: createStorageArea(), sync: createStorageArea(), session: createStorageArea() },
 
     alarms: createAlarms(onAlarm),
 
@@ -161,7 +161,10 @@ export function createChromeMock() {
     },
 
     declarativeNetRequest: {
-      sessionRules: [] as { id: number }[],
+      sessionRules: [] as { id: number; condition?: { urlFilter?: string } }[],
+      async getSessionRules() {
+        return structuredClone(mock.declarativeNetRequest.sessionRules)
+      },
       updateSessionRuleCalls: [] as { addRules?: { id: number }[]; removeRuleIds?: number[] }[],
       async updateSessionRules(options: { addRules?: { id: number }[]; removeRuleIds?: number[] }) {
         mock.declarativeNetRequest.updateSessionRuleCalls.push(structuredClone(options))
@@ -193,16 +196,31 @@ export function createChromeMock() {
         mock.tabs.created.push(options)
         return { id: mock.tabs.byId.size + 1, ...options }
       },
+      removed: [] as number[],
+      async remove(tabId: number) {
+        mock.tabs.removed.push(tabId)
+        mock.tabs.byId.delete(tabId)
+      },
     },
 
     windows: {
       WINDOW_ID_NONE: -1,
       onFocusChanged: createEvent<[number]>(),
       onRemoved: createEvent<[number]>(),
+      /** What `getLastFocused` reports. Set per test to say whether the browser has the user's focus. */
+      lastFocused: { id: 1, focused: true },
+      async getLastFocused() {
+        return mock.windows.lastFocused
+      },
+    },
+
+    idle: {
+      onStateChanged: createEvent<["active" | "idle" | "locked"]>(),
     },
 
     webRequest: {
-      onCompleted: createEvent<[{ url: string; responseHeaders?: { name: string; value?: string }[] }]>(),
+      onCompleted:
+        createEvent<[{ url: string; tabId?: number; responseHeaders?: { name: string; value?: string }[] }]>(),
     },
 
     scripting: {

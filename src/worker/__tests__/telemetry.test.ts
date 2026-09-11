@@ -14,7 +14,6 @@ const { Telemetry } = await import("../telemetry")
 // Every instance built here subscribes to the shared event bus and stays subscribed, so instances
 // from earlier tests still react to later emits. That is harmless for map assertions (each applies
 // the same mutation to its own map) but not for storage ones - those live in telemetry.storage.test.ts.
-const SAVE_DEBOUNCE_DELAY = 5
 
 type Source = "header" | "meta"
 type StoredMap = Record<string, { publisherId: string; source: Source; views: number; duration: number }>
@@ -23,7 +22,7 @@ const seedStored = (telemetry: StoredMap) => chromeMock.storage.local.seed({ tel
 
 /** Builds an instance whose stored map has already been read back. */
 async function createTelemetry() {
-  const instance = new Telemetry(SAVE_DEBOUNCE_DELAY)
+  const instance = new Telemetry()
   await instance.ready
   return instance
 }
@@ -267,26 +266,51 @@ describe("Telemetry", () => {
     })
   })
 
-  describe("flushing", () => {
-    test("zeroes counters but keeps the publishers, so re-detection is not needed", async () => {
+  describe("after a push", () => {
+    test("acknowledging takes the sent amounts off but keeps the publishers, so re-detection is not needed", async () => {
       seedStored({ "a.test": entry("client-a", 2, 200) })
       const telemetry = await createTelemetry()
 
-      eventBroker().emit(EVENT.TELEMETRY.FLUSH)
+      await telemetry.acknowledge(telemetry.export())
 
       expect(telemetry.map.get("a.test")).toEqual(entry("client-a"))
       expect(telemetry.export()).toEqual([])
     })
 
-    test("an expired subscription and a reset request both flush", async () => {
-      for (const event of [EVENT.EXTENSION.SUBSCRIPTION_EXPIRED, EVENT.EXTENSION.REQUEST_RESET]) {
-        seedStored({ "a.test": entry("client-a", 2, 200) })
-        const telemetry = await createTelemetry()
+    test("acknowledging skips a hostname that changed hands while the push was in flight", async () => {
+      seedStored({ "a.test": entry("client-a", 2, 200) })
+      const telemetry = await createTelemetry()
+      const sent = telemetry.export()
 
-        eventBroker().emit(event)
+      eventBroker().emit(EVENT.TAB_TRACKER.PUBLISHER_DETECTED, {
+        publisherId: "client-b",
+        source: "header",
+        url: "https://a.test/",
+      })
+      telemetry.addViews("https://a.test/")
+      await telemetry.acknowledge(sent)
 
-        expect(telemetry.map.get("a.test")?.views).toBe(0)
-      }
+      expect(telemetry.map.get("a.test")).toEqual(entry("client-b", 1, 0))
+    })
+  })
+
+  describe("losing the subscription", () => {
+    test("an expired subscription keeps unsent usage, which a late renewal makes sendable again", async () => {
+      seedStored({ "a.test": entry("client-a", 2, 200) })
+      const telemetry = await createTelemetry()
+
+      eventBroker().emit(EVENT.EXTENSION.SUBSCRIPTION_EXPIRED)
+
+      expect(telemetry.map.get("a.test")).toEqual(entry("client-a", 2, 200))
+    })
+
+    test("a reset request clears everything", async () => {
+      seedStored({ "a.test": entry("client-a", 2, 200) })
+      const telemetry = await createTelemetry()
+
+      eventBroker().emit(EVENT.EXTENSION.REQUEST_RESET)
+
+      expect(telemetry.map.size).toBe(0)
     })
   })
 })

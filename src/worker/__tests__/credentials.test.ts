@@ -1,8 +1,18 @@
 import { afterEach, beforeEach, describe, expect, mock, spyOn, test } from "bun:test"
 import { chromeMock } from "../../__fixtures__/chrome"
 
-const state = { extensionToken: "refresh-1" as string | undefined }
-mock.module("../extension", () => ({ extension: () => ({ getExtensionToken: () => state.extensionToken }) }))
+const state = {
+  extensionToken: "ext-1" as string | undefined,
+  isSubscriptionActive: true,
+  ready: Promise.resolve() as Promise<void>,
+}
+mock.module("../extension", () => ({
+  extension: () => ({
+    ready: state.ready,
+    getExtensionToken: () => state.extensionToken,
+    isSubscriptionActive: () => state.isSubscriptionActive,
+  }),
+}))
 
 const pool = { needsRefresh: true, refresh: mock(async () => 250) }
 mock.module("../token-pool", () => ({
@@ -17,7 +27,13 @@ const { credentials } = await import("../credentials")
 
 const EXPIRY_ALARM = "EXTENSION_TOKEN_EXPIRATION_ALARM"
 const RETRY_ALARM = "EXTENSION_TOKEN_RENEWAL_ATTEMPT_ALARM"
-const HOUR = 60 * 60 * 1000
+const POOL_ALARM = "TOKEN_POOL_CHECK_ALARM"
+
+// Created at import, before the per-test reset clears every alarm.
+await Bun.sleep(0)
+const poolAlarmAtStartup = chromeMock.alarms.peek().get(POOL_ALARM)
+const MINUTE = 60 * 1000
+const HOUR = 60 * MINUTE
 
 const syncPayload = (expiresAt = Date.now() + HOUR) => ({
   payload: {
@@ -31,12 +47,15 @@ const jsonResponse = (body: unknown, status = 200) =>
 
 const alarms = () => chromeMock.alarms.peek()
 const storedAttempts = () => chromeMock.storage.local.peek().renewalAttempts
+const retryDelay = () => (alarms().get(RETRY_ALARM)?.scheduledTime ?? 0) - Date.now()
 
 describe("credentials", () => {
   let fetchSpy: ReturnType<typeof spyOn<typeof globalThis, "fetch">>
 
   beforeEach(async () => {
-    state.extensionToken = "refresh-1"
+    state.extensionToken = "ext-1"
+    state.isSubscriptionActive = true
+    state.ready = Promise.resolve()
     pool.needsRefresh = true
     pool.refresh.mockClear()
     await chromeMock.alarms.clearAll()
@@ -50,7 +69,7 @@ describe("credentials", () => {
   })
 
   describe("scheduling", () => {
-    test("enableRenewal arms an alarm for the moment the token expires", async () => {
+    test("enableRenewal arms an alarm for the moment the subscription expires", async () => {
       const when = Date.now() + HOUR
 
       await credentials().enableRenewal(when)
@@ -62,18 +81,19 @@ describe("credentials", () => {
       await credentials().enableRenewal(Date.now() + HOUR)
       await credentials().enableRenewal(Date.now() + 2 * HOUR)
 
-      expect(alarms().size).toBe(1)
+      expect(alarms().has(EXPIRY_ALARM)).toBe(true)
+      expect([...alarms().keys()].filter((name) => name === EXPIRY_ALARM)).toHaveLength(1)
     })
 
     test("enableRenewal(0) arms nothing, since there is no expiry to renew against", async () => {
       await credentials().enableRenewal(0)
 
-      expect(alarms().size).toBe(0)
+      expect(alarms().has(EXPIRY_ALARM)).toBe(false)
     })
 
     test("enableRenewal wipes a retry backlog left over from an earlier failure", async () => {
       await chromeMock.storage.local.set({ renewalAttempts: 3 })
-      await chromeMock.alarms.create(RETRY_ALARM, { periodInMinutes: 1 })
+      await chromeMock.alarms.create(RETRY_ALARM, { delayInMinutes: 5 })
 
       await credentials().enableRenewal(Date.now() + HOUR)
 
@@ -81,14 +101,15 @@ describe("credentials", () => {
       expect(storedAttempts()).toBeUndefined()
     })
 
-    test("cancelRenewal clears both alarms and the attempt counter", async () => {
+    test("cancelRenewal clears both renewal alarms and the attempt counter", async () => {
       await credentials().enableRenewal(Date.now() + HOUR)
       await chromeMock.storage.local.set({ renewalAttempts: 2 })
-      await chromeMock.alarms.create(RETRY_ALARM, { periodInMinutes: 1 })
+      await chromeMock.alarms.create(RETRY_ALARM, { delayInMinutes: 5 })
 
       await credentials().cancelRenewal()
 
-      expect(alarms().size).toBe(0)
+      expect(alarms().has(EXPIRY_ALARM)).toBe(false)
+      expect(alarms().has(RETRY_ALARM)).toBe(false)
       expect(storedAttempts()).toBeUndefined()
     })
   })
@@ -104,13 +125,13 @@ describe("credentials", () => {
 
       const [url, init] = fetchSpy.mock.calls[0] as [string, RequestInit]
       expect(url).toBe("https://zeroad.network/extension/sync")
-      expect((init.headers as Record<string, string>).Authorization).toBe("Bearer refresh-1")
+      expect((init.headers as Record<string, string>).Authorization).toBe("Bearer ext-1")
       expect(received).toHaveBeenCalledWith(body.payload)
     })
 
     test("clears the retry state after a successful renewal", async () => {
       await chromeMock.storage.local.set({ renewalAttempts: 3 })
-      await chromeMock.alarms.create(RETRY_ALARM, { periodInMinutes: 1 })
+      await chromeMock.alarms.create(RETRY_ALARM, { delayInMinutes: 5 })
 
       await chromeMock.alarms.fire(EXPIRY_ALARM)
 
@@ -133,103 +154,109 @@ describe("credentials", () => {
       expect(fetchSpy).not.toHaveBeenCalled()
     })
 
-    test("asks for a reset instead of renewing when there is no refresh token", async () => {
+    test("waits for the stored state before renewing, so a waking worker is not mistaken for signed out", async () => {
+      let finishLoading = () => {}
+      state.ready = new Promise((resolve) => {
+        finishLoading = resolve
+      })
+      const reset = mock()
+      eventBroker().on(EVENT.EXTENSION.REQUEST_RESET, reset)
+
+      const renewal = chromeMock.alarms.fire(EXPIRY_ALARM)
+      await Bun.sleep(0)
+      expect(fetchSpy).not.toHaveBeenCalled()
+
+      finishLoading()
+      await renewal
+
+      expect(fetchSpy).toHaveBeenCalledTimes(1)
+      expect(reset).not.toHaveBeenCalled()
+    })
+
+    test("a signed-out extension stops renewing instead of resetting", async () => {
       state.extensionToken = undefined
       const reset = mock()
       eventBroker().on(EVENT.EXTENSION.REQUEST_RESET, reset)
+      await credentials().enableRenewal(Date.now() + HOUR)
 
       await chromeMock.alarms.fire(EXPIRY_ALARM)
 
-      expect(reset).toHaveBeenCalled()
       expect(fetchSpy).not.toHaveBeenCalled()
+      expect(reset).not.toHaveBeenCalled()
+      expect(alarms().has(EXPIRY_ALARM)).toBe(false)
     })
   })
 
-  describe("rejecting a bad renewal", () => {
+  describe("a renewal the platform has not processed yet", () => {
     const cases: [string, unknown][] = [
-      ["a subscription that is already expired", syncPayload(Date.now() - 1000)],
-      ["a payload with no subscription", { payload: { user: { extensionToken: "refresh-1" } } }],
+      ["a subscription that is still on its old period", syncPayload(Date.now() - 1000)],
+      ["a payload with no subscription", { payload: { user: { extensionToken: "ext-1" } } }],
     ]
 
     for (const [description, body] of cases) {
-      test(`does not accept ${description}`, async () => {
+      test(`stores ${description} and keeps retrying, without signing out`, async () => {
         fetchSpy.mockResolvedValue(jsonResponse(body))
         const received = mock()
+        const reset = mock()
         eventBroker().on(EVENT.EXTENSION.PAYLOAD_RECEIVED, received)
+        eventBroker().on(EVENT.EXTENSION.REQUEST_RESET, reset)
 
         await chromeMock.alarms.fire(EXPIRY_ALARM)
 
-        expect(received).not.toHaveBeenCalled()
-        expect(alarms().get(RETRY_ALARM)?.periodInMinutes).toBe(1)
+        expect(received).toHaveBeenCalledWith((body as { payload: unknown }).payload)
+        expect(reset).not.toHaveBeenCalled()
+        expect(storedAttempts()).toBe(1)
+        expect(alarms().has(RETRY_ALARM)).toBe(true)
       })
     }
-
-    test("a failed credential refresh counts as a failed renewal, so it is retried", async () => {
-      // Without credentials the extension has a live subscription it cannot spend anywhere, which is
-      // worth retrying rather than reporting as success
-      pool.refresh.mockRejectedValueOnce(new Error("platform unreachable"))
-      const received = mock()
-      eventBroker().on(EVENT.EXTENSION.PAYLOAD_RECEIVED, received)
-
-      await chromeMock.alarms.fire(EXPIRY_ALARM)
-
-      expect(received).not.toHaveBeenCalled()
-      expect(alarms().get(RETRY_ALARM)?.periodInMinutes).toBe(1)
-    })
-  })
-
-  describe("restocking the token pool", () => {
-    test("refreshes the pool as part of a successful renewal", async () => {
-      await chromeMock.alarms.fire(EXPIRY_ALARM)
-
-      expect(pool.refresh).toHaveBeenCalled()
-    })
-
-    test("leaves a well-stocked pool alone", async () => {
-      // Asking for a fresh batch every renewal would discard unspent credentials and, worse, move
-      // every site this extension already talks to onto a new anonymity set for no reason
-      pool.needsRefresh = false
-
-      await chromeMock.alarms.fire(EXPIRY_ALARM)
-
-      expect(pool.refresh).not.toHaveBeenCalled()
-    })
   })
 
   describe("retrying", () => {
-    test("a failed renewal counts the attempt and arms a one-minute retry", async () => {
+    test("backs off from a minute to hourly, since renewal payments take hours to land", async () => {
       fetchSpy.mockResolvedValue(jsonResponse({ error: "nope" }, 500))
+      const delays: number[] = []
+
+      for (let attempt = 0; attempt < 6; attempt++) {
+        await chromeMock.alarms.fire(RETRY_ALARM)
+        delays.push(Math.round(retryDelay() / MINUTE))
+      }
+
+      expect(delays).toEqual([1, 5, 15, 60, 60, 60])
+    })
+
+    test("a rejected token signs the extension out", async () => {
+      fetchSpy.mockResolvedValue(jsonResponse({}, 403))
+      const reset = mock()
+      eventBroker().on(EVENT.EXTENSION.REQUEST_RESET, reset)
 
       await chromeMock.alarms.fire(EXPIRY_ALARM)
 
-      expect(storedAttempts()).toBe(1)
-      expect(alarms().get(RETRY_ALARM)?.periodInMinutes).toBe(1)
+      expect(reset).toHaveBeenCalledTimes(1)
+      expect(alarms().has(RETRY_ALARM)).toBe(false)
     })
 
-    test("keeps the existing retry alarm across attempts rather than pushing it back", async () => {
-      fetchSpy.mockResolvedValue(jsonResponse({}, 500))
-
-      await chromeMock.alarms.fire(EXPIRY_ALARM)
-      const scheduledTime = alarms().get(RETRY_ALARM)?.scheduledTime
-      await chromeMock.alarms.fire(RETRY_ALARM)
-
-      expect(storedAttempts()).toBe(2)
-      expect(alarms().get(RETRY_ALARM)?.scheduledTime).toBe(scheduledTime)
-    })
-
-    test("gives up and asks for a reset once the attempts run out", async () => {
-      // Five failures means the refresh token is not coming back; keeping it would retry forever.
+    test("a server error is retried, never treated as a rejected token", async () => {
       fetchSpy.mockResolvedValue(jsonResponse({}, 500))
       const reset = mock()
       eventBroker().on(EVENT.EXTENSION.REQUEST_RESET, reset)
 
-      for (let attempt = 0; attempt < 5; attempt++) await chromeMock.alarms.fire(RETRY_ALARM)
+      await chromeMock.alarms.fire(EXPIRY_ALARM)
+
       expect(reset).not.toHaveBeenCalled()
+      expect(storedAttempts()).toBe(1)
+    })
+
+    test("stops polling after about three days but stays signed in", async () => {
+      fetchSpy.mockResolvedValue(jsonResponse({}, 500))
+      const reset = mock()
+      eventBroker().on(EVENT.EXTENSION.REQUEST_RESET, reset)
+      await chromeMock.storage.local.set({ renewalAttempts: 75 })
 
       await chromeMock.alarms.fire(RETRY_ALARM)
 
-      expect(reset).toHaveBeenCalledTimes(1)
-      expect(fetchSpy).toHaveBeenCalledTimes(5)
+      expect(alarms().has(RETRY_ALARM)).toBe(false)
+      expect(storedAttempts()).toBeUndefined()
+      expect(reset).not.toHaveBeenCalled()
     })
 
     test("a network failure retries the same way an error status does", async () => {
@@ -238,6 +265,56 @@ describe("credentials", () => {
       await chromeMock.alarms.fire(EXPIRY_ALARM)
 
       expect(storedAttempts()).toBe(1)
+    })
+  })
+
+  describe("keeping the token pool stocked", () => {
+    test("checks the pool on its own hourly alarm", () => {
+      expect(poolAlarmAtStartup?.periodInMinutes).toBe(60)
+    })
+
+    test("refreshes a pool that needs it when the subscription becomes active", async () => {
+      eventBroker().emit(EVENT.EXTENSION.SUBSCRIPTION_ACTIVE)
+      await Bun.sleep(0)
+
+      expect(pool.refresh).toHaveBeenCalledTimes(1)
+    })
+
+    test("refreshes on the check alarm, independently of subscription renewal", async () => {
+      await chromeMock.alarms.fire(POOL_ALARM)
+
+      expect(pool.refresh).toHaveBeenCalledTimes(1)
+      expect(fetchSpy).not.toHaveBeenCalled()
+    })
+
+    test("leaves a well-stocked pool alone", async () => {
+      // A fresh batch every check would discard unspent credentials and move every site onto a new
+      // anonymity set for no reason
+      pool.needsRefresh = false
+
+      await chromeMock.alarms.fire(POOL_ALARM)
+
+      expect(pool.refresh).not.toHaveBeenCalled()
+    })
+
+    test("does not ask for credentials without a live subscription", async () => {
+      state.isSubscriptionActive = false
+
+      await chromeMock.alarms.fire(POOL_ALARM)
+
+      expect(pool.refresh).not.toHaveBeenCalled()
+    })
+
+    test("a failed refresh is left for the next check rather than thrown", async () => {
+      pool.refresh.mockRejectedValueOnce(new Error("rate_limited"))
+
+      await expect(credentials().maintainTokenPool()).resolves.toBeUndefined()
+    })
+
+    test("renewing the subscription no longer touches the pool", async () => {
+      await chromeMock.alarms.fire(EXPIRY_ALARM)
+
+      expect(pool.refresh).not.toHaveBeenCalled()
     })
   })
 })

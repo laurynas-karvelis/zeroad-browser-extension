@@ -4,6 +4,7 @@ import { chromeMock } from "../../__fixtures__/chrome"
 const state = { extensionToken: "refresh-1" as string | undefined }
 mock.module("../extension", () => ({ extension: () => ({ getExtensionToken: () => state.extensionToken }) }))
 
+const { EVENT, eventBroker } = await import("../event-broker")
 const { tokenPool } = await import("../token-pool")
 
 const HOUR = 3600
@@ -76,7 +77,8 @@ describe("tokenPool", () => {
 
     authority = await fakeAuthority()
     fetchSpy = spyOn(globalThis, "fetch")
-    respondWith((publicKeys) => authority.sign(publicKeys, nowSeconds() + 24 * HOUR))
+    // Real batches expire at the second UTC midnight after issue, 24-48 hours out.
+    respondWith((publicKeys) => authority.sign(publicKeys, nowSeconds() + 36 * HOUR))
   })
 
   afterEach(() => {
@@ -319,6 +321,14 @@ describe("tokenPool", () => {
       expect(await tokenPool().needsRefresh()).toBe(false)
     })
 
+    test("asks for a refresh once less than a day of the batch is left, before it runs out", async () => {
+      respondWith((publicKeys) => authority.sign(publicKeys, nowSeconds() + 12 * HOUR))
+      await tokenPool().refresh()
+
+      expect(await tokenPool().size()).toBe(BATCH_SIZE)
+      expect(await tokenPool().needsRefresh()).toBe(true)
+    })
+
     test("clear wipes both the credentials and the bindings", async () => {
       await tokenPool().refresh()
       await tokenPool().tokenFor("publisher.test")
@@ -328,5 +338,38 @@ describe("tokenPool", () => {
       expect(await tokenPool().size()).toBe(0)
       expect(await tokenPool().boundHostnames()).toEqual([])
     })
+  })
+
+  describe("concurrent callers", () => {
+    test("share one refresh request, since every batch spends the daily allowance", async () => {
+      await Promise.all([tokenPool().refresh(), tokenPool().refresh()])
+
+      expect(fetchSpy).toHaveBeenCalledTimes(1)
+    })
+
+    test("spend a single credential when binding the same hostname at once", async () => {
+      await tokenPool().refresh()
+
+      const [first, second] = await Promise.all([
+        tokenPool().tokenFor("publisher.test"),
+        tokenPool().tokenFor("publisher.test"),
+      ])
+
+      expect(first).toBe(second as string)
+      expect(await tokenPool().size()).toBe(BATCH_SIZE - 1)
+    })
+  })
+
+  test("a refresh announces the hostnames the replaced batch held, so they can be rebound", async () => {
+    await tokenPool().refresh()
+    await tokenPool().tokenFor("one.test")
+    await tokenPool().tokenFor("two.test")
+    const refreshed = mock()
+    eventBroker().on(EVENT.TOKEN_POOL.REFRESHED, refreshed)
+
+    await tokenPool().refresh()
+
+    expect(refreshed).toHaveBeenCalledWith({ hostnames: ["one.test", "two.test"] })
+    expect(await tokenPool().boundHostnames()).toEqual([])
   })
 })

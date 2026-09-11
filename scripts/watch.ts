@@ -54,6 +54,8 @@ const timers: Record<string, ReturnType<typeof setTimeout>> = {}
 async function runCommand(command: string, args: string[] = []) {
   const child = spawn({
     cmd: [command, ...args],
+    // A watched build is a development build, so the locally served site may talk to the extension.
+    env: { ...process.env, EXTENSION_DEV: "1" },
     stdout: "inherit",
     stderr: "inherit",
   })

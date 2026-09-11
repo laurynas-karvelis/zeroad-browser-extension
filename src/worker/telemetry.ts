@@ -33,10 +33,8 @@ export type TelemetryObservation = {
 
 export type TelemetryExportData = TelemetryObservation[]
 
-const SAVE_DEBOUNCE_DELAY = 5000
-
 export class Telemetry {
-  map: Map<Hostname, Entry> = this.createMap()
+  map = new Map<Hostname, Entry>()
 
   /**
    * Resolves once the stored map has been read back. A service worker restarts constantly, so
@@ -45,65 +43,61 @@ export class Telemetry {
    */
   readonly ready: Promise<void>
 
-  private saveTimeout?: ReturnType<typeof setTimeout>
-
-  /** @param saveDebounceDelay how long writes are coalesced for - only lowered by tests. */
-  constructor(private readonly saveDebounceDelay = SAVE_DEBOUNCE_DELAY) {
+  constructor() {
     this.ready = this.load()
 
     eventBroker()
       .on<TabTrackerPublisherDetectedData>(EVENT.TAB_TRACKER.PUBLISHER_DETECTED, ({ publisherId, source, url }) =>
         this.addEntry(publisherId, source, url)
       )
-      .on(EVENT.TELEMETRY.FLUSH, () => this.softReset())
-      .on(EVENT.EXTENSION.SUBSCRIPTION_EXPIRED, () => this.softReset())
-      .on(EVENT.EXTENSION.REQUEST_RESET, () => this.softReset())
+      .on(EVENT.EXTENSION.REQUEST_RESET, () => this.clear())
   }
 
-  private createMap(record?: StoredTelemetryMap) {
-    return new Map<Hostname, Entry>(Object.entries(record || {}))
-  }
+  /**
+   * Takes a successfully pushed batch off the counters. Subtracted rather than zeroed, so whatever was
+   * recorded while the upload was in flight stays for the next push.
+   */
+  acknowledge(observations: TelemetryExportData) {
+    for (const { hostname, publisherId, views, duration } of observations) {
+      const entry = this.map.get(hostname)
 
-  private exportMap(): StoredTelemetryMap {
-    return Object.fromEntries(this.map)
-  }
+      // The hostname changed hands mid-flight, and its counters already started over for the new owner.
+      if (!entry || entry.publisherId !== publisherId) continue
 
-  private async softReset() {
-    this.map.values().forEach((entry) => {
-      entry.views = 0
-      entry.duration = 0
-    })
+      entry.views = Math.max(0, entry.views - views)
+      entry.duration = Math.max(0, entry.duration - duration)
+    }
 
     return this.save()
   }
 
-  private save() {
-    if (this.saveTimeout) clearTimeout(this.saveTimeout)
+  private clear() {
+    this.map.clear()
+    return this.save()
+  }
 
-    this.saveTimeout = setTimeout(() => {
-      chrome.storage.local.set<{ telemetry: StoredTelemetryMap }>({
-        telemetry: this.exportMap(),
-      })
-      this.saveTimeout = undefined
-    }, this.saveDebounceDelay)
+  // Written through rather than debounced: the worker can be torn down at any moment, and the map is small.
+  private save() {
+    return chrome.storage.local.set<{ telemetry: StoredTelemetryMap }>({ telemetry: Object.fromEntries(this.map) })
   }
 
   private async load() {
-    const { telemetry } = await chrome.storage.local.get<{
-      telemetry: StoredTelemetryMap
-    }>(["telemetry"])
-    this.map = this.createMap(telemetry)
+    const { telemetry } = await chrome.storage.local.get<{ telemetry: StoredTelemetryMap }>(["telemetry"])
 
-    // Clean-up potentially old entries
-    const toDelete: Hostname[] = []
-    for (const [key, entry] of this.map.entries()) {
-      if (!entry.views && !entry.duration) {
-        toDelete.push(key)
+    // Merged into, not swapped for, the in-memory map: an event can land before this read returns.
+    // Entries with nothing left to send are dropped - the site is simply rediscovered on its next visit.
+    for (const [hostname, stored] of Object.entries(telemetry || {})) {
+      const current = this.map.get(hostname)
+
+      if (!current) {
+        if (stored.views || stored.duration) this.map.set(hostname, stored)
+      } else if (current.publisherId === stored.publisherId) {
+        current.views += stored.views
+        current.duration += stored.duration
       }
     }
-    toDelete.forEach((key) => this.map.delete(key))
 
-    this.save()
+    await this.save()
   }
 
   private addEntry(publisherId: Entry["publisherId"], source: Entry["source"], url: string) {
@@ -181,7 +175,7 @@ export class Telemetry {
 
     for (const [hostname, { publisherId, source, views, duration }] of this.map) {
       // Anything with activity ships. A view with no dwell time is still a visit, and if it is
-      // dropped here it is never reported at all - `softReset` zeroes the entry on the next flush.
+      // dropped here it is never reported at all - `acknowledge` takes it off after the push.
       if (!views && !duration) continue
 
       observations.push({ publisherId, source, hostname, views, duration })

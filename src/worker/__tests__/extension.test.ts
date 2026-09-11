@@ -195,13 +195,22 @@ describe("Extension", () => {
       expect(reset).toHaveBeenCalled()
     })
 
-    test("a sync clears the paused state, so the popup and the rule agree again", async () => {
+    test("the pause is stored, so it survives the stored state being read back", async () => {
+      // A sync re-reads everything from storage, exactly as a restarted worker does.
       await extension().pause()
+      expect(chromeMock.storage.local.peek().isHeaderInjectionPaused).toBe(true)
 
       eventBroker().emit(EVENT.EXTENSION.PAYLOAD_RECEIVED, { user: user(), subscription: subscription() })
       await Bun.sleep(0)
 
-      expect(extension().isPaused()).toBe(false)
+      expect(extension().isPaused()).toBe(true)
+    })
+
+    test("resume forgets the stored pause", async () => {
+      await extension().pause()
+      await extension().resume()
+
+      expect(chromeMock.storage.local.peek().isHeaderInjectionPaused).toBeUndefined()
     })
   })
 

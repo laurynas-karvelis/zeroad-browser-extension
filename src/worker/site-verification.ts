@@ -35,6 +35,25 @@ export type VerifySiteResult = {
 const LOAD_TIMEOUT_MS = 20000
 const PUBLISHER_HEADER_LOWERCASE = PUBLISHER_HEADER.toLowerCase()
 
+const verificationTabIds = new Set<number>()
+
+/**
+ * Whether a tab was opened to verify a site. The tab tracker ignores these, so a publisher checking
+ * their own site is not credited a visit and does not spend a credential on it.
+ */
+export function isVerificationTab(tabId: number) {
+  return verificationTabIds.has(tabId)
+}
+
+let verificationQueue: Promise<unknown> = Promise.resolve()
+
+/** Verifications run one at a time, so a page cannot open any number of background tabs at once. */
+export function verifySite(request: VerifySiteRequest): Promise<VerifySiteResult> {
+  const verification = verificationQueue.then(() => runVerification(request))
+  verificationQueue = verification.catch(() => undefined)
+  return verification
+}
+
 /**
  * Buffers the `Better-Web-Publisher` response header (and final URL) of every main-frame navigation,
  * keyed by tab. Registered before the tab is opened so the navigation cannot complete before we are
@@ -112,7 +131,7 @@ function waitForTabLoad(tabId: number, timeoutMs: number): Promise<void> {
   })
 }
 
-export async function verifySite(request: VerifySiteRequest): Promise<VerifySiteResult> {
+async function runVerification(request: VerifySiteRequest): Promise<VerifySiteResult> {
   const publisherId = (request?.publisherId || "").trim()
   const url = (request?.url || "").trim()
 
@@ -134,6 +153,8 @@ export async function verifySite(request: VerifySiteRequest): Promise<VerifySite
     if (tabId === undefined) {
       return { success: false, method: null, error: "Couldn't open the page to check it." }
     }
+
+    verificationTabIds.add(tabId)
 
     await waitForTabLoad(tabId, LOAD_TIMEOUT_MS)
 
@@ -174,6 +195,8 @@ export async function verifySite(request: VerifySiteRequest): Promise<VerifySite
       } catch {
         /* The tab may already be closed. */
       }
+
+      verificationTabIds.delete(tabId)
     }
   }
 }

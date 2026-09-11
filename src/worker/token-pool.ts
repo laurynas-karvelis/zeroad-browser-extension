@@ -1,4 +1,5 @@
 import { getConfig } from "./config"
+import { EVENT, eventBroker } from "./event-broker"
 import { extension } from "./extension"
 import { log } from "./logger"
 import type { Hostname } from "./types"
@@ -40,6 +41,12 @@ const BATCH_SIZE = 250
 /** Below this, the next refresh is brought forward rather than waiting for the daily one. */
 const LOW_WATER_MARK = 25
 
+/**
+ * A batch is replaced once less than this is left of it. Credentials expire at the second UTC midnight
+ * after issue - one to two days out - so this refreshes about daily, always before the batch runs out.
+ */
+const REFRESH_BEFORE_EXPIRY_SECONDS = 24 * 60 * 60
+
 const STORAGE_KEY = "tokenPool"
 
 const textEncoder = new TextEncoder()
@@ -55,6 +62,11 @@ type PooledCredential = {
   privateKey: JsonWebKey
   /** base64url, the authority's 64-byte signature over this key. */
   signature: string
+}
+
+export type TokenPoolRefreshedData = {
+  /** Hostnames that held a binding in the batch just replaced. */
+  hostnames: Hostname[]
 }
 
 type BoundToken = {
@@ -90,6 +102,8 @@ const nowSeconds = () => Math.floor(Date.now() / 1000)
 
 class TokenPool {
   private pool?: StoredPool
+  private refreshing?: Promise<number>
+  private bindingByHostname = new Map<Hostname, Promise<string | undefined>>()
 
   private async load(): Promise<StoredPool | undefined> {
     if (this.pool) return this.pool
@@ -118,7 +132,12 @@ class TokenPool {
 
   async needsRefresh() {
     const pool = await this.load()
-    return !this.isUsable(pool) || pool.unused.length <= LOW_WATER_MARK
+
+    return (
+      !this.isUsable(pool) ||
+      pool.unused.length <= LOW_WATER_MARK ||
+      pool.expiresAt - nowSeconds() < REFRESH_BEFORE_EXPIRY_SECONDS
+    )
   }
 
   private isUsable(pool: StoredPool | undefined): pool is StoredPool {
@@ -130,8 +149,18 @@ class TokenPool {
    *
    * Everything already in the pool is discarded: credentials from an older batch carry the previous
    * expiry, and mixing the two would leave sites seeing tokens from two different anonymity sets.
+   *
+   * Concurrent callers share one request - every batch spends part of the platform's daily allowance.
    */
-  async refresh() {
+  refresh() {
+    this.refreshing ??= this.fetchBatch().finally(() => {
+      this.refreshing = undefined
+    })
+
+    return this.refreshing
+  }
+
+  private async fetchBatch() {
     const extensionToken = extension().getExtensionToken()
     if (!extensionToken) throw new Error("Cannot refresh the token pool without an extension token")
 
@@ -152,6 +181,8 @@ class TokenPool {
 
     if (payload.expiresAt <= nowSeconds()) throw new Error("Platform issued already-expired credentials")
 
+    const previouslyBoundHostnames = Object.keys((await this.load())?.bound ?? {})
+
     await this.save({
       version: payload.version,
       plan: payload.plan,
@@ -167,6 +198,10 @@ class TokenPool {
 
     log("debug", "[token-pool]", `stored ${keyPairs.length} credentials, expiring ${payload.expiresAt}`)
 
+    // Sites that held a binding get a fresh one now rather than when next rediscovered - a meta-tag
+    // publisher never is, so it would otherwise keep sending a token from the dead batch.
+    eventBroker().emit<TokenPoolRefreshedData>(EVENT.TOKEN_POOL.REFRESHED, { hostnames: previouslyBoundHostnames })
+
     return payload.signatures.length
   }
 
@@ -176,8 +211,21 @@ class TokenPool {
    * Repeat visits reuse the same token, which is what the multi-use design intends: re-binding on
    * every request would burn the pool in minutes and gain nothing, since the site already saw the
    * first one.
+   *
+   * Concurrent calls for the same hostname share one binding, so two tabs detecting the same site at
+   * once do not each spend a credential on it.
    */
-  async tokenFor(hostname: Hostname): Promise<string | undefined> {
+  tokenFor(hostname: Hostname): Promise<string | undefined> {
+    const pending = this.bindingByHostname.get(hostname)
+    if (pending) return pending
+
+    const binding = this.bind(hostname).finally(() => this.bindingByHostname.delete(hostname))
+    this.bindingByHostname.set(hostname, binding)
+
+    return binding
+  }
+
+  private async bind(hostname: Hostname): Promise<string | undefined> {
     const pool = await this.load()
     if (!this.isUsable(pool)) return undefined
 

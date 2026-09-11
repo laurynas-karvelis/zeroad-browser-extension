@@ -7,6 +7,8 @@ import { telemetrySync } from "./telemetry-sync"
 import type { ExtensionSyncData, SubscriptionExtensionData, UserExtensionData } from "./types"
 import { inDevMode } from "./utils"
 
+type StoredPause = { isHeaderInjectionPaused?: boolean }
+
 class Extension {
   private state: {
     user?: UserExtensionData
@@ -14,11 +16,18 @@ class Extension {
     isHeaderInjectionPaused: boolean
   } = { isHeaderInjectionPaused: false }
 
+  /**
+   * Resolves once the stored state has been read back. The worker is usually woken by the very event it
+   * then handles, so anything reading this state from an event handler must await this first, or it
+   * sees a signed-out, unsubscribed extension and drops the event.
+   */
+  readonly ready: Promise<void>
+
   constructor() {
     inDevMode().then((devMode) => setLogLevel((devMode && "debug") || "warn"))
 
     this.setupLinks()
-    this.load()
+    this.ready = this.load()
 
     eventBroker()
       .on<ExtensionSyncData>(EVENT.EXTENSION.PAYLOAD_RECEIVED, (payload) => this.reload(payload))
@@ -56,13 +65,20 @@ class Extension {
     return this.state.subscription.expiresAt > Date.now()
   }
 
-  pause() {
+  // Stored, not just held in memory: the worker restarts constantly, and a pause that silently lifted
+  // itself within a minute would not be a pause.
+  async pause() {
+    // Otherwise the initial load, still in flight, would overwrite the pause with the stored state
+    await this.ready
     this.state.isHeaderInjectionPaused = true
+    await chrome.storage.local.set<StoredPause>({ isHeaderInjectionPaused: true })
     return headerInjection().removeAllRules()
   }
 
-  resume() {
+  async resume() {
+    await this.ready
     this.state.isHeaderInjectionPaused = false
+    await chrome.storage.local.remove<StoredPause>(["isHeaderInjectionPaused"])
     return headerInjection().reset()
   }
 
@@ -71,11 +87,14 @@ class Extension {
   }
 
   private async load() {
-    const { user, subscription } = await chrome.storage.sync.get<ExtensionSyncData>(["user", "subscription"])
+    const [{ user, subscription }, { isHeaderInjectionPaused }] = await Promise.all([
+      chrome.storage.sync.get<ExtensionSyncData>(["user", "subscription"]),
+      chrome.storage.local.get<StoredPause>(["isHeaderInjectionPaused"]),
+    ])
 
     this.state.user = user
     this.state.subscription = subscription
-    this.state.isHeaderInjectionPaused = false
+    this.state.isHeaderInjectionPaused = !!isHeaderInjectionPaused
 
     if (this.isSubscriptionActive()) {
       // Schedule for subscription data reload

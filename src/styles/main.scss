@@ -6,6 +6,16 @@
 // light-dark(), so the popup follows the OS light/dark setting via the `color-scheme` meta tag.
 @include meta.load-css("@styles");
 
+// Shipped with the extension rather than fetched: a font request on every popup open would tell a third
+// party the user's IP and that they run the extension, and fail offline. `--font-sans` names InterVariable.
+@font-face {
+  font-family: InterVariable;
+  font-style: normal;
+  font-weight: 100 900;
+  font-display: swap;
+  src: url("../fonts/InterVariable.woff2") format("woff2");
+}
+
 // Chrome injects an unlayered `body { font-family: system-ui; font-size: 75% }` into every extension page,
 // and an unlayered rule beats every layer - so both are restated outside the layers. `html body` outranks
 // Chrome's `body` whichever of the two stylesheets loads last.

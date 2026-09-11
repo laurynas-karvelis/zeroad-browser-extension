@@ -360,15 +360,6 @@ export function Popup() {
           content="light dark"
         />
         <link
-          rel="preconnect"
-          href="https://rsms.me"
-          crossorigin="anonymous"
-        />
-        <link
-          rel="stylesheet"
-          href="https://rsms.me/inter/inter.css"
-        />
-        <link
           rel="stylesheet"
           href="./css/main.css"
         />

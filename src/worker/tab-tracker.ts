@@ -1,11 +1,28 @@
+import { schedule } from "./alarm"
 import { EVENT, eventBroker } from "./event-broker"
+import { extension } from "./extension"
 import { headerInjection } from "./header-injection"
 import { readMetaPublisherValue } from "./page-scan"
 import { PUBLISHER_HEADER, parsePublisherHeader } from "./publisher-id"
+import { isVerificationTab } from "./site-verification"
 import { type Entry, telemetry } from "./telemetry"
 import { isValidUrl } from "./utils"
 
 type BrowserTab = chrome.tabs.Tab & { publisher: boolean }
+
+/** The tab the user is looking at, the page on it, and since when its time is unbooked. */
+type FocusedVisit = { tabId: number; url?: string; since: number }
+
+const FOCUSED_VISIT_STORAGE_KEY = "focusedVisit"
+
+/**
+ * Books the focused visit's time every minute without ending it. The worker is torn down after ~30s
+ * of quiet, so a long read would otherwise only be booked on the next tab switch - by a worker that
+ * may have been restarted in between. This also wakes the worker, which keeps a visit from going
+ * unbooked for longer than the interval.
+ */
+const DWELL_CHECKPOINT_ALARM = "dwell-checkpoint"
+const DWELL_CHECKPOINT_INTERVAL_IN_MINUTES = 1
 
 export type TabTrackerPublisherDetectedData = {
   publisherId: string
@@ -31,6 +48,7 @@ enum TAB_REGISTER_SOURCE {
   ON_TAB_ACTIVATED = "tabs.onActivated",
   ON_TAB_UPDATED = "tabs.onUpdated",
   ON_WINDOW_FOCUS_CHANGED = "window.onFocusChanged",
+  ON_SCREEN_UNLOCKED = "idle.onStateChanged",
 }
 
 class TrackedTabs {
@@ -38,15 +56,22 @@ class TrackedTabs {
 
   // Chrome marks one tab `active` per window, so the flag alone cannot say which tab the user is
   // actually looking at. The worker remembers that itself, and times the visit itself rather than
-  // trusting `tab.lastAccessed`, whose meaning varies with how the tab was reached.
-  private focusedTabId?: number
-  private focusedSince?: number
+  // trusting `tab.lastAccessed`, whose meaning varies with how the tab was reached. It is mirrored to
+  // `storage.session`, since the worker is torn down mid-visit all the time.
+  private focused?: FocusedVisit
+
+  /** Resolves once a focused visit persisted by an earlier worker has been restored. */
+  readonly ready: Promise<void>
+
+  constructor() {
+    this.ready = this.restoreFocus()
+  }
 
   notifyIfActiveTabIsPublisher(tab?: BrowserTab) {
     tab = tab || this.findActiveTab()
 
     // Only the focused tab drives the badge; a background window's "active" tab must not.
-    if (!tab || tab.id !== this.focusedTabId) return
+    if (!tab || tab.id !== this.focused?.tabId) return
 
     const telemetryEntry = tab.publisher ? telemetry().findPublisherEntryByUrl(tab.url) : undefined
 
@@ -59,39 +84,42 @@ class TrackedTabs {
   }
 
   findActiveTab() {
-    return this.focusedTabId === undefined ? undefined : this.map.get(this.focusedTabId)
+    return this.focused === undefined ? undefined : this.map.get(this.focused.tabId)
+  }
+
+  /** Whether any tab has the user's attention - false once the browser loses focus or the screen locks. */
+  hasFocus() {
+    return this.focused !== undefined
   }
 
   /** Books the time spent on the focused tab and leaves nothing focused. */
   flushActive() {
-    const tab = this.findActiveTab()
+    this.bookFocusedTime()
+    this.setFocused(undefined)
+  }
 
-    if (tab?.publisher && this.focusedSince) {
-      telemetry().addDuration(tab.url, Math.floor(Date.now() - this.focusedSince))
-    }
+  /** Books the focused visit's time so far and keeps it going. */
+  checkpoint() {
+    if (!this.focused) return
 
-    this.focusedTabId = undefined
-    this.focusedSince = undefined
+    this.bookFocusedTime()
+    this.setFocused({ ...this.focused, since: Date.now() })
   }
 
   register(tab: chrome.tabs.Tab, source: TAB_REGISTER_SOURCE) {
     if (!tab.id) return
 
-    const previous = this.map.get(tab.id)
-
     // Time already spent belongs to the page it was spent on, not to whatever navigated over it.
-    if (tab.id === this.focusedTabId && previous && previous.url !== tab.url) this.flushActive()
+    if (this.focused?.tabId === tab.id && this.focused.url !== tab.url) {
+      this.bookFocusedTime()
+      this.setFocused({ tabId: tab.id, url: tab.url, since: Date.now() })
+    }
 
     const trackedTab = { ...tab, publisher: telemetry().hasPublisherEntryByUrl(tab.url) }
     this.map.set(tab.id, trackedTab)
 
-    const takesFocus =
-      source === TAB_REGISTER_SOURCE.ON_TAB_ACTIVATED ||
-      source === TAB_REGISTER_SOURCE.ON_WINDOW_FOCUS_CHANGED ||
-      // A restarted worker has no idea what is focused until the user switches something.
-      (this.focusedTabId === undefined && !!tab.active)
-
-    if (takesFocus) this.focus(tab.id)
+    // A tab finishing its load says nothing about where the user is looking - only switching does.
+    if (source !== TAB_REGISTER_SOURCE.ON_TAB_UPDATED) this.focus(tab)
 
     this.notifyIfActiveTabIsPublisher(trackedTab)
   }
@@ -107,7 +135,7 @@ class TrackedTabs {
 
   delete(tabId: number) {
     // Closing a background tab must not stop the clock on the tab the user is reading.
-    if (tabId === this.focusedTabId) this.flushActive()
+    if (tabId === this.focused?.tabId) this.flushActive()
     this.map.delete(tabId)
   }
 
@@ -117,18 +145,42 @@ class TrackedTabs {
     }
   }
 
-  private focus(tabId: number) {
+  private focus(tab: chrome.tabs.Tab) {
     // Re-focusing the same tab keeps its clock running instead of discarding the elapsed time.
-    if (this.focusedTabId === tabId) return
+    if (this.focused?.tabId === tab.id) return
 
     this.flushActive()
-    this.focusedTabId = tabId
-    this.focusedSince = Date.now()
+    if (tab.id) this.setFocused({ tabId: tab.id, url: tab.url, since: Date.now() })
+  }
+
+  private bookFocusedTime() {
+    if (!this.focused) return
+
+    const { url, since } = this.focused
+    if (telemetry().hasPublisherEntryByUrl(url)) telemetry().addDuration(url, Math.floor(Date.now() - since))
+  }
+
+  private setFocused(focused: FocusedVisit | undefined) {
+    this.focused = focused
+
+    void (focused
+      ? chrome.storage.session.set({ [FOCUSED_VISIT_STORAGE_KEY]: focused })
+      : chrome.storage.session.remove([FOCUSED_VISIT_STORAGE_KEY]))
+  }
+
+  private async restoreFocus() {
+    const stored = await chrome.storage.session.get<{ focusedVisit?: FocusedVisit }>([FOCUSED_VISIT_STORAGE_KEY])
+
+    // Whatever this worker has already seen is newer than what the last one left behind.
+    this.focused ??= stored.focusedVisit
   }
 }
 
 const singleton = new TrackedTabs()
 export const trackedTabs = () => singleton
+
+/** Handlers run only once every store they read is back from storage - see `extension().ready`. */
+const allReady = () => Promise.all([trackedTabs().ready, extension().ready, telemetry().ready])
 
 const helpers = {
   PUBLISHER_SITE_HEADER_NAME: PUBLISHER_HEADER.toLocaleLowerCase(),
@@ -160,13 +212,16 @@ const helpers = {
 }
 
 chrome.tabs.onActivated.addListener(async ({ tabId }) => {
+  await allReady()
   trackedTabs().register(await chrome.tabs.get(tabId), TAB_REGISTER_SOURCE.ON_TAB_ACTIVATED)
 })
 
-chrome.tabs.onUpdated.addListener(async (_tabId, changeInfo, tab) => {
-  if (changeInfo.status !== "complete") {
+chrome.tabs.onUpdated.addListener(async (tabId, changeInfo, tab) => {
+  if (changeInfo.status !== "complete" || isVerificationTab(tabId)) {
     return
   }
+
+  await allReady()
 
   if (isValidUrl(tab.url)) {
     if (!telemetry().hasPublisherEntryByUrl(tab.url)) {
@@ -185,7 +240,13 @@ chrome.tabs.onUpdated.addListener(async (_tabId, changeInfo, tab) => {
 })
 
 chrome.windows.onFocusChanged.addListener(async (windowId) => {
-  if (windowId === chrome.windows.WINDOW_ID_NONE) return
+  await allReady()
+
+  // The user moved to another application - the page is no longer being read.
+  if (windowId === chrome.windows.WINDOW_ID_NONE) {
+    trackedTabs().flushActive()
+    return
+  }
 
   // A special case: the `onActivated` event won't fire when switching between windows, so this is
   // the only signal that the user moved their attention to whatever is active over here.
@@ -193,9 +254,43 @@ chrome.windows.onFocusChanged.addListener(async (windowId) => {
   if (tab) trackedTabs().register(tab, TAB_REGISTER_SOURCE.ON_WINDOW_FOCUS_CHANGED)
 })
 
-chrome.tabs.onRemoved.addListener((tabId) => trackedTabs().delete(tabId))
+// Only a locked screen stops the clock, not mere inactivity: someone watching a video or reading a
+// long page touches nothing for minutes at a time. Firefox never reports "locked", so there only the
+// browser losing focus stops it.
+chrome.idle.onStateChanged.addListener(async (state) => {
+  await allReady()
 
-chrome.windows.onRemoved.addListener((windowId) => trackedTabs().deleteByWindowId(windowId))
+  if (state === "locked") {
+    trackedTabs().flushActive()
+    return
+  }
+
+  if (state !== "active" || trackedTabs().hasFocus()) return
+
+  // Unlocked: resume on the active tab, but only if the browser is what the user came back to.
+  const lastFocusedWindow = await chrome.windows.getLastFocused()
+  if (!lastFocusedWindow.focused) return
+
+  const [tab] = await chrome.tabs.query({ active: true, windowId: lastFocusedWindow.id })
+  if (tab) trackedTabs().register(tab, TAB_REGISTER_SOURCE.ON_SCREEN_UNLOCKED)
+})
+
+chrome.tabs.onRemoved.addListener(async (tabId) => {
+  await allReady()
+  trackedTabs().delete(tabId)
+})
+
+chrome.windows.onRemoved.addListener(async (windowId) => {
+  await allReady()
+  trackedTabs().deleteByWindowId(windowId)
+})
+
+schedule
+  .on(DWELL_CHECKPOINT_ALARM, async () => {
+    await allReady()
+    trackedTabs().checkpoint()
+  })
+  .create(DWELL_CHECKPOINT_ALARM, { periodInMinutes: DWELL_CHECKPOINT_INTERVAL_IN_MINUTES })
 
 eventBroker().on(EVENT.TELEMETRY.PUBLISHER_ADDED, () => trackedTabs().refreshPublisherFlags())
 
@@ -212,9 +307,10 @@ eventBroker().on<TabTrackerPublisherDetectedData>(EVENT.TAB_TRACKER.PUBLISHER_DE
 
 chrome.webRequest.onCompleted.addListener(
   async (details) => {
-    if (isValidUrl(details.url)) {
-      helpers.testWebRequestHeaders(details.url, details.responseHeaders || [])
-    }
+    if (!isValidUrl(details.url) || isVerificationTab(details.tabId)) return
+
+    await allReady()
+    helpers.testWebRequestHeaders(details.url, details.responseHeaders || [])
   },
   { types: ["main_frame"], urls: ["<all_urls>"] },
   ["responseHeaders"]

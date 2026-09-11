@@ -1,7 +1,11 @@
 import { ExtensionError } from "./error"
 
-export const inDevMode = async () => {
-  return (await chrome.management.getSelf()).installType === "development"
+let devMode: Promise<boolean> | undefined
+
+// The install type cannot change while the extension runs, so it is read once per worker lifetime.
+export function inDevMode() {
+  devMode ??= chrome.management.getSelf().then((self) => self.installType === "development")
+  return devMode
 }
 
 export function arraysEqual(a: unknown[], b: unknown[]) {
@@ -56,7 +60,11 @@ export async function httpPost<T>(url: string, token: string, payload: object, t
     })
 
     if (!response.ok) {
-      throw new ExtensionError(`Endpoint responded with ${response.status}`, await readErrorBody(response))
+      throw new ExtensionError(
+        `Endpoint responded with ${response.status}`,
+        await readErrorBody(response),
+        response.status
+      )
     }
 
     if ((response.headers.get("content-type") || "").includes(contentType)) {

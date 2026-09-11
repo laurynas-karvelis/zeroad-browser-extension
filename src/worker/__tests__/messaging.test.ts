@@ -3,7 +3,9 @@ import { chromeMock } from "../../__fixtures__/chrome"
 
 // No `browser` global, so `messaging` takes the Chrome path: sites reach the worker directly
 // through `onMessageExternal`, which the browser gates with `externally_connectable`.
+let finishLoading = () => {}
 const extensionStub = {
+  ready: Promise.resolve() as Promise<void>,
   getExtensionData: mock(() => ({ user: { firstName: "Ada", extensionToken: "r" }, subscription: undefined })),
   isPaused: mock(() => false),
   pause: mock(async () => "paused"),
@@ -19,12 +21,16 @@ mock.module("../telemetry", () => ({ telemetry: () => ({ map: new Map(), export:
 const { EVENT, eventBroker } = await import("../event-broker")
 await import("../messaging")
 
+const POPUP_SENDER = { id: chromeMock.runtime.id, url: "chrome-extension://test-extension-id/popup.html" }
+
 /** Sends a message the way the popup does and resolves with whatever the worker replies. */
-async function askPopupChannel(command: string) {
+async function askPopupChannel(command: string, sender: object = POPUP_SENDER) {
   let response: unknown
-  const results = await chromeMock.runtime.onMessage.dispatch({ command }, {}, (value: unknown) => {
+  const results = await chromeMock.runtime.onMessage.dispatch({ command }, sender, (value: unknown) => {
     response = value
   })
+  // Handlers reply asynchronously, after awaiting the worker's stored state.
+  await Bun.sleep(0)
   return { response, keptChannelOpen: results.filter(Boolean).length }
 }
 
@@ -102,6 +108,37 @@ describe("popup messages", () => {
 
     expect(response).toBeUndefined()
     expect(keptChannelOpen).toBe(0)
+  })
+
+  test("refuses popup commands sent from a tab, where a site's content script runs", async () => {
+    // On Firefox the page bridge shares this channel; a site must never read the extension token.
+    const fromTab = { id: chromeMock.runtime.id, tab: { id: 3 }, url: "https://zeroad.network/" }
+
+    const { response, keptChannelOpen } = await askPopupChannel(EVENT.POPUP.GET_EXTENSION_DATA, fromTab)
+
+    expect(response).toBeUndefined()
+    expect(keptChannelOpen).toBe(0)
+    expect(extensionStub.getExtensionData).not.toHaveBeenCalled()
+  })
+
+  test("refuses popup commands from another extension", async () => {
+    const { response } = await askPopupChannel(EVENT.POPUP.RESET_EXTENSION_STATE, { id: "someone-else" })
+
+    expect(response).toBeUndefined()
+  })
+
+  test("waits for the stored state before answering, so a waking worker does not report a guest", async () => {
+    extensionStub.ready = new Promise((resolve) => {
+      finishLoading = resolve
+    })
+    const pending = askPopupChannel(EVENT.POPUP.GET_EXTENSION_DATA)
+
+    await Bun.sleep(0)
+    expect(extensionStub.getExtensionData).not.toHaveBeenCalled()
+
+    finishLoading()
+    expect((await pending).response).toMatchObject({ user: { firstName: "Ada" } })
+    extensionStub.ready = Promise.resolve()
   })
 
   test("a failing handler replies with a serializable error rather than an empty object", async () => {

@@ -16,7 +16,10 @@ import { chromeMock } from "../../__fixtures__/chrome"
 // biome-ignore lint/suspicious/noExplicitAny: deleting an optional capability off the mock
 delete (chromeMock.runtime as any).onMessageExternal
 
-mock.module("../extension", () => ({ extension: () => ({ getExtensionData: () => ({}), isPaused: () => false }) }))
+const getExtensionData = mock(() => ({ user: { extensionToken: "secret" } }))
+mock.module("../extension", () => ({
+  extension: () => ({ ready: Promise.resolve(), getExtensionData, isPaused: () => false }),
+}))
 mock.module("../tab-tracker", () => ({ trackedTabs: () => ({ notifyIfActiveTabIsPublisher: mock() }) }))
 mock.module("../telemetry", () => ({ telemetry: () => ({ map: new Map(), export: () => ({}) }) }))
 
@@ -87,6 +90,21 @@ describe("site messages relayed by the Firefox content script", () => {
     await relayFromSite({ command: EVENT.WEBSITE.SYNC_CLIENT_DATA, payload: { user: { extensionToken: "x" } } }, {})
 
     expect(received).not.toHaveBeenCalled()
+  })
+
+  test("never answers a popup command relayed from a page, which would hand it the extension token", async () => {
+    let response: unknown
+    await chromeMock.runtime.onMessage.dispatch(
+      { command: EVENT.POPUP.GET_EXTENSION_DATA },
+      { id: chromeMock.runtime.id, ...contentScriptSender("https://zeroad.network/") },
+      (value: unknown) => {
+        response = value
+      }
+    )
+    await Bun.sleep(0)
+
+    expect(getExtensionData).not.toHaveBeenCalled()
+    expect(response).toBeUndefined()
   })
 
   test("rejects a tab sender with no URL to check", async () => {

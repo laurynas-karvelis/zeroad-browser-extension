@@ -24,6 +24,10 @@ const telemetryStub = {
 
 mock.module("../telemetry", () => ({ telemetry: () => telemetryStub }))
 
+// Tabs the site verifier has open, which the tracker must ignore.
+const verificationTabIds = new Set<number>()
+mock.module("../site-verification", () => ({ isVerificationTab: (tabId: number) => verificationTabIds.has(tabId) }))
+
 const { EVENT, eventBroker } = await import("../event-broker")
 const { trackedTabs } = await import("../tab-tracker")
 
@@ -143,13 +147,50 @@ describe("trackedTabs", () => {
       expect(addDuration.mock.calls[0][1]).toBeGreaterThanOrEqual(20)
     })
 
-    test("adopts an active tab when a restarted worker has no idea what is focused", () => {
-      // Only `onUpdated` may fire after a service worker wake-up; without this the clock never starts.
+    test("a tab finishing its load never takes focus, even with nothing focused", () => {
+      // With nothing focused the user is in another app; a background reload must not start the clock.
       makePublisher("publisher.test")
 
       register(tab(1, "https://publisher.test/"), TAB_REGISTER_SOURCE.ON_TAB_UPDATED)
 
+      expect(trackedTabs().hasFocus()).toBe(false)
+    })
+
+    test("persists the focused visit, so a restarted worker can pick the clock back up", async () => {
+      register(tab(1, "https://publisher.test/"), TAB_REGISTER_SOURCE.ON_TAB_ACTIVATED)
+      await Bun.sleep(0)
+
+      expect(chromeMock.storage.session.peek().focusedVisit).toMatchObject({ tabId: 1, url: "https://publisher.test/" })
+
+      trackedTabs().flushActive()
+      await Bun.sleep(0)
+
+      expect(chromeMock.storage.session.peek().focusedVisit).toBeUndefined()
+    })
+
+    test("a checkpoint books the time so far and keeps the visit going", async () => {
+      makePublisher("publisher.test")
+      register(tab(1, "https://publisher.test/"), TAB_REGISTER_SOURCE.ON_TAB_ACTIVATED)
+      await Bun.sleep(25)
+
+      trackedTabs().checkpoint()
+
+      expect(addDuration).toHaveBeenCalledTimes(1)
+      expect(addDuration.mock.calls[0][1]).toBeGreaterThanOrEqual(20)
       expect(trackedTabs().findActiveTab()?.id).toBe(1)
+
+      // The next booking starts from the checkpoint, not from the start of the visit.
+      trackedTabs().flushActive()
+      expect(addDuration.mock.calls[1][1]).toBeLessThan(20)
+    })
+
+    test("the checkpoint alarm drives the checkpoint", async () => {
+      makePublisher("publisher.test")
+      register(tab(1, "https://publisher.test/"), TAB_REGISTER_SOURCE.ON_TAB_ACTIVATED)
+
+      await chromeMock.alarms.fire("dwell-checkpoint")
+
+      expect(addDuration).toHaveBeenCalledTimes(1)
     })
 
     test("ignores a tab with no id", () => {
@@ -159,6 +200,58 @@ describe("trackedTabs", () => {
       )
 
       expect(trackedTabs().map.size).toBe(0)
+    })
+  })
+
+  describe("the user leaving the browser", () => {
+    test("switching to another application books the time and stops the clock", async () => {
+      makePublisher("publisher.test")
+      register(tab(1, "https://publisher.test/"), TAB_REGISTER_SOURCE.ON_TAB_ACTIVATED)
+      await Bun.sleep(25)
+
+      await chromeMock.windows.onFocusChanged.dispatch(chromeMock.windows.WINDOW_ID_NONE)
+
+      expect(addDuration).toHaveBeenCalledTimes(1)
+      expect(trackedTabs().hasFocus()).toBe(false)
+    })
+
+    test("locking the screen books the time and stops the clock", async () => {
+      makePublisher("publisher.test")
+      register(tab(1, "https://publisher.test/"), TAB_REGISTER_SOURCE.ON_TAB_ACTIVATED)
+
+      await chromeMock.idle.onStateChanged.dispatch("locked")
+
+      expect(addDuration).toHaveBeenCalledTimes(1)
+      expect(trackedTabs().hasFocus()).toBe(false)
+    })
+
+    test("mere inactivity keeps the clock running - a video or a long read touches nothing", async () => {
+      register(tab(1, "https://publisher.test/"), TAB_REGISTER_SOURCE.ON_TAB_ACTIVATED)
+
+      await chromeMock.idle.onStateChanged.dispatch("idle")
+
+      expect(trackedTabs().hasFocus()).toBe(true)
+    })
+
+    test("unlocking resumes on the active tab when the browser is what the user came back to", async () => {
+      chromeMock.tabs.byId.set(4, tab(4, "https://publisher.test/") as unknown as Record<string, unknown>)
+      chromeMock.windows.lastFocused = { id: 1, focused: true }
+
+      await chromeMock.idle.onStateChanged.dispatch("active")
+
+      expect(trackedTabs().findActiveTab()?.id).toBe(4)
+      chromeMock.tabs.byId.delete(4)
+    })
+
+    test("unlocking leaves the clock stopped when another application has focus", async () => {
+      chromeMock.tabs.byId.set(4, tab(4, "https://publisher.test/") as unknown as Record<string, unknown>)
+      chromeMock.windows.lastFocused = { id: 1, focused: false }
+
+      await chromeMock.idle.onStateChanged.dispatch("active")
+
+      expect(trackedTabs().hasFocus()).toBe(false)
+      chromeMock.tabs.byId.delete(4)
+      chromeMock.windows.lastFocused = { id: 1, focused: true }
     })
   })
 
@@ -392,6 +485,25 @@ describe("welcome-header detection", () => {
 
       expect(chromeMock.scripting.executeScriptCalls).toEqual([])
       expect(trackedTabs().map.size).toBe(0)
+    })
+
+    test("ignores a tab opened to verify a site, so a publisher's own check is not a visit", async () => {
+      chromeMock.scripting.executeScriptResult = [{ result: publisherValue }]
+      chromeMock.scripting.executeScriptCalls.length = 0
+      verificationTabIds.add(9)
+      const seen = publisherDetections()
+
+      await finishLoading(tab(9, "https://meta.test/"))
+      await chromeMock.webRequest.onCompleted.dispatch({
+        url: "https://meta.test/",
+        tabId: 9,
+        responseHeaders: [{ name: "Better-Web-Publisher", value: publisherValue }],
+      })
+
+      expect(seen).toEqual([])
+      expect(chromeMock.scripting.executeScriptCalls).toEqual([])
+      expect(trackedTabs().map.has(9)).toBe(false)
+      verificationTabIds.delete(9)
     })
 
     test("survives a page that cannot be scripted", async () => {

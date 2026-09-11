@@ -7,14 +7,14 @@
     "icons": {
       "512": "images/dove.png"
     },
-    "permissions": ["scripting", "declarativeNetRequest", "webRequest", "storage", "alarms", "tabs", "activeTab"],
+    "permissions": ["scripting", "declarativeNetRequest", "webRequest", "storage", "alarms", "tabs", "idle"],
     "popup": {
       "default_popup": "popup.html",
       "default_icon": "images/dove-gray-128.png"
     },
     "background_script": "js/worker.js",
     "hosts": ["https://*/*", "http://*/*"],
-    "external_matches": ["https://zeroad.network/*", "http://localhost/*"]
+    "external_matches": ["https://zeroad.network/*"]
   },
   "chrome": {
     "manifest_version": 3,
@@ -63,13 +63,7 @@
       "gecko": {
         "id": "${root.extension_name}@zeroad.network",
         "data_collection_permissions": {
-          "required": [
-            "personallyIdentifyingInfo",
-            "authenticationInfo",
-            "locationInfo",
-            "browsingActivity",
-            "websiteContent"
-          ]
+          "required": ["authenticationInfo", "browsingActivity", "websiteContent"]
         }
       }
     }

@@ -3,7 +3,7 @@ import type { LeafValues } from "./types"
 
 class EventBroker extends EventTarget {
   emit<T = unknown>(eventName: EventType, data?: T) {
-    const logData: unknown[] = ["[event-broken]", eventName]
+    const logData: unknown[] = ["[event-broker]", eventName]
     if (data !== undefined) logData.push(data)
     log("debug", ...logData)
 
@@ -12,8 +12,7 @@ class EventBroker extends EventTarget {
   }
 
   on<T = unknown>(eventName: EventType, callback: (data: T) => void) {
-    // @ts-expect-error Cant be bothered
-    this.addEventListener(eventName, (e: CustomEvent) => callback(e.detail as T))
+    this.addEventListener(eventName, (event) => callback((event as CustomEvent<T>).detail))
     return this
   }
 }
@@ -34,7 +33,6 @@ export const EVENT = {
   },
   TELEMETRY: {
     PUSH: "TELEMETRY:PUSH",
-    FLUSH: "TELEMETRY:FLUSH",
     PUBLISHER_ADDED: "TELEMETRY:PUBLISHER:ADDED",
     VIEWS_ADDED: "TELEMETRY:PUBLISHER:VIEWS_ADDED",
     DURATION_ADDED: "TELEMETRY:PUBLISHER:DURATION_ADDED",
@@ -45,6 +43,9 @@ export const EVENT = {
   },
   HEADER_INJECTION: {
     RULE_INSTALLED: "HEADER_INJECTION:RULE_INSTALLED",
+  },
+  TOKEN_POOL: {
+    REFRESHED: "TOKEN_POOL:REFRESHED",
   },
   MESSAGING: {
     POPUP_RELOAD_REQUEST: "MESSAGING:POPUP_RELOAD_REQUEST",

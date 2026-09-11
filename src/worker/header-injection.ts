@@ -1,8 +1,9 @@
 import { EVENT, eventBroker } from "./event-broker"
 import { extension } from "./extension"
 import { log } from "./logger"
-import { tokenPool } from "./token-pool"
+import { type TokenPoolRefreshedData, tokenPool } from "./token-pool"
 import type { Hostname } from "./types"
+import { inDevMode } from "./utils"
 
 /**
  * Installs the `declarativeNetRequest` rules that attach a token to outgoing requests.
@@ -21,42 +22,54 @@ const TOKEN_HEADER = "Better-Web-Token"
 /** Rule ids start above the range the old single blanket rule used. */
 const FIRST_RULE_ID = 100
 
+/**
+ * The exact host on any port, never a subdomain - `^` stops the match at the host's boundary, and a
+ * token bound to `example.com` would only fail verification at `blog.example.com` anyway. HTTPS only:
+ * a token is reusable until it expires, so one sent in clear text could be replayed by anyone on the
+ * network. A development build also allows http, which the local demo site is served over.
+ */
+async function tokenUrlFilter(hostname: Hostname) {
+  return `${(await inDevMode()) ? "|http*://" : "|https://"}${hostname}^`
+}
+
+function hostnameFromUrlFilter(urlFilter: string | undefined): Hostname | undefined {
+  return urlFilter?.match(/:\/\/(.+)\^$/)?.[1]
+}
+
 class HeaderInjection {
   private ruleIdByHostname = new Map<Hostname, number>()
   private nextRuleId = FIRST_RULE_ID
+  private restoredRuleIds?: Promise<void>
 
   constructor() {
     eventBroker()
       .on(EVENT.EXTENSION.SUBSCRIPTION_ACTIVE, () => this.reset())
       .on(EVENT.EXTENSION.SUBSCRIPTION_EXPIRED, () => this.removeAllRules())
+      .on<TokenPoolRefreshedData>(EVENT.TOKEN_POOL.REFRESHED, ({ hostnames }) => this.rebind(hostnames))
   }
 
   /** Reinstates rules for every hostname already holding a token, after a worker restart. */
   async reset() {
     await this.removeAllRules()
 
-    if (!this.shouldInject()) return
+    if (!(await this.shouldInject())) return
 
     for (const hostname of await tokenPool().boundHostnames()) {
       await this.enableForHostname(hostname)
     }
   }
 
-  private shouldInject() {
-    // A paused extension stays paused no matter who asks for a rule to go up
-    return !extension().isPaused() && extension().isSubscriptionActive()
-  }
-
   async removeAllRules() {
-    const ruleIds = [...this.ruleIdByHostname.values()]
+    // Read from Chrome rather than from memory: session rules outlive the worker that installed them.
+    const installedRules = await chrome.declarativeNetRequest.getSessionRules()
     this.ruleIdByHostname.clear()
 
-    // Rule 1 was the old blanket rule. Removing it is harmless when absent and necessary when an
-    // extension updates in place with it still installed
-    await chrome.declarativeNetRequest.updateSessionRules({ removeRuleIds: [1, ...ruleIds] })
+    await chrome.declarativeNetRequest.updateSessionRules({ removeRuleIds: installedRules.map((rule) => rule.id) })
   }
 
   async removeRuleForHostname(hostname: Hostname) {
+    await this.restoreRuleIds()
+
     const ruleId = this.ruleIdByHostname.get(hostname)
     if (ruleId === undefined) return
 
@@ -71,7 +84,9 @@ class HeaderInjection {
    * pool is empty. An exhausted pool is not an error: the site simply sees an ordinary visitor.
    */
   async enableForHostname(hostname: Hostname): Promise<number | undefined> {
-    if (!hostname || !this.shouldInject()) return undefined
+    if (!hostname || !(await this.shouldInject())) return undefined
+
+    await this.restoreRuleIds()
 
     const token = await tokenPool().tokenFor(hostname)
     if (!token) return undefined
@@ -82,9 +97,7 @@ class HeaderInjection {
       id: ruleId,
       priority: 99,
       condition: {
-        // Scoped to this host and its subdomains' parent - a token bound to `example.com` must not be
-        // attached to a request for anything else, or that other site would just see it fail
-        requestDomains: [hostname],
+        urlFilter: await tokenUrlFilter(hostname),
         resourceTypes: ["main_frame", "media"],
       },
       action: {
@@ -107,6 +120,36 @@ class HeaderInjection {
   /** Hostnames currently carrying an injection rule, for diagnostics and the popup. */
   installedHostnames(): Hostname[] {
     return [...this.ruleIdByHostname.keys()]
+  }
+
+  private async shouldInject() {
+    // A paused extension stays paused no matter who asks for a rule to go up
+    await extension().ready
+    return !extension().isPaused() && extension().isSubscriptionActive()
+  }
+
+  /** Swaps in tokens from a new batch for sites bound in the one it replaced. */
+  private async rebind(hostnames: Hostname[]) {
+    for (const hostname of hostnames) {
+      await this.enableForHostname(hostname)
+    }
+  }
+
+  /**
+   * Session rules survive a worker restart and this map does not, so it is rebuilt from the installed
+   * rules before first use - otherwise a new rule could reuse a live rule's id, and a stale rule would be
+   * unknown to `removeRuleForHostname`.
+   */
+  private restoreRuleIds() {
+    this.restoredRuleIds ??= chrome.declarativeNetRequest.getSessionRules().then((rules) => {
+      for (const rule of rules) {
+        const hostname = hostnameFromUrlFilter(rule.condition.urlFilter)
+        if (hostname && !this.ruleIdByHostname.has(hostname)) this.ruleIdByHostname.set(hostname, rule.id)
+        this.nextRuleId = Math.max(this.nextRuleId, rule.id + 1)
+      }
+    })
+
+    return this.restoredRuleIds
   }
 }
 

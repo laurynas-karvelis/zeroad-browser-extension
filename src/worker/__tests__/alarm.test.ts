@@ -12,20 +12,25 @@ describe("schedule", () => {
     test("creates an alarm that does not exist yet", async () => {
       await schedule.create("sync", { periodInMinutes: 60 })
 
-      expect(await schedule.has("sync")).toBe(true)
       expect(chromeMock.alarms.peek().get("sync")?.periodInMinutes).toBe(60)
     })
 
-    test("leaves an existing alarm alone, so a worker restart never resets its period", async () => {
+    test("leaves an existing alarm with the same period alone, so a worker restart never resets it", async () => {
       // The worker re-runs its module top level on every wake-up; re-creating the alarm
       // there would push its next firing back forever.
-      await schedule.create("sync", { periodInMinutes: 60 })
-      const scheduledTime = chromeMock.alarms.peek().get("sync")?.scheduledTime
+      await schedule.create("sync", { periodInMinutes: 60, when: 1_000 })
 
-      await schedule.create("sync", { periodInMinutes: 5 })
+      await schedule.create("sync", { periodInMinutes: 60, when: 2_000 })
+
+      expect(chromeMock.alarms.peek().get("sync")?.scheduledTime).toBe(1_000)
+    })
+
+    test("replaces an alarm left over with a different period, so a new cadence takes effect", async () => {
+      await schedule.create("sync", { periodInMinutes: 60 * 24 })
+
+      await schedule.create("sync", { periodInMinutes: 60 })
 
       expect(chromeMock.alarms.peek().get("sync")?.periodInMinutes).toBe(60)
-      expect(chromeMock.alarms.peek().get("sync")?.scheduledTime).toBe(scheduledTime)
     })
   })
 
@@ -41,16 +46,16 @@ describe("schedule", () => {
     test("creates the alarm when there is nothing to replace", async () => {
       await schedule.recreate("renew", { when: 2_000 })
 
-      expect(await schedule.has("renew")).toBe(true)
+      expect(chromeMock.alarms.peek().has("renew")).toBe(true)
     })
   })
 
-  test("clear removes the alarm and has() reports it gone", async () => {
+  test("clear removes the alarm", async () => {
     await schedule.create("renew", { when: 1_000 })
 
     await schedule.clear("renew")
 
-    expect(await schedule.has("renew")).toBe(false)
+    expect(chromeMock.alarms.peek().has("renew")).toBe(false)
   })
 
   describe("on", () => {
@@ -88,7 +93,7 @@ describe("schedule", () => {
       await chromeMock.alarms.fire("ghost")
 
       expect(callback).toHaveBeenCalledTimes(1)
-      expect(await schedule.has("ghost")).toBe(false)
+      expect(chromeMock.alarms.peek().has("ghost")).toBe(false)
     })
   })
 })
