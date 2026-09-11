@@ -5,21 +5,32 @@ import type { Hostname } from "./types"
 import { getHostname } from "./utils"
 
 export type Entry = {
-  /** The publisher this hostname announced itself as belonging to, for crediting the visit. */
+  /** The publisher this hostname or page announced itself as belonging to, for crediting the visit. */
   publisherId: TabTrackerPublisherDetectedData["publisherId"]
   /** Where the id was found. Decides the monetization tier server-side, so it has to travel with the visit. */
   source: TabTrackerPublisherDetectedData["source"]
+  /** Set for a content detection only: the page the id was printed on, which is what gets credited. */
+  url?: string
   views: number
   duration: number
 }
 
-type StoredTelemetryMap = Record<Hostname, Entry>
+/**
+ * Keyed by hostname for a full site (header or meta), since the publisher controls every page on it.
+ * An id printed in page content only speaks for that page - a video platform hosts many publishers -
+ * so those entries are keyed by the page's url instead. The two cannot collide: a url has a scheme.
+ */
+type EntryKey = string
+
+type StoredTelemetryMap = Record<EntryKey, Entry>
 
 /**
- * What gets sent: a flat list of observations, one per hostname visited, each self-identifying with the
- * publisher it announced, where that id was found, and the views and dwell time earned there.
+ * What gets sent: a flat list of observations, one per full site or content page visited, each
+ * self-identifying with the publisher it announced, where that id was found, and the views and dwell
+ * time earned there. A content observation carries its page `url`, which the platform rolls up into
+ * that placement's per-page stats.
  *
- * Per hostname rather than per publisher total, because a publisher with several sites needs each of
+ * Per site rather than per publisher total, because a publisher with several sites needs each of
  * them credited on its own, and this is the only place that knows which site the time was spent on.
  * The shape is exactly what `POST /extension/telemetry` accepts - see `ExtensionTelemetryObservation`.
  */
@@ -27,14 +38,26 @@ export type TelemetryObservation = {
   publisherId: string
   source: TabTrackerPublisherDetectedData["source"]
   hostname: Hostname
+  url?: string
   views: number
   duration: number
 }
 
 export type TelemetryExportData = TelemetryObservation[]
 
+/** A page's identity without its fragment, which only scrolls within the same page. */
+function pageKey(url: string): EntryKey {
+  try {
+    const page = new URL(url)
+    page.hash = ""
+    return page.toString()
+  } catch {
+    return ""
+  }
+}
+
 export class Telemetry {
-  map = new Map<Hostname, Entry>()
+  map = new Map<EntryKey, Entry>()
 
   /**
    * Resolves once the stored map has been read back. A service worker restarts constantly, so
@@ -58,10 +81,10 @@ export class Telemetry {
    * recorded while the upload was in flight stays for the next push.
    */
   acknowledge(observations: TelemetryExportData) {
-    for (const { hostname, publisherId, views, duration } of observations) {
-      const entry = this.map.get(hostname)
+    for (const { hostname, url, publisherId, views, duration } of observations) {
+      const entry = this.map.get(url ?? hostname)
 
-      // The hostname changed hands mid-flight, and its counters already started over for the new owner.
+      // The entry changed hands mid-flight, and its counters already started over for the new owner.
       if (!entry || entry.publisherId !== publisherId) continue
 
       entry.views = Math.max(0, entry.views - views)
@@ -69,6 +92,53 @@ export class Telemetry {
     }
 
     return this.save()
+  }
+
+  hasPublisherEntryByUrl(url: string | undefined): boolean {
+    return this.keyFor(url) !== undefined
+  }
+
+  findPublisherEntryByUrl(url: string | undefined): Entry | undefined {
+    const key = this.keyFor(url)
+    return key === undefined ? undefined : this.map.get(key)
+  }
+
+  addViews(url: string | undefined) {
+    this.incrementStat(url, "views", 1, EVENT.TELEMETRY.VIEWS_ADDED)
+  }
+
+  addDuration(url: string | undefined, duration: number) {
+    this.incrementStat(url, "duration", duration, EVENT.TELEMETRY.DURATION_ADDED)
+  }
+
+  export(): TelemetryExportData {
+    const observations: TelemetryExportData = []
+
+    for (const [key, { publisherId, source, url, views, duration }] of this.map) {
+      // Anything with activity ships. A view with no dwell time is still a visit, and if it is
+      // dropped here it is never reported at all - `acknowledge` takes it off after the push.
+      if (!views && !duration) continue
+
+      const hostname = url ? getHostname(url) : key
+      observations.push(
+        url
+          ? { publisherId, source, hostname, url, views, duration }
+          : { publisherId, source, hostname, views, duration }
+      )
+    }
+
+    return observations
+  }
+
+  /** The entry crediting `url`: its full site if the hostname is one, otherwise its content page, if any. */
+  private keyFor(url: string | undefined): EntryKey | undefined {
+    if (!url) return undefined
+
+    const hostname = getHostname(url)
+    if (this.map.has(hostname)) return hostname
+
+    const page = pageKey(url)
+    return this.map.has(page) ? page : undefined
   }
 
   private clear() {
@@ -86,11 +156,11 @@ export class Telemetry {
 
     // Merged into, not swapped for, the in-memory map: an event can land before this read returns.
     // Entries with nothing left to send are dropped - the site is simply rediscovered on its next visit.
-    for (const [hostname, stored] of Object.entries(telemetry || {})) {
-      const current = this.map.get(hostname)
+    for (const [key, stored] of Object.entries(telemetry || {})) {
+      const current = this.map.get(key)
 
       if (!current) {
-        if (stored.views || stored.duration) this.map.set(hostname, stored)
+        if (stored.views || stored.duration) this.map.set(key, stored)
       } else if (current.publisherId === stored.publisherId) {
         current.views += stored.views
         current.duration += stored.duration
@@ -104,6 +174,7 @@ export class Telemetry {
     const hostname = getHostname(url)
 
     if (!hostname || !publisherId) return
+    if (source === "content") return this.addPageEntry(publisherId, url, hostname)
 
     const entry = this.map.get(hostname)
 
@@ -130,21 +201,25 @@ export class Telemetry {
     }
   }
 
-  hasPublisherEntryByUrl(url: string | undefined): boolean {
-    if (!url) return false
-    return this.map.has(getHostname(url))
-  }
+  private addPageEntry(publisherId: Entry["publisherId"], url: string, hostname: Hostname) {
+    // A full site on this hostname already credits every page on it, content included.
+    if (this.map.has(hostname)) return
 
-  findPublisherEntryByUrl(url: string | undefined): Entry | undefined {
-    if (!url) return undefined
-    return this.map.get(getHostname(url))
+    const key = pageKey(url)
+    if (!key || this.map.get(key)?.publisherId === publisherId) return
+
+    // New, or the page now names a different publisher: its counters start over for the new one.
+    this.map.set(key, { publisherId, source: "content", url: key, views: 0, duration: 0 })
+    this.save()
+
+    eventBroker().emit(EVENT.TELEMETRY.PUBLISHER_ADDED, { publisherId })
   }
 
   private incrementStat(url: string | undefined, key: "views" | "duration", amount: number, eventName: EventType) {
     if (!url || !Number.isFinite(amount) || amount <= 0) return
 
-    const hostname = getHostname(url)
-    const entry = this.map.get(hostname)
+    const entryKey = this.keyFor(url)
+    const entry = entryKey === undefined ? undefined : this.map.get(entryKey)
 
     if (!entry) return
     if (!extension().isSubscriptionActive()) return
@@ -160,28 +235,6 @@ export class Telemetry {
 
     this.save()
     eventBroker().emit(eventName, { publisherId: entry.publisherId, [key]: amount })
-  }
-
-  addViews(url: string | undefined) {
-    this.incrementStat(url, "views", 1, EVENT.TELEMETRY.VIEWS_ADDED)
-  }
-
-  addDuration(url: string | undefined, duration: number) {
-    this.incrementStat(url, "duration", duration, EVENT.TELEMETRY.DURATION_ADDED)
-  }
-
-  export(): TelemetryExportData {
-    const observations: TelemetryExportData = []
-
-    for (const [hostname, { publisherId, source, views, duration }] of this.map) {
-      // Anything with activity ships. A view with no dwell time is still a visit, and if it is
-      // dropped here it is never reported at all - `acknowledge` takes it off after the push.
-      if (!views && !duration) continue
-
-      observations.push({ publisherId, source, hostname, views, duration })
-    }
-
-    return observations
   }
 }
 

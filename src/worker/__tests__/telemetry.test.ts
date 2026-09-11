@@ -266,6 +266,84 @@ describe("Telemetry", () => {
     })
   })
 
+  describe("an id printed in page content", () => {
+    const detectInContent = (publisherId: string, url: string) =>
+      eventBroker().emit(EVENT.TAB_TRACKER.PUBLISHER_DETECTED, { source: "content", publisherId, url })
+
+    test("is credited per page, since one platform hosts many publishers", async () => {
+      const telemetry = await createTelemetry()
+
+      detectInContent("channel-a", "https://video.test/watch?v=1")
+      detectInContent("channel-b", "https://video.test/watch?v=2")
+      telemetry.addViews("https://video.test/watch?v=1")
+      telemetry.addDuration("https://video.test/watch?v=2", 300)
+
+      expect(telemetry.export()).toEqual([
+        {
+          publisherId: "channel-a",
+          source: "content",
+          hostname: "video.test",
+          url: "https://video.test/watch?v=1",
+          views: 1,
+          duration: 0,
+        },
+        {
+          publisherId: "channel-b",
+          source: "content",
+          hostname: "video.test",
+          url: "https://video.test/watch?v=2",
+          views: 1,
+          duration: 300,
+        },
+      ])
+    })
+
+    test("treats a fragment as the same page", async () => {
+      const telemetry = await createTelemetry()
+
+      detectInContent("channel-a", "https://video.test/watch?v=1#comments")
+      telemetry.addViews("https://video.test/watch?v=1")
+
+      expect(telemetry.map.size).toBe(1)
+      expect(telemetry.export()[0]).toMatchObject({ url: "https://video.test/watch?v=1", views: 1 })
+    })
+
+    test("a page of an unrecognised id is not a publisher page", async () => {
+      const telemetry = await createTelemetry()
+
+      detectInContent("channel-a", "https://video.test/watch?v=1")
+
+      expect(telemetry.hasPublisherEntryByUrl("https://video.test/watch?v=9")).toBe(false)
+    })
+
+    test("a full site on the hostname outranks any id printed on its pages", async () => {
+      const telemetry = await createTelemetry()
+
+      eventBroker().emit(EVENT.TAB_TRACKER.PUBLISHER_DETECTED, {
+        source: "header",
+        publisherId: "owner",
+        url: "https://site.test/",
+      })
+      detectInContent("commenter", "https://site.test/post")
+      telemetry.addViews("https://site.test/post")
+
+      expect(telemetry.map.size).toBe(1)
+      expect(telemetry.export()).toEqual([observation("owner", "site.test", 1, 0)])
+    })
+
+    test("acknowledging a pushed content page takes it off that page only", async () => {
+      const telemetry = await createTelemetry()
+      detectInContent("channel-a", "https://video.test/watch?v=1")
+      detectInContent("channel-b", "https://video.test/watch?v=2")
+      telemetry.addViews("https://video.test/watch?v=1")
+      telemetry.addViews("https://video.test/watch?v=2")
+
+      await telemetry.acknowledge(telemetry.export().filter((sent) => sent.publisherId === "channel-a"))
+
+      expect(telemetry.export().map((sent) => sent.publisherId)).toEqual(["channel-b"])
+    })
+  })
+
   describe("after a push", () => {
     test("acknowledging takes the sent amounts off but keeps the publishers, so re-detection is not needed", async () => {
       seedStored({ "a.test": entry("client-a", 2, 200) })

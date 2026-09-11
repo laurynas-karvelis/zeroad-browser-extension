@@ -182,7 +182,7 @@ export function createChromeMock() {
       byId: new Map<number, Record<string, unknown>>(),
       created: [] as { url: string }[],
       onActivated: createEvent<[{ tabId: number; windowId?: number }]>(),
-      onUpdated: createEvent<[number, { status?: string }, chrome.tabs.Tab]>(),
+      onUpdated: createEvent<[number, { status?: string; url?: string }, chrome.tabs.Tab]>(),
       onRemoved: createEvent<[number]>(),
       async get(tabId: number) {
         const tab = mock.tabs.byId.get(tabId)

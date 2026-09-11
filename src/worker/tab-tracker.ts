@@ -2,8 +2,8 @@ import { schedule } from "./alarm"
 import { EVENT, eventBroker } from "./event-broker"
 import { extension } from "./extension"
 import { headerInjection } from "./header-injection"
-import { readMetaPublisherValue } from "./page-scan"
-import { PUBLISHER_HEADER, parsePublisherHeader } from "./publisher-id"
+import { readBodyPublisherId, readMetaPublisherValue } from "./page-scan"
+import { isValidPublisherId, PUBLISHER_HEADER, parsePublisherHeader } from "./publisher-id"
 import { isVerificationTab } from "./site-verification"
 import { type Entry, telemetry } from "./telemetry"
 import { isValidUrl } from "./utils"
@@ -24,9 +24,17 @@ const FOCUSED_VISIT_STORAGE_KEY = "focusedVisit"
 const DWELL_CHECKPOINT_ALARM = "dwell-checkpoint"
 const DWELL_CHECKPOINT_INTERVAL_IN_MINUTES = 1
 
+/**
+ * How long an in-page navigation is given to render before the page is read. Single-page sites (a video
+ * platform, most notably) change the url first and swap the content in afterwards, so reading at once
+ * would find the previous page's publisher id.
+ */
+const IN_PAGE_NAVIGATION_SETTLE_MS = 1500
+
 export type TabTrackerPublisherDetectedData = {
   publisherId: string
-  source: "header" | "meta"
+  /** `content` is an id printed in the page, which names a publisher on a platform they don't control. */
+  source: "header" | "meta" | "content"
   url: string
 }
 
@@ -195,11 +203,24 @@ const helpers = {
     })
   },
 
-  async testHtmlMetaTags(tab: chrome.tabs.Tab) {
+  /**
+   * Reads a loaded page for its publisher id. A meta tag names a full site; failing that, an id printed
+   * in the page content names a publisher on a platform they don't control (an ad-supported placement).
+   */
+  async readPagePublisher(tab: chrome.tabs.Tab) {
     if (!tab.id || !tab.url) return
 
     const metaValue = await readMetaPublisherValue(tab.id)
-    helpers.testPublisherHeaderValue(tab.url, metaValue, "meta")
+    if (parsePublisherHeader(metaValue)) return helpers.testPublisherHeaderValue(tab.url, metaValue, "meta")
+
+    const bodyPublisherId = await readBodyPublisherId(tab.id)
+    if (!isValidPublisherId(bodyPublisherId)) return
+
+    eventBroker().emit<TabTrackerPublisherDetectedData>(EVENT.TAB_TRACKER.PUBLISHER_DETECTED, {
+      publisherId: bodyPublisherId,
+      source: "content",
+      url: tab.url,
+    })
   },
 
   testWebRequestHeaders(url: string, headers: chrome.webRequest.HttpHeader[]) {
@@ -216,26 +237,43 @@ chrome.tabs.onActivated.addListener(async ({ tabId }) => {
   trackedTabs().register(await chrome.tabs.get(tabId), TAB_REGISTER_SOURCE.ON_TAB_ACTIVATED)
 })
 
+async function recordPageView(tab: chrome.tabs.Tab) {
+  if (!isValidUrl(tab.url)) return
+
+  if (!telemetry().hasPublisherEntryByUrl(tab.url)) {
+    // This has to be awaited: the very first visit to a meta-tag or content publisher is only
+    // recognised once the page has been read, and an un-awaited check would leave that view uncounted.
+    await helpers.readPagePublisher(tab)
+  }
+
+  if (telemetry().hasPublisherEntryByUrl(tab.url)) {
+    telemetry().addViews(tab.url)
+  }
+}
+
 chrome.tabs.onUpdated.addListener(async (tabId, changeInfo, tab) => {
-  if (changeInfo.status !== "complete" || isVerificationTab(tabId)) {
+  // Besides a finished load: the history API changing the url of a page that has already loaded, which
+  // is how single-page sites move between pages without ever loading again.
+  const isInPageNavigation = changeInfo.status !== "complete" && !!changeInfo.url && tab.status === "complete"
+
+  if ((changeInfo.status !== "complete" && !isInPageNavigation) || isVerificationTab(tabId)) {
     return
   }
 
   await allReady()
 
-  if (isValidUrl(tab.url)) {
-    if (!telemetry().hasPublisherEntryByUrl(tab.url)) {
-      // Might include "Welcome header" inside one of their <meta> tags. This has to be awaited:
-      // the very first visit to a meta-tag publisher is only recognised once the script comes back,
-      // and an un-awaited check would leave that page view uncounted.
-      await helpers.testHtmlMetaTags(tab)
-    }
+  if (isInPageNavigation) {
+    // The time on the page being left is booked right away; the new page is read once it has rendered,
+    // unless the tab has moved on again by then - that navigation reads its own page.
+    trackedTabs().register(tab, TAB_REGISTER_SOURCE.ON_TAB_UPDATED)
+    await new Promise((resolve) => setTimeout(resolve, IN_PAGE_NAVIGATION_SETTLE_MS))
 
-    if (telemetry().hasPublisherEntryByUrl(tab.url)) {
-      telemetry().addViews(tab.url)
-    }
+    const current = await chrome.tabs.get(tabId).catch(() => undefined)
+    if (current?.url === tab.url) await recordPageView(tab)
+    return
   }
 
+  await recordPageView(tab)
   trackedTabs().register(tab, TAB_REGISTER_SOURCE.ON_TAB_UPDATED)
 })
 
@@ -297,7 +335,11 @@ eventBroker().on(EVENT.TELEMETRY.PUBLISHER_ADDED, () => trackedTabs().refreshPub
 // Phase D, the discovery loop: the first response from a participating site is what reveals it takes
 // part. From then on it gets a token bound to its hostname, so the visit after this one arrives
 // identified. Nothing is spent on a site that never announced itself.
-eventBroker().on<TabTrackerPublisherDetectedData>(EVENT.TAB_TRACKER.PUBLISHER_DETECTED, async ({ url }) => {
+eventBroker().on<TabTrackerPublisherDetectedData>(EVENT.TAB_TRACKER.PUBLISHER_DETECTED, async ({ url, source }) => {
+  // An id printed in page content names a publisher on someone else's platform: there is no site of
+  // theirs to send a token to, and binding one to the platform would spend a credential on it.
+  if (source === "content") return
+
   try {
     await headerInjection().enableForHostname(new URL(url).hostname)
   } catch (_err) {

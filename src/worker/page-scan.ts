@@ -38,11 +38,16 @@ export function readMetaPublisherValue(tabId: number): Promise<string | undefine
  * The topmost publisher id printed in a loaded tab's visible body, or undefined. Only the first
  * occurrence is honoured, so appending an id below someone else's cannot hijack it. Ids are matched
  * case-insensitively; the id is returned as it appears so the caller can validate its exact shape.
+ *
+ * Runs on every page the tab tracker does not recognise yet, so it bails out on the cheap `textContent`
+ * before paying for `innerText`, which has to lay the page out to know what is visible.
  */
 export function readBodyPublisherId(tabId: number): Promise<string | undefined> {
   return runInPage(
     tabId,
     (scheme: string) => {
+      if (!(document.body?.textContent || "").toLowerCase().includes(scheme.toLowerCase())) return undefined
+
       const bodyText = document.body?.innerText || ""
       const schemeAt = bodyText.toLowerCase().indexOf(scheme.toLowerCase())
       if (schemeAt === -1) return undefined

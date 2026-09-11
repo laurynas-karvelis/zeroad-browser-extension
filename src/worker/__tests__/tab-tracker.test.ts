@@ -1,4 +1,4 @@
-import { beforeEach, describe, expect, mock, test } from "bun:test"
+import { afterAll, beforeEach, describe, expect, mock, test } from "bun:test"
 import { chromeMock } from "../../__fixtures__/chrome"
 import type { Entry } from "../telemetry"
 
@@ -24,6 +24,9 @@ const telemetryStub = {
 
 mock.module("../telemetry", () => ({ telemetry: () => telemetryStub }))
 
+const enableForHostname = mock<(hostname: string) => Promise<number | undefined>>(async () => undefined)
+mock.module("../header-injection", () => ({ headerInjection: () => ({ enableForHostname }) }))
+
 // Tabs the site verifier has open, which the tracker must ignore.
 const verificationTabIds = new Set<number>()
 mock.module("../site-verification", () => ({ isVerificationTab: (tabId: number) => verificationTabIds.has(tabId) }))
@@ -32,6 +35,7 @@ const { EVENT, eventBroker } = await import("../event-broker")
 const { trackedTabs } = await import("../tab-tracker")
 
 type TabTrackActiveTabEventData = import("../tab-tracker").TabTrackActiveTabEventData
+type TabTrackerPublisherDetectedData = import("../tab-tracker").TabTrackerPublisherDetectedData
 
 const TAB_REGISTER_SOURCE = {
   ON_TAB_ACTIVATED: "tabs.onActivated",
@@ -372,6 +376,115 @@ describe("trackedTabs", () => {
   })
 })
 
+describe("an id printed in the page content", () => {
+  const publisherId = "zapub_AbCdEfGhIjKlMnOpQrStUvWx"
+  const originalExecuteScript = chromeMock.scripting.executeScript
+
+  // The meta reader is handed the meta tag name, the body reader the id prefix.
+  const servePage = (page: { meta?: string; body?: string }) => {
+    chromeMock.scripting.executeScript = async (injection: unknown) => {
+      const [arg] = (injection as { args: string[] }).args
+      return [{ result: arg === "zapub_" ? page.body : page.meta }]
+    }
+  }
+
+  const detections = () => {
+    const seen: TabTrackerPublisherDetectedData[] = []
+    eventBroker().on<TabTrackerPublisherDetectedData>(EVENT.TAB_TRACKER.PUBLISHER_DETECTED, (data) => seen.push(data))
+    return seen
+  }
+
+  beforeEach(() => {
+    publishers.clear()
+    trackedTabs().map.clear()
+    trackedTabs().flushActive()
+    addViews.mockClear()
+    enableForHostname.mockClear()
+    chromeMock.tabs.byId.clear()
+  })
+
+  afterAll(() => {
+    chromeMock.scripting.executeScript = originalExecuteScript
+  })
+
+  test("names a publisher on a platform they don't control, credited for that page", async () => {
+    servePage({ body: publisherId })
+    const seen = detections()
+
+    await chromeMock.tabs.onUpdated.dispatch(1, { status: "complete" }, tab(1, "https://video.test/watch?v=1"))
+
+    expect(seen.at(-1)).toEqual({ publisherId, source: "content", url: "https://video.test/watch?v=1" })
+  })
+
+  test("never binds a token to the platform the id was printed on", async () => {
+    servePage({ body: publisherId })
+
+    await chromeMock.tabs.onUpdated.dispatch(1, { status: "complete" }, tab(1, "https://video.test/watch?v=1"))
+
+    expect(enableForHostname).not.toHaveBeenCalled()
+  })
+
+  test("a meta tag outranks an id in the content", async () => {
+    servePage({ meta: publisherId, body: "zapub_ZzZzZzZzZzZzZzZzZzZzZzZz" })
+    const seen = detections()
+
+    await chromeMock.tabs.onUpdated.dispatch(1, { status: "complete" }, tab(1, "https://site.test/"))
+
+    expect(seen.at(-1)).toMatchObject({ publisherId, source: "meta" })
+  })
+
+  describe("in-page navigation", () => {
+    const navigate = (url: string, current = url) => {
+      chromeMock.tabs.byId.set(1, { id: 1, url: current, status: "complete", active: true, windowId: 1 })
+      return chromeMock.tabs.onUpdated.dispatch(1, { url }, tab(1, url, { status: "complete" }))
+    }
+
+    test("reads the new page once it has rendered, since single-page sites never load again", async () => {
+      servePage({ body: publisherId })
+      const seen = detections()
+
+      await navigate("https://video.test/watch?v=2")
+
+      expect(seen.at(-1)).toEqual({ publisherId, source: "content", url: "https://video.test/watch?v=2" })
+    })
+
+    test("books the time on the page being left, and moves the clock to the new page", async () => {
+      makePublisher("site.test")
+      register(tab(1, "https://site.test/one"), TAB_REGISTER_SOURCE.ON_TAB_ACTIVATED)
+      addDuration.mockClear()
+      servePage({})
+
+      await navigate("https://site.test/two")
+
+      expect(addDuration.mock.calls[0][0]).toBe("https://site.test/one")
+      trackedTabs().flushActive()
+      expect(addDuration.mock.calls.at(-1)?.[0]).toBe("https://site.test/two")
+    })
+
+    test("skips a page the tab has already navigated away from", async () => {
+      servePage({ body: publisherId })
+      const seen = detections()
+
+      await navigate("https://video.test/watch?v=3", "https://video.test/watch?v=4")
+
+      expect(seen).toEqual([])
+    })
+
+    test("ignores the url change that starts an ordinary page load", async () => {
+      servePage({ body: publisherId })
+      const seen = detections()
+
+      await chromeMock.tabs.onUpdated.dispatch(
+        1,
+        { status: "loading", url: "https://video.test/" },
+        tab(1, "https://video.test/", { status: "loading" })
+      )
+
+      expect(seen).toEqual([])
+    })
+  })
+})
+
 describe("welcome-header detection", () => {
   const publisherId = "zapub_AbCdEfGhIjKlMnOpQrStUvWx"
   const publisherValue = publisherId
@@ -504,6 +617,15 @@ describe("welcome-header detection", () => {
       expect(chromeMock.scripting.executeScriptCalls).toEqual([])
       expect(trackedTabs().map.has(9)).toBe(false)
       verificationTabIds.delete(9)
+    })
+
+    test("a header or meta detection binds a token to the site", async () => {
+      chromeMock.scripting.executeScriptResult = [{ result: publisherValue }]
+      enableForHostname.mockClear()
+
+      await finishLoading(tab(1, "https://meta.test/"))
+
+      expect(enableForHostname).toHaveBeenCalledWith("meta.test")
     })
 
     test("survives a page that cannot be scripted", async () => {
