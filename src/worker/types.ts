@@ -27,6 +27,12 @@ export type UserExtensionData = {
   firstName: string | null
   /** The single token the extension authenticates every platform call with. Never expires. */
   extensionToken: string
+  /**
+   * The user's public publisher id. Site verification checks for this id and nothing else, so a page
+   * cannot have the extension look for someone else's. Absent for the demo user, and in data synced
+   * before the platform started sending it.
+   */
+  publisherId?: string
 }
 
 export type SubscriptionExtensionData = {

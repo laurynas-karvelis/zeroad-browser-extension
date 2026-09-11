@@ -185,10 +185,12 @@ class Messaging {
       return false
     })
 
-    // Opens the entered address in a background tab and reports whether it carries this publisher's id
-    // as a response header, meta tag, or page content, so the site can register and activate it.
+    // Opens the entered address in a background tab and reports whether it carries the signed-in user's
+    // publisher id as a response header, meta tag, or page content, so the site can register and activate
+    // it. The id is the user's own from the last sync - one the page sends along is never used.
     onSiteMessage<{ payload: VerifySiteRequest }>(EVENT.WEBSITE.VERIFY_SITE, async (message) => {
-      const response = await verifySite(message.payload)
+      await extension().ready
+      const response = await verifySite(message.payload?.url, extension().getExtensionData().user?.publisherId)
       log("debug", "[messaging]", "verifySite", response)
       return response
     })

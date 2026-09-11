@@ -15,17 +15,20 @@ import { isValidUrl } from "./utils"
  *   3. the id printed in the visible page content  -> a platform the publisher doesn't control
  *
  * The tab is opened inactive and closed as soon as the check finishes, so the publisher barely sees it.
+ *
+ * The id looked for is always the signed-in user's own (see `messaging.ts`), never one the page supplies.
  */
 
 export type VerifySiteRequest = {
   url: string
-  publisherId: string
 }
 
 export type VerifySiteResult = {
   success: boolean
   /** Which proof matched the expected id, or null when none did. */
   method: "header" | "meta" | "content" | null
+  /** The id that was looked for, so the site can tell whether the extension is signed in to the same account. */
+  publisherId?: string
   /** The address the tab settled on after any redirects. */
   finalUrl?: string
   /** A short, human-readable reason when verification did not succeed. */
@@ -48,8 +51,8 @@ export function isVerificationTab(tabId: number) {
 let verificationQueue: Promise<unknown> = Promise.resolve()
 
 /** Verifications run one at a time, so a page cannot open any number of background tabs at once. */
-export function verifySite(request: VerifySiteRequest): Promise<VerifySiteResult> {
-  const verification = verificationQueue.then(() => runVerification(request))
+export function verifySite(url: string, publisherId: string | undefined): Promise<VerifySiteResult> {
+  const verification = verificationQueue.then(() => runVerification(url, publisherId))
   verificationQueue = verification.catch(() => undefined)
   return verification
 }
@@ -131,18 +134,25 @@ function waitForTabLoad(tabId: number, timeoutMs: number): Promise<void> {
   })
 }
 
-async function runVerification(request: VerifySiteRequest): Promise<VerifySiteResult> {
-  const publisherId = (request?.publisherId || "").trim()
-  const url = (request?.url || "").trim()
+async function runVerification(rawUrl: string, publisherId: string | undefined): Promise<VerifySiteResult> {
+  const url = (rawUrl || "").trim()
 
   if (!isValidPublisherId(publisherId)) {
-    return { success: false, method: null, error: "The publisher id is not valid." }
+    return {
+      success: false,
+      method: null,
+      error: "The extension isn't synced with your publisher account yet. Open your dashboard, then try again.",
+    }
   }
 
   if (!isValidUrl(url)) {
-    return { success: false, method: null, error: "That doesn't look like a valid web address." }
+    return { success: false, method: null, publisherId, error: "That doesn't look like a valid web address." }
   }
 
+  return { ...(await checkPage(url, publisherId)), publisherId }
+}
+
+async function checkPage(url: string, publisherId: string): Promise<VerifySiteResult> {
   const capture = captureMainFrameHeaders()
   let tabId: number | undefined
 

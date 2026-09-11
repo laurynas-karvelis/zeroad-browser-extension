@@ -51,15 +51,17 @@ describe("verifySite", () => {
     mostOpenAtOnce = 0
   })
 
-  test("refuses a malformed publisher id without opening anything", async () => {
-    const result = await verifySite({ url: "https://site.test/", publisherId: "zapub_short" })
+  test("asks for a sync, without opening anything, when there is no publisher id to look for", async () => {
+    for (const publisherId of [undefined, "zapub_short"]) {
+      const result = await verifySite("https://site.test/", publisherId)
 
-    expect(result).toMatchObject({ success: false, method: null })
+      expect(result).toMatchObject({ success: false, method: null, error: expect.stringContaining("dashboard") })
+    }
     expect(chromeMock.tabs.removed).toEqual([])
   })
 
   test("refuses an address that is not http(s)", async () => {
-    const result = await verifySite({ url: "javascript:alert(1)", publisherId: PUBLISHER_ID })
+    const result = await verifySite("javascript:alert(1)", PUBLISHER_ID)
 
     expect(result).toMatchObject({ success: false, method: null })
   })
@@ -67,15 +69,29 @@ describe("verifySite", () => {
   test("a matching response header proves control of the site", async () => {
     servePage({ header: PUBLISHER_ID, finalUrl: "https://www.site.test/" })
 
-    const result = await verifySite({ url: "https://site.test/", publisherId: PUBLISHER_ID })
+    const result = await verifySite("https://site.test/", PUBLISHER_ID)
 
-    expect(result).toEqual({ success: true, method: "header", finalUrl: "https://www.site.test/" })
+    expect(result).toEqual({
+      success: true,
+      method: "header",
+      finalUrl: "https://www.site.test/",
+      publisherId: PUBLISHER_ID,
+    })
+  })
+
+  test("reports the id it looked for even when it found nothing, so the site can spot a different account", async () => {
+    servePage({})
+
+    expect(await verifySite("https://site.test/", PUBLISHER_ID)).toMatchObject({
+      success: false,
+      publisherId: PUBLISHER_ID,
+    })
   })
 
   test("a matching meta tag proves control when there is no header", async () => {
     servePage({ meta: PUBLISHER_ID })
 
-    expect(await verifySite({ url: "https://site.test/", publisherId: PUBLISHER_ID })).toMatchObject({
+    expect(await verifySite("https://site.test/", PUBLISHER_ID)).toMatchObject({
       success: true,
       method: "meta",
     })
@@ -84,7 +100,7 @@ describe("verifySite", () => {
   test("the id in the page content marks a platform the publisher doesn't control", async () => {
     servePage({ body: PUBLISHER_ID })
 
-    expect(await verifySite({ url: "https://site.test/", publisherId: PUBLISHER_ID })).toMatchObject({
+    expect(await verifySite("https://site.test/", PUBLISHER_ID)).toMatchObject({
       success: true,
       method: "content",
     })
@@ -93,7 +109,7 @@ describe("verifySite", () => {
   test("someone else's id proves nothing", async () => {
     servePage({ header: OTHER_ID, meta: OTHER_ID, body: OTHER_ID })
 
-    const result = await verifySite({ url: "https://site.test/", publisherId: PUBLISHER_ID })
+    const result = await verifySite("https://site.test/", PUBLISHER_ID)
 
     expect(result).toMatchObject({ success: false, method: null })
     expect(result.error).toBeDefined()
@@ -103,7 +119,7 @@ describe("verifySite", () => {
     // A content proof, so the page is actually read while the check runs
     servePage({ body: PUBLISHER_ID })
 
-    await verifySite({ url: "https://site.test/", publisherId: PUBLISHER_ID })
+    await verifySite("https://site.test/", PUBLISHER_ID)
     const tabId = chromeMock.tabs.removed[0]
 
     expect(chromeMock.tabs.removed).toHaveLength(1)
@@ -115,9 +131,7 @@ describe("verifySite", () => {
   test("runs verifications one at a time, so a page cannot open tabs without limit", async () => {
     servePage({ body: PUBLISHER_ID })
 
-    await Promise.all(
-      Array.from({ length: 3 }, () => verifySite({ url: "https://site.test/", publisherId: PUBLISHER_ID }))
-    )
+    await Promise.all(Array.from({ length: 3 }, () => verifySite("https://site.test/", PUBLISHER_ID)))
 
     expect(mostOpenAtOnce).toBe(1)
     expect(chromeMock.tabs.removed).toHaveLength(3)

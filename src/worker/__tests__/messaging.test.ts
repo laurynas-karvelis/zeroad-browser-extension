@@ -18,6 +18,13 @@ mock.module("../tab-tracker", () => ({ trackedTabs: () => ({ notifyIfActiveTabIs
 
 mock.module("../telemetry", () => ({ telemetry: () => ({ map: new Map(), export: () => ({}) }) }))
 
+const verifySite = mock(async (_url: string, publisherId: string | undefined) => ({
+  success: true,
+  method: "header",
+  publisherId,
+}))
+mock.module("../site-verification", () => ({ verifySite }))
+
 const { EVENT, eventBroker } = await import("../event-broker")
 await import("../messaging")
 
@@ -39,6 +46,8 @@ async function askSiteChannel(message: object) {
   await chromeMock.runtime.onMessageExternal.dispatch(message, {}, (value: unknown) => {
     response = value
   })
+  // Handlers reply asynchronously, after awaiting the worker's stored state.
+  await Bun.sleep(0)
   return response
 }
 
@@ -187,6 +196,22 @@ describe("site messages over the Chrome external channel", () => {
 
     expect(received).not.toHaveBeenCalled()
     expect(response).toBe(false)
+  })
+
+  test("verifies a site against the signed-in user's own publisher id, never one the page supplies", async () => {
+    const ownId = "zapub_7Fq2xR9nKdW3mB6tYp1sVzAe"
+    extensionStub.getExtensionData.mockImplementationOnce(() => ({
+      user: { firstName: "Ada", extensionToken: "r", publisherId: ownId } as never,
+      subscription: undefined,
+    }))
+
+    const response = await askSiteChannel({
+      command: EVENT.WEBSITE.VERIFY_SITE,
+      payload: { url: "https://site.test/", publisherId: "zapub_AbCdEfGhIjKlMnOpQrStUvWx" },
+    })
+
+    expect(verifySite).toHaveBeenCalledWith("https://site.test/", ownId)
+    expect(response).toMatchObject({ success: true, publisherId: ownId })
   })
 
   test("ignores commands the site channel does not serve", async () => {
