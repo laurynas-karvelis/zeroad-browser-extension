@@ -46,7 +46,14 @@ describe("popup messages", () => {
   beforeEach(() => {
     chromeMock.runtime.sentMessages = []
     notifyIfActiveTabIsPublisher.mockClear()
-    for (const spy of Object.values(extensionStub)) spy.mockClear()
+    for (const spy of [
+      extensionStub.getExtensionData,
+      extensionStub.isPaused,
+      extensionStub.pause,
+      extensionStub.resume,
+    ]) {
+      spy.mockClear()
+    }
   })
 
   test("returns the config", async () => {

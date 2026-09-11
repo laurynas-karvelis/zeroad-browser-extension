@@ -23,6 +23,7 @@ function servePage(page: Page) {
     await chromeMock.webRequest.onCompleted.dispatch({
       url: page.finalUrl ?? options.url,
       tabId: id,
+      type: "main_frame",
       responseHeaders: page.header ? [{ name: "Better-Web-Publisher", value: page.header }] : [],
     } as never)
 
