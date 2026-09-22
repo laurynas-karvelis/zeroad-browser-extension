@@ -104,34 +104,40 @@ function ValidSubscription() {
       class="subscription-valid"
       hidden
     >
-      <p
+      <div
         class="clean-web"
         hidden
       >
-        You have the <b>Clean Web</b> plan active for <b class="valid-until"></b>.
-        <span class="fg-2 d-block mt-3">Enjoy a completely ad-free experience and fewer interruptions.</span>
-      </p>
-      <p
+        <p>
+          You have the <b>Clean Web</b> plan active for <b class="valid-until"></b>.
+        </p>
+        <ul class="list-unstyled check-list d-flex flex-column gap-3 fg-2 mb-6">
+          <li>Enjoy a completely ad-free experience and fewer interruptions.</li>
+        </ul>
+      </div>
+      <div
         class="one-pass"
         hidden
       >
-        You have the <b>One Pass</b> plan active for <b class="valid-until"></b>.
-        <span class="fg-2 d-block mt-3">
-          Access content behind paywalls and unlocked free access to subscriptions and streaming services.
-        </span>
-      </p>
-      <p
+        <p>
+          You have the <b>One Pass</b> plan active for <b class="valid-until"></b>.
+        </p>
+        <ul class="list-unstyled check-list d-flex flex-column gap-3 fg-2 mb-6">
+          <li>Access content behind paywalls and unlock free access to subscriptions and streaming services.</li>
+        </ul>
+      </div>
+      <div
         class="freedom"
         hidden
       >
-        You have the <b>Freedom</b> plan active for <b class="valid-until"></b>.
-        <span class="fg-2 d-block mt-3">Enjoy a completely ad-free experience and fewer interruptions.</span>
-        {/* A nested <p> would be auto-closed by the parser, hoisting this line out of the hidden
-            .freedom paragraph and showing it to every plan. A block span stays put. */}
-        <span class="fg-2 d-block">
-          Access content behind paywalls and unlocked free access to subscriptions and streaming services.
-        </span>
-      </p>
+        <p>
+          You have the <b>Freedom</b> plan active for <b class="valid-until"></b>.
+        </p>
+        <ul class="list-unstyled check-list d-flex flex-column gap-3 fg-2 mb-6">
+          <li>Enjoy a completely ad-free experience and fewer interruptions.</li>
+          <li>Access content behind paywalls and unlock free access to subscriptions and streaming services.</li>
+        </ul>
+      </div>
     </div>
   )
 }
