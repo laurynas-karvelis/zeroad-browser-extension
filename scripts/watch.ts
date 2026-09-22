@@ -64,6 +64,9 @@ async function runCommand(command: string, args: string[] = []) {
   return await child.exited
 }
 
+const buildExitCode = await runCommand("bun", ["run", "build"])
+if (buildExitCode !== 0) process.exit(buildExitCode)
+
 // Initialize watchers
 for (const { dir, allowed, cmd, label } of watchers) {
   const options = { persistent: true, ignoreInitial: true, ignored: /node_modules/ }

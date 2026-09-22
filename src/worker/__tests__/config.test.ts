@@ -1,13 +1,18 @@
-import { describe, expect, test } from "bun:test"
+import { afterEach, describe, expect, spyOn, test } from "bun:test"
 import { chromeMock } from "../../__fixtures__/chrome"
 
-chromeMock.management.installType = "normal"
+chromeMock.management.installType = "development"
 chromeMock.runtime.manifestVersion = "1.2.3"
 
 const { getConfig } = await import("../config")
 
 describe("getConfig", () => {
-  test("points at production hosts for a store-installed extension", async () => {
+  afterEach(() => {
+    chromeMock.runtime.externalMatches = ["https://zeroad.network/*"]
+    chromeMock.management.installType = "development"
+  })
+
+  test("points at production hosts for a production build loaded unpacked", async () => {
     const config = await getConfig()
 
     expect(config.DEV_MODE).toBe(false)
@@ -22,10 +27,39 @@ describe("getConfig", () => {
     expect((await getConfig()).VERSION).toBe("1.2.3")
   })
 
-  test("caches the install type, so a later management change cannot flip live hosts", async () => {
-    // `chrome.management.getSelf()` is only consulted once per worker lifetime.
-    chromeMock.management.installType = "development"
+  test("keeps a normally installed development build on production hosts", async () => {
+    chromeMock.runtime.externalMatches.push("http://localhost/*")
+    chromeMock.management.installType = "normal"
 
-    expect((await getConfig()).BASE_URL).toBe("https://zeroad.network")
+    const config = await getConfig()
+    expect(config.DEV_MODE).toBe(false)
+    expect(config.BASE_URL).toBe("https://zeroad.network")
+    expect(config.DATA_INGEST.INGEST_URL).toBe("https://api.zeroad.network/extension/telemetry")
+  })
+
+  test("points at local hosts for a Chromium development build", async () => {
+    chromeMock.runtime.externalMatches.push("http://localhost/*")
+
+    const config = await getConfig()
+    expect(config.DEV_MODE).toBe(true)
+    expect(config.BASE_URL).toBe("http://localhost:3000")
+    expect(config.DATA_INGEST.INGEST_URL).toBe("http://localhost:3010/extension/telemetry")
+  })
+
+  test("uses content script matches for a Firefox development build", async () => {
+    const manifestSpy = spyOn(chrome.runtime, "getManifest").mockReturnValue({
+      manifest_version: 3,
+      name: "Zero Ad Network",
+      version: "1.2.3",
+      content_scripts: [{ matches: ["https://zeroad.network/*", "http://localhost/*"], js: ["js/content.js"] }],
+    })
+
+    try {
+      const config = await getConfig()
+      expect(config.DEV_MODE).toBe(true)
+      expect(config.BASE_URL).toBe("http://localhost:3000")
+    } finally {
+      manifestSpy.mockRestore()
+    }
   })
 })

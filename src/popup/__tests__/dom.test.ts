@@ -10,7 +10,7 @@ beforeEach(() => {
 
 describe("$", () => {
   test("collects every match", () => {
-    expect($(".nav-item").elements).toHaveLength(2)
+    expect($(".popup-navigation-links li").elements).toHaveLength(2)
   })
 
   test("leaves an unmatched selector as a chain of no-ops rather than throwing", () => {
@@ -41,8 +41,8 @@ describe("$", () => {
   })
 
   test("gathers descendants from every element of the outer match", () => {
-    // Two `.nav-item`s, one anchor each - proof the outer selection is walked, not just its first element.
-    expect($("a", $(".nav-item")).elements).toHaveLength(2)
+    // Two navigation items, one anchor each - proof the outer selection is walked, not just its first element.
+    expect($("a", $(".popup-navigation-links li")).elements).toHaveLength(2)
   })
 
   test("narrows an empty match to an empty match", () => {
@@ -180,7 +180,7 @@ describe("updateUrls", () => {
   test("resolves the template's site-relative links against the real site", () => {
     updateUrls(SITE_URL)
 
-    expect(hrefOf(".navbar-brand")).toBe("https://zeroad.network/")
+    expect(hrefOf(".popup-brand")).toBe("https://zeroad.network/")
     expect(hrefOf("#link-pricing a")).toBe("https://zeroad.network/#features")
     expect(hrefOf("#choose-plan-btn")).toBe("https://zeroad.network/dashboard")
   })

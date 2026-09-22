@@ -111,7 +111,11 @@ export function createChromeMock() {
       lastError: undefined as { message: string } | undefined,
       manifestVersion: "9.9.9",
       uninstallUrl: undefined as string | undefined,
-      getManifest: () => ({ version: mock.runtime.manifestVersion }),
+      externalMatches: ["https://zeroad.network/*"],
+      getManifest: () => ({
+        version: mock.runtime.manifestVersion,
+        externally_connectable: { matches: mock.runtime.externalMatches },
+      }),
       getURL: (path: string) => `chrome-extension://test-extension-id/${path.replace(/^\.?\//, "")}`,
       setUninstallURL: (url: string) => {
         mock.runtime.uninstallUrl = url

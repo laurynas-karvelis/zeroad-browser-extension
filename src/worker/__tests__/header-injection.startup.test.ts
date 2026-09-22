@@ -1,8 +1,9 @@
 import { describe, expect, mock, test } from "bun:test"
 import { chromeMock } from "../../__fixtures__/chrome"
 
-// What a freshly started worker finds: a development install, and a session rule installed by the worker
+// What a freshly started worker finds: a development build, and a session rule installed by the worker
 // before it - session rules last until the browser restarts, the worker's memory does not.
+chromeMock.runtime.externalMatches.push("http://localhost/*")
 chromeMock.management.installType = "development"
 chromeMock.declarativeNetRequest.sessionRules = [{ id: 107, condition: { urlFilter: "|https://earlier.test^" } }]
 

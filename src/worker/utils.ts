@@ -1,11 +1,11 @@
 import { ExtensionError } from "./error"
 
-let devMode: Promise<boolean> | undefined
-
-// The install type cannot change while the extension runs, so it is read once per worker lifetime.
-export function inDevMode() {
-  devMode ??= chrome.management.getSelf().then((self) => self.installType === "development")
-  return devMode
+// The build enables localhost messaging in the manifest for each browser.
+export async function inDevMode() {
+  const manifest = chrome.runtime.getManifest()
+  const matches = manifest.externally_connectable?.matches ?? manifest.content_scripts?.flatMap((entry) => entry.matches)
+  if (!matches?.includes("http://localhost/*")) return false
+  return (await chrome.management.getSelf()).installType === "development"
 }
 
 export function arraysEqual(a: unknown[], b: unknown[]) {

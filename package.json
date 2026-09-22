@@ -19,6 +19,7 @@
     "targets:build": "dirs=(\"chrome\" \"firefox\"); for d in \"${dirs[@]}\"; do (rsync -a --delete --mkpath build/ targets/$d/ && bun manifest:build $d > targets/$d/manifest.json); done",
     "watch": "bun run ./scripts/watch.ts",
     "test": "bun test --isolate",
+    "build:dev": "EXTENSION_DEV=1 bun run build",
     "build": "bun scripts:build && bun assets:build && bun styles:build && bun popup:build && bun targets:build",
     "postbuild": "dirs=(\"chrome\"); for d in \"${dirs[@]}\"; do (cd \"targets/$d\" && rm js/content.js); done",
     "package": "version=$(jq -r '.version' ./package.json) dirs=(\"chrome\" \"firefox\"); for d in \"${dirs[@]}\"; do (cd \"targets/$d\" && zip -r $d-$version.zip manifest.json js popup.html css images fonts); done"
