@@ -28,7 +28,7 @@ describe("getConfig", () => {
   })
 
   test("keeps a normally installed development build on production hosts", async () => {
-    chromeMock.runtime.externalMatches.push("http://localhost/*")
+    chromeMock.runtime.externalMatches.push("https://zeroad.local/*")
     chromeMock.management.installType = "normal"
 
     const config = await getConfig()
@@ -38,12 +38,12 @@ describe("getConfig", () => {
   })
 
   test("points at local hosts for a Chromium development build", async () => {
-    chromeMock.runtime.externalMatches.push("http://localhost/*")
+    chromeMock.runtime.externalMatches.push("https://zeroad.local/*")
 
     const config = await getConfig()
     expect(config.DEV_MODE).toBe(true)
-    expect(config.BASE_URL).toBe("http://localhost:3000")
-    expect(config.DATA_INGEST.INGEST_URL).toBe("http://localhost:3010/extension/telemetry")
+    expect(config.BASE_URL).toBe("https://zeroad.local")
+    expect(config.DATA_INGEST.INGEST_URL).toBe("https://api.zeroad.local/extension/telemetry")
   })
 
   test("uses content script matches for a Firefox development build", async () => {
@@ -51,13 +51,13 @@ describe("getConfig", () => {
       manifest_version: 3,
       name: "Zero Ad Network",
       version: "1.2.3",
-      content_scripts: [{ matches: ["https://zeroad.network/*", "http://localhost/*"], js: ["js/content.js"] }],
+      content_scripts: [{ matches: ["https://zeroad.network/*", "https://zeroad.local/*"], js: ["js/content.js"] }],
     })
 
     try {
       const config = await getConfig()
       expect(config.DEV_MODE).toBe(true)
-      expect(config.BASE_URL).toBe("http://localhost:3000")
+      expect(config.BASE_URL).toBe("https://zeroad.local")
     } finally {
       manifestSpy.mockRestore()
     }

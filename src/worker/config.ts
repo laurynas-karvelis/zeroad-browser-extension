@@ -1,12 +1,12 @@
 import { inDevMode } from "./utils"
 
 enum HOMEPAGE {
-  DEV = "http://localhost:3000",
+  DEV = "https://zeroad.local",
   PROD = "https://zeroad.network",
 }
 
 enum API_SERVER {
-  DEV = "http://localhost:3010",
+  DEV = "https://api.zeroad.local",
   PROD = "https://api.zeroad.network",
 }
 

@@ -8,7 +8,7 @@ import { chromeMock } from "../../__fixtures__/chrome"
 // biome-ignore lint/suspicious/noExplicitAny: the manifest shape differs per target
 ;(chromeMock.runtime as any).getManifest = () => ({
   version: "1.0.0",
-  content_scripts: [{ matches: ["https://zeroad.network/*", "http://localhost/*"], js: ["js/content.js"] }],
+  content_scripts: [{ matches: ["https://zeroad.network/*", "https://zeroad.local/*"], js: ["js/content.js"] }],
 })
 // Firefox has no `onMessageExternal` (pages can't use externally_connectable), and messaging.ts uses
 // exactly that absence to decide it must bridge site messages through content.js. Remove it before
@@ -54,7 +54,7 @@ describe("site messages relayed by the Firefox content script", () => {
   test("accepts the local development origin", async () => {
     await relayFromSite(
       { command: EVENT.WEBSITE.SYNC_CLIENT_DATA, payload: { user: { extensionToken: "r" } } },
-      contentScriptSender("http://localhost:3000/extension/sync")
+      contentScriptSender("https://zeroad.local/extension/sync")
     )
 
     expect(received).toHaveBeenCalled()

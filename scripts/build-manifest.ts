@@ -9,11 +9,10 @@ if (!target) {
   process.exit(1)
 }
 
-// Only a development build lets the locally served site talk to the extension. A published build
-// trusting localhost would hand that channel to any local dev server or app, on any port.
+// Only development builds let the local HTTPS frontend talk to the extension.
 const isDevelopmentBuild = process.env.EXTENSION_DEV === "1"
 const externalMatches = isDevelopmentBuild
-  ? [...template.root.external_matches, "http://localhost/*"]
+  ? [...template.root.external_matches, "https://zeroad.local/*"]
   : template.root.external_matches
 
 // Inject `package.json` into context.root
