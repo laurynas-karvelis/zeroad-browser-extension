@@ -1,4 +1,5 @@
 @use "sass:meta";
+@use "@styles/settings/site-theme";
 
 // The shared design system (packages/styles in the better-web monorepo), the same one the frontend app
 // uses. Loaded first: it declares the cascade layer order; the popup's own styles go in `features`.
@@ -6,45 +7,14 @@
 // light-dark(), so the popup follows the OS light/dark setting via the `color-scheme` meta tag.
 @include meta.load-css("@styles");
 
-// Shipped with the extension rather than fetched: a font request on every popup open would tell a third
-// party the user's IP and that they run the extension, and fail offline. `--font-sans` names InterVariable.
-@font-face {
-  font-family: InterVariable;
-  font-style: normal;
-  font-weight: 100 900;
-  font-display: swap;
-  src: url("../fonts/InterVariable.woff2") format("woff2");
-}
-
 // Chrome injects an unlayered `body { font-family: system-ui; font-size: 75% }` into every extension page,
 // and an unlayered rule beats every layer - so both are restated outside the layers. `html body` outranks
 // Chrome's `body` whichever of the two stylesheets loads last.
 html body {
   font-family: var(--font-sans);
-  font-size: 0.86rem;
+  font-size: var(--font-size-sm);
 }
 
 @layer features {
-  body {
-    width: 430px;
-  }
-
-  // The popup is always narrow and never collapses its links, so they stay in a row at every width.
-  .navbar {
-    flex-wrap: nowrap;
-  }
-
-  .navbar-nav {
-    flex-direction: row;
-  }
-
-  .greeting {
-    margin-block-end: 1rem;
-    color: var(--fg-2);
-  }
-
-  hr {
-    margin-block: 1rem;
-    border-block-start: 2px dotted var(--fg-4);
-  }
+  @include meta.load-css("features/popup");
 }

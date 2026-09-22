@@ -13,39 +13,23 @@ const VERSION = "{VERSION}"
 
 function Header() {
   return (
-    <header class="mb-4">
-      <nav class="navbar border-bottom">
+    <header class="mb-6">
+      <nav
+        class="popup-navigation"
+        aria-label="Main navigation"
+      >
         <a
-          class="navbar-brand d-flex align-items-center gap-2"
+          class="popup-brand"
           href="/"
         >
-          <img
-            src="./images/dove.png"
-            width="26"
-            height="26"
-            alt=""
-          />
           Zero Ad Network
         </a>
-        <ul class="nav navbar-nav ms-auto">
-          <li
-            id="link-pricing"
-            class="nav-item"
-          >
-            <a
-              class="nav-link px-3"
-              href="/#features"
-            >
-              Features
-            </a>
+        <ul class="popup-navigation-links list-unstyled mb-0">
+          <li id="link-pricing">
+            <a href="/#features">Features</a>
           </li>
-          <li class="nav-item">
-            <a
-              class="nav-link px-3"
-              href="/#pricing"
-            >
-              Pricing
-            </a>
+          <li>
+            <a href="/#pricing">Pricing</a>
           </li>
         </ul>
       </nav>
@@ -59,36 +43,33 @@ function UnsubscribedSection() {
       class="guest user not-subscribed"
       hidden
     >
-      <h4
-        class="guest greeting"
+      <h1
+        class="guest greeting fs-xl"
         hidden
       >
         Welcome guest,
-      </h4>
-      <h4
-        class="user not-subscribed greeting"
+      </h1>
+      <h1
+        class="user not-subscribed greeting fs-xl"
         hidden
       >
         Hi {FIRST_NAME},
-      </h4>
+      </h1>
       <div
         class="guest"
         hidden
       >
-        <p>
-          Sign up and activate a subscription to <b class="fg-success">unlock</b> your ad-free and enhanced browsing
-          experience:
+        <p class="fg-2">
+          Sign up and activate a subscription to unlock your ad-free and enhanced browsing experience:
         </p>
       </div>
       <div
         class="not-subscribed"
         hidden
       >
-        <p>
-          Activate a subscription to <b class="fg-success">begin enjoying</b> an ad-free and enhanced web experience:
-        </p>
+        <p class="fg-2">Activate a subscription to begin enjoying an ad-free and enhanced web experience:</p>
       </div>
-      <ul class="list-unstyled check-list d-flex flex-column gap-2 lh-sm">
+      <ul class="list-unstyled check-list d-flex flex-column gap-3 mb-6">
         <li>Enjoy a completely ad-free experience</li>
         <li>Skip cookie consent pop-ups</li>
         <li>No unnecessary third-party trackers</li>
@@ -127,15 +108,15 @@ function ValidSubscription() {
         class="clean-web"
         hidden
       >
-        Your have the <b class="fg-success">Clean Web</b> plan active for <b class="valid-until fg-success"></b>.
-        <span class="fg-secondary ms-1">Enjoy a completely ad-free experience and fewer interruptions.</span>
+        You have the <b>Clean Web</b> plan active for <b class="valid-until"></b>.
+        <span class="fg-2 d-block mt-3">Enjoy a completely ad-free experience and fewer interruptions.</span>
       </p>
       <p
         class="one-pass"
         hidden
       >
-        Your have the <b class="fg-success">One Pass</b> plan active for <b class="valid-until fg-success"></b>.
-        <span class="fg-secondary ms-1">
+        You have the <b>One Pass</b> plan active for <b class="valid-until"></b>.
+        <span class="fg-2 d-block mt-3">
           Access content behind paywalls and unlocked free access to subscriptions and streaming services.
         </span>
       </p>
@@ -143,11 +124,11 @@ function ValidSubscription() {
         class="freedom"
         hidden
       >
-        Your have the <b class="fg-success">Freedom</b> plan active for <b class="valid-until fg-success"></b>.
-        <span class="fg-secondary ms-1">Enjoy a completely ad-free experience and fewer interruptions.</span>
+        You have the <b>Freedom</b> plan active for <b class="valid-until"></b>.
+        <span class="fg-2 d-block mt-3">Enjoy a completely ad-free experience and fewer interruptions.</span>
         {/* A nested <p> would be auto-closed by the parser, hoisting this line out of the hidden
             .freedom paragraph and showing it to every plan. A block span stays put. */}
-        <span class="fg-secondary d-block">
+        <span class="fg-2 d-block">
           Access content behind paywalls and unlocked free access to subscriptions and streaming services.
         </span>
       </p>
@@ -164,10 +145,10 @@ function ExpiredSubscription() {
       <h5>
         Your plan is now <span class="fg-danger">expired</span>.
       </h5>
-      <p class="fg-secondary">
+      <p class="fg-2">
         No action needed {raw("&mdash;")} we'll automatically refresh your token while your subscription is active.
       </p>
-      <p class="fg-secondary">
+      <p class="fg-2">
         If not, you can renew your subscription anytime from your dashboard to keep enjoying an ad-free web experience.
       </p>
     </div>
@@ -178,14 +159,11 @@ function PublisherFeatures() {
   return (
     <div
       id="publisher-features"
-      class="col"
       hidden
     >
       <hr />
-      <h5>
-        The active tab <span class="fg-success">site offers</span>:
-      </h5>
-      <ul class="list-unstyled check-list d-flex flex-column gap-2 lh-sm">
+      <h5>This site offers</h5>
+      <ul class="list-unstyled check-list d-flex flex-column gap-3 mb-0">
         <li
           class="clean_web"
           hidden
@@ -210,7 +188,7 @@ function DeveloperDetails() {
       hidden
     >
       <hr />
-      <h5>Developer token overview:</h5>
+      <h5>Developer token</h5>
       <span
         id="developer-token-label"
         class="badge theme-warning me-1"
@@ -242,38 +220,38 @@ function SubscriberControls() {
         href="/dashboard"
         title="Open my dashboard"
       >
-        <Icon
-          name="layout-dashboard"
-          class="me-2"
-        />
+        <Icon name="layout-dashboard" />
         Dashboard
       </a>
       {/* biome-ignore lint/a11y/useValidAnchor: the destination is only known once the active tab
           turns out to be a publisher site - see `updateUrls` in `dom.ts`. */}
       <a
         id="report-site-btn"
-        class="btn-solid theme-danger"
+        class="btn-outline theme-danger"
         hidden
         data-href="/report/site"
-        title="Report publishered site Issue"
+        title="Report a site issue"
+        aria-label="Report a site issue"
       >
         <Icon name="bug" />
       </a>
       <button
         type="button"
         id="pause-btn"
-        class="btn-solid theme-warning"
+        class="btn-outline theme-secondary"
         hidden
         title="Pause the extension"
+        aria-label="Pause the extension"
       >
         <Icon name="circle-pause" />
       </button>
       <button
         type="button"
         id="resume-btn"
-        class="btn-solid theme-success"
+        class="btn-outline theme-success"
         hidden
         title="Resume the extension"
+        aria-label="Resume the extension"
       >
         <Icon name="circle-play" />
       </button>
@@ -299,11 +277,11 @@ function SubscribedSection() {
 
 function Footer() {
   return (
-    <footer class="mt-3">
-      <div class="d-flex flex-row justify-content-end fg-secondary gap-2 mt-3">
+    <footer class="popup-footer">
+      <div class="d-flex flex-wrap justify-content-end fg-3 gap-3">
         <small
           id="debug-menu"
-          class="d-flex d-row gap-1"
+          class="d-flex flex-wrap gap-3"
           hidden
         >
           <a
@@ -369,15 +347,15 @@ export function Popup() {
         ></script>
       </head>
       <body>
-        <div class="container px-4 py-3">
+        <div class="px-7 py-6">
           <Header />
           <main>
             <div
               id="extension-paused"
-              class="alert theme-warning text-center"
+              class="alert theme-warning"
               hidden
             >
-              NOTE: Extension functionality is currently paused!
+              Extension paused. Resume to continue ad-free browsing.
             </div>
             <UnsubscribedSection />
             <SubscribedSection />
