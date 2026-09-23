@@ -166,8 +166,8 @@ class Extension {
     // different user. A repeat sync of the same token is not news and must not re-announce.
     const hasNewToken = previousToken !== user.extensionToken
 
-    if (hasNewToken) await chrome.storage.local.remove(["websiteTest"])
-    if (testAccess?.hostname && testAccess.visitorToken) {
+    if (hasNewToken || user.accountClosed) await chrome.storage.local.remove(["websiteTest"])
+    if (!user.accountClosed && testAccess?.hostname && testAccess.visitorToken) {
       await chrome.storage.local.set<StoredTestAccess>({
         websiteTest: { extensionToken: user.extensionToken, access: testAccess },
       })

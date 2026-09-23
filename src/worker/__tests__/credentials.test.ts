@@ -95,6 +95,23 @@ describe("credentials", () => {
     expect(alarms().has(RETRY_ALARM)).toBe(false)
   })
 
+  test("hourly sync receives account closure without waiting for subscription expiry", async () => {
+    const received = mock(() => {})
+    eventBroker().on(EVENT.EXTENSION.PAYLOAD_RECEIVED, received)
+    const data = syncPayload()
+    const payload = { ...data.payload, user: { ...data.payload.user, firstName: null, accountClosed: true } }
+    fetchSpy.mockResolvedValue(jsonResponse({ payload }))
+    await chromeMock.alarms.fire(POOL_ALARM)
+    expect(received).toHaveBeenCalledWith(payload)
+  })
+
+  test("hourly sync leaves demo credentials alone", async () => {
+    state.extensionToken = "demo"
+    state.visitorToken = "demo-visitor"
+    await chromeMock.alarms.fire(POOL_ALARM)
+    expect(fetchSpy).not.toHaveBeenCalled()
+  })
+
   test("ends test mode when permission is withdrawn instead of signing out", async () => {
     state.testAccess = {
       hostname: "publisher.test",
@@ -355,7 +372,7 @@ describe("credentials", () => {
       await chromeMock.alarms.fire(POOL_ALARM)
 
       expect(pool.refresh).toHaveBeenCalledTimes(1)
-      expect(fetchSpy).not.toHaveBeenCalled()
+      expect(fetchSpy).toHaveBeenCalledTimes(1)
     })
 
     test("leaves a well-stocked pool alone", async () => {

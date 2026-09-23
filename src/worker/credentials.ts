@@ -53,7 +53,11 @@ class Credentials {
     )
 
     schedule
-      .on(this.TOKEN_POOL_CHECK_ALARM, () => this.maintainTokenPool())
+      .on(this.TOKEN_POOL_CHECK_ALARM, async () => {
+        await extension().ready
+        if (extension().getExtensionToken() !== "demo") await this.attemptToRenewToken()
+        await this.maintainTokenPool()
+      })
       .create(this.TOKEN_POOL_CHECK_ALARM, { periodInMinutes: TOKEN_POOL_CHECK_INTERVAL_IN_MINUTES })
 
     eventBroker().on(EVENT.EXTENSION.SUBSCRIPTION_ACTIVE, () => this.maintainTokenPool())

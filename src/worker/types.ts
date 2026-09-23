@@ -21,6 +21,7 @@ export type ExtensionSyncData = {
 }
 
 export type UserExtensionData = {
+  accountClosed?: boolean
   firstName: string | null
   /** The single token the extension authenticates every platform call with. Never expires. */
   extensionToken: string

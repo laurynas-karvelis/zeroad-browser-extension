@@ -240,6 +240,18 @@ describe("Extension", () => {
       expiresAt: Date.now() + 7 * 24 * HOUR,
     })
 
+    test("account closure clears the stored name and test mode but keeps the remaining paid period", async () => {
+      const paid = { ...subscription(), planName: SUBSCRIPTION_PLAN_NAME.FREEDOM }
+      await extension().sync({ user: user(), subscription: paid, testAccess: testAccess() })
+      await extension().sync({ user: { ...user(), firstName: null, accountClosed: true }, subscription: paid })
+      expect(extension().getExtensionData().user?.firstName).toBeNull()
+      expect(chromeMock.storage.sync.peek().user).toMatchObject({ firstName: null })
+      expect(extension().getExtensionData().testAccess).toBeUndefined()
+      expect(chromeMock.storage.local.peek().websiteTest).toBeUndefined()
+      expect(extension().getExtensionData().subscription).toEqual(paid)
+      expect(extension().hasPaidSubscription()).toBe(true)
+    })
+
     test("works without a subscription and survives ordinary dashboard sync", async () => {
       const access = testAccess()
       expect(await extension().sync({ user: user(), testAccess: access })).toBe(true)
