@@ -7,7 +7,7 @@ import { getHostname } from "./utils"
 export type Entry = {
   /** The publisher this hostname or page announced itself as belonging to, for crediting the visit. */
   publisherId: TabTrackerPublisherDetectedData["publisherId"]
-  /** Where the id was found. Decides the monetization tier server-side, so it has to travel with the visit. */
+  /** Where the id was found. Decides the integration type server-side, so it has to travel with the visit. */
   source: TabTrackerPublisherDetectedData["source"]
   /** Set for a content detection only: the page the id was printed on, which is what gets credited. */
   url?: string
@@ -16,7 +16,7 @@ export type Entry = {
 }
 
 /**
- * Keyed by hostname for a full site (header or meta), since the publisher controls every page on it.
+ * Keyed by hostname for a website (header or meta), since the publisher controls every page on it.
  * An id printed in page content only speaks for that page - a video platform hosts many publishers -
  * so those entries are keyed by the page's url instead. The two cannot collide: a url has a scheme.
  */
@@ -25,7 +25,7 @@ type EntryKey = string
 type StoredTelemetryMap = Record<EntryKey, Entry>
 
 /**
- * What gets sent: a flat list of observations, one per full site or content page visited, each
+ * What gets sent: a flat list of observations, one per website or content page visited, each
  * self-identifying with the publisher it announced, where that id was found, and the views and dwell
  * time earned there. A content observation carries its page `url`, which the platform rolls up into
  * that placement's per-page stats.
@@ -130,7 +130,7 @@ export class Telemetry {
     return observations
   }
 
-  /** The entry crediting `url`: its full site if the hostname is one, otherwise its content page, if any. */
+  /** The entry crediting `url`: its website if the hostname is one, otherwise its content page, if any. */
   private keyFor(url: string | undefined): EntryKey | undefined {
     if (!url) return undefined
 
@@ -202,7 +202,7 @@ export class Telemetry {
   }
 
   private addPageEntry(publisherId: Entry["publisherId"], url: string, hostname: Hostname) {
-    // A full site on this hostname already credits every page on it, content included.
+    // A website on this hostname already credits every page on it, content included.
     if (this.map.has(hostname)) return
 
     const key = pageKey(url)

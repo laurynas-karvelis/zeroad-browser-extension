@@ -10,8 +10,8 @@ import { isValidUrl } from "./utils"
  * a visitor sees them, which an edge fetch cannot), and checked for the publisher's id in three
  * places, in order of strength:
  *
- *   1. the `Better-Web-Publisher` response header  -> proves control of the site (a full site)
- *   2. a `<meta name="better-web-publisher">` tag  -> proves control of the site (a full site)
+ *   1. the `Better-Web-Publisher` response header  -> proves control of the site (a website)
+ *   2. a `<meta name="better-web-publisher">` tag  -> proves control of the site (a website)
  *   3. the id printed in the visible page content  -> a platform the publisher doesn't control
  *
  * The tab is opened inactive and closed as soon as the check finishes, so the publisher barely sees it.

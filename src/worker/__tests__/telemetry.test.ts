@@ -234,7 +234,7 @@ describe("Telemetry", () => {
     })
 
     test("carries the detection source through to the observation", async () => {
-      // The source decides the monetization tier server-side, so it must survive to the payload.
+      // The source decides the integration type server-side, so it must survive to the payload.
       seedStored({ "meta.test": entry("client-a", 1, 100, "meta") })
       const telemetry = await createTelemetry()
 
@@ -316,7 +316,7 @@ describe("Telemetry", () => {
       expect(telemetry.hasPublisherEntryByUrl("https://video.test/watch?v=9")).toBe(false)
     })
 
-    test("a full site on the hostname outranks any id printed on its pages", async () => {
+    test("a website on the hostname outranks any id printed on its pages", async () => {
       const telemetry = await createTelemetry()
 
       eventBroker().emit(EVENT.TAB_TRACKER.PUBLISHER_DETECTED, {

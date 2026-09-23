@@ -204,8 +204,8 @@ const helpers = {
   },
 
   /**
-   * Reads a loaded page for its publisher id. A meta tag names a full site; failing that, an id printed
-   * in the page content names a publisher on a platform they don't control (an ad-supported placement).
+   * Reads a loaded page for its publisher id. A meta tag names a website; failing that, an id printed
+   * in the page content names a publisher on a platform they don't control (an creator integration).
    */
   async readPagePublisher(tab: chrome.tabs.Tab) {
     if (!tab.id || !tab.url) return
