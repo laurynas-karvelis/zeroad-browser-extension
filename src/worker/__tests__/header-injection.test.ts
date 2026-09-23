@@ -1,12 +1,14 @@
 import { beforeEach, describe, expect, mock, test } from "bun:test"
 import { chromeMock } from "../../__fixtures__/chrome"
+import { SUBSCRIPTION_PLAN_NAME, type SubscriptionExtensionData } from "../types"
 
-const state = { active: true, paused: false }
+const state = { active: true, paused: false, subscription: undefined as SubscriptionExtensionData | undefined }
 mock.module("../extension", () => ({
   extension: () => ({
     ready: Promise.resolve(),
     isSubscriptionActive: () => state.active,
     isPaused: () => state.paused,
+    getExtensionData: () => ({ subscription: state.subscription }),
   }),
 }))
 
@@ -47,6 +49,7 @@ describe("headerInjection", () => {
   beforeEach(async () => {
     state.active = true
     state.paused = false
+    state.subscription = undefined
     pool.tokens.clear()
     pool.bound = []
     pool.exhausted = false
@@ -58,6 +61,23 @@ describe("headerInjection", () => {
   })
 
   describe("installing a rule for a publisher hostname", () => {
+    test("installs a demo token without consuming credentials and restricts it to its hostname", async () => {
+      state.subscription = {
+        planName: SUBSCRIPTION_PLAN_NAME.FREEDOM,
+        expiresAt: Date.now() + 60000,
+        hostname: "demo.zeroad.network",
+        visitorToken: "demo-visitor-token",
+      }
+      pool.exhausted = true
+
+      await headerInjection().reset()
+      expect(rules()).toHaveLength(1)
+      expect(headerOf(rules()[0]).value).toBe("demo-visitor-token")
+      expect(await headerInjection().enableForHostname("another.test")).toBeUndefined()
+      expect(rules()).toHaveLength(1)
+      expect(pool.tokens.size).toBe(0)
+    })
+
     test("sets the token header over HTTPS only, for that exact host and none of its subdomains", async () => {
       // A token is reusable until it expires, so one sent in clear text could be replayed; `^` ends
       // the match at the host boundary, so `blog.publisher.test` does not match

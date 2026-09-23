@@ -1,5 +1,6 @@
 import { beforeEach, describe, expect, mock, test } from "bun:test"
 import { chromeMock } from "../../__fixtures__/chrome"
+import { SUBSCRIPTION_PLAN_NAME } from "../types"
 
 const enableRenewal = mock<(when: number) => Promise<void>>(async () => {})
 const cancelRenewal = mock<() => Promise<void>>(async () => {})
@@ -10,8 +11,9 @@ mock.module("../telemetry-sync", () => ({ telemetrySync: () => ({ push }) }))
 
 const removeAllRules = mock<() => Promise<void>>(async () => {})
 const reset = mock<() => Promise<void>>(async () => {})
+const installedHostnames = mock(() => ["demo.zeroad.network"])
 mock.module("../header-injection", () => ({
-  headerInjection: () => ({ removeAllRules, reset }),
+  headerInjection: () => ({ removeAllRules, reset, installedHostnames }),
 }))
 
 const { EVENT, eventBroker } = await import("../event-broker")
@@ -66,6 +68,52 @@ describe("Extension", () => {
   })
 
   describe("receiving a sync payload", () => {
+    test("does not report demo success when no rule was installed", async () => {
+      installedHostnames.mockReturnValueOnce([])
+      expect(
+        await extension().sync({
+          user: user("demo"),
+          subscription: {
+            planName: SUBSCRIPTION_PLAN_NAME.FREEDOM,
+            expiresAt: Date.now() + HOUR,
+            hostname: "demo.zeroad.network",
+            visitorToken: "demo-token",
+          },
+        })
+      ).toBe(false)
+    })
+
+    test("waits for demo rules before reporting success", async () => {
+      let finishReset = () => {}
+      reset.mockImplementationOnce(
+        () =>
+          new Promise<void>((resolve) => {
+            finishReset = resolve
+          })
+      )
+
+      let finished = false
+      const syncing = extension()
+        .sync({
+          user: user("demo"),
+          subscription: {
+            planName: SUBSCRIPTION_PLAN_NAME.FREEDOM,
+            expiresAt: Date.now() + HOUR,
+            hostname: "demo.zeroad.network",
+            visitorToken: "demo-token",
+          },
+        })
+        .then((result) => {
+          finished = true
+          return result
+        })
+
+      await Bun.sleep(0)
+      expect(finished).toBe(false)
+      finishReset()
+      expect(await syncing).toBe(true)
+    })
+
     test("stores the payload and announces the sync", async () => {
       const synced = mock()
       eventBroker().on(EVENT.EXTENSION.SYNCED, synced)

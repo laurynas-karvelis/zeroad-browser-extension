@@ -86,6 +86,22 @@ class Extension {
     return this.state.isHeaderInjectionPaused
   }
 
+  async sync(payload: ExtensionSyncData): Promise<boolean> {
+    await this.ready
+    if (!payload?.user?.extensionToken) return false
+
+    await this.reload(payload)
+
+    const { subscription } = this.state
+    if (subscription?.visitorToken) {
+      await headerInjection().reset()
+      if (!subscription.hostname || !headerInjection().installedHostnames().includes(subscription.hostname))
+        return false
+    }
+
+    return true
+  }
+
   private async load() {
     const [{ user, subscription }, { isHeaderInjectionPaused }] = await Promise.all([
       chrome.storage.sync.get<ExtensionSyncData>(["user", "subscription"]),

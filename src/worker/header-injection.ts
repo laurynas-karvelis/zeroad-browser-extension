@@ -40,6 +40,7 @@ class HeaderInjection {
   private ruleIdByHostname = new Map<Hostname, number>()
   private nextRuleId = FIRST_RULE_ID
   private restoredRuleIds?: Promise<void>
+  private resetting?: Promise<void>
 
   constructor() {
     eventBroker()
@@ -49,10 +50,23 @@ class HeaderInjection {
   }
 
   /** Reinstates rules for every hostname already holding a token, after a worker restart. */
-  async reset() {
+  reset() {
+    this.resetting ??= this.resetRules().finally(() => {
+      this.resetting = undefined
+    })
+    return this.resetting
+  }
+
+  private async resetRules() {
     await this.removeAllRules()
 
     if (!(await this.shouldInject())) return
+
+    const { subscription } = extension().getExtensionData()
+    if (subscription?.visitorToken && subscription.hostname) {
+      await this.enableForHostname(subscription.hostname)
+      return
+    }
 
     for (const hostname of await tokenPool().boundHostnames()) {
       await this.enableForHostname(hostname)
@@ -88,7 +102,11 @@ class HeaderInjection {
 
     await this.restoreRuleIds()
 
-    const token = await tokenPool().tokenFor(hostname)
+    const { subscription } = extension().getExtensionData()
+    if (subscription?.hostname && subscription.hostname !== hostname) return undefined
+    if (subscription?.visitorToken && !subscription.hostname) return undefined
+
+    const token = subscription?.visitorToken || (await tokenPool().tokenFor(hostname))
     if (!token) return undefined
 
     const ruleId = this.ruleIdByHostname.get(hostname) ?? this.nextRuleId++

@@ -75,6 +75,7 @@ class Credentials {
   async maintainTokenPool() {
     await extension().ready
     if (!extension().isSubscriptionActive()) return
+    if (extension().getExtensionData().subscription?.visitorToken) return
 
     try {
       if (await tokenPool().needsRefresh()) await tokenPool().refresh()

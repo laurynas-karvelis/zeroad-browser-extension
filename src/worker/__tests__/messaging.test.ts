@@ -5,6 +5,7 @@ import { chromeMock } from "../../__fixtures__/chrome"
 // through `onMessageExternal`, which the browser gates with `externally_connectable`.
 let finishLoading = () => {}
 const extensionStub = {
+  sync: mock(async (_payload: unknown) => true),
   ready: Promise.resolve() as Promise<void>,
   getExtensionData: mock(() => ({ user: { firstName: "Ada", extensionToken: "r" }, subscription: undefined })),
   isPaused: mock(() => false),
@@ -178,24 +179,28 @@ describe("site messages over the Chrome external channel", () => {
   })
 
   test("hands a sync payload to the worker", async () => {
-    const received = mock()
-    eventBroker().on(EVENT.EXTENSION.PAYLOAD_RECEIVED, received)
     const payload = { user: { extensionToken: "r" }, subscription: { planName: "clean-web" } }
 
     const response = await askSiteChannel({ command: EVENT.WEBSITE.SYNC_CLIENT_DATA, payload })
 
-    expect(received).toHaveBeenCalledWith(payload)
+    expect(extensionStub.sync).toHaveBeenCalledWith(payload)
     expect(response).toBe(true)
   })
 
   test("refuses a sync message with no payload", async () => {
-    const received = mock()
-    eventBroker().on(EVENT.EXTENSION.PAYLOAD_RECEIVED, received)
+    extensionStub.sync.mockClear()
 
     const response = await askSiteChannel({ command: EVENT.WEBSITE.SYNC_CLIENT_DATA })
 
-    expect(received).not.toHaveBeenCalled()
+    expect(extensionStub.sync).not.toHaveBeenCalled()
     expect(response).toBe(false)
+  })
+
+  test("reports failure when the extension could not install demo access", async () => {
+    extensionStub.sync.mockResolvedValueOnce(false)
+    expect(
+      await askSiteChannel({ command: EVENT.WEBSITE.SYNC_CLIENT_DATA, payload: { user: { extensionToken: "demo" } } })
+    ).toBe(false)
   })
 
   test("verifies a site against the signed-in user's own publisher id, never one the page supplies", async () => {

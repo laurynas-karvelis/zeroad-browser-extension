@@ -5,12 +5,14 @@ const state = {
   extensionToken: "ext-1" as string | undefined,
   isSubscriptionActive: true,
   ready: Promise.resolve() as Promise<void>,
+  visitorToken: undefined as string | undefined,
 }
 mock.module("../extension", () => ({
   extension: () => ({
     ready: state.ready,
     getExtensionToken: () => state.extensionToken,
     isSubscriptionActive: () => state.isSubscriptionActive,
+    getExtensionData: () => ({ subscription: { visitorToken: state.visitorToken } }),
   }),
 }))
 
@@ -56,6 +58,7 @@ describe("credentials", () => {
     state.extensionToken = "ext-1"
     state.isSubscriptionActive = true
     state.ready = Promise.resolve()
+    state.visitorToken = undefined
     pool.needsRefresh = true
     pool.refresh.mockClear()
     await chromeMock.alarms.clearAll()
@@ -269,6 +272,12 @@ describe("credentials", () => {
   })
 
   describe("keeping the token pool stocked", () => {
+    test("does not request subscriber credentials for demo access", async () => {
+      state.visitorToken = "demo-token"
+      await credentials().maintainTokenPool()
+      expect(pool.refresh).not.toHaveBeenCalled()
+    })
+
     test("checks the pool on its own hourly alarm", () => {
       expect(poolAlarmAtStartup?.periodInMinutes).toBe(60)
     })

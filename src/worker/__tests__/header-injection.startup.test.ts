@@ -8,7 +8,12 @@ chromeMock.management.installType = "development"
 chromeMock.declarativeNetRequest.sessionRules = [{ id: 107, condition: { urlFilter: "|https://earlier.test^" } }]
 
 mock.module("../extension", () => ({
-  extension: () => ({ ready: Promise.resolve(), isSubscriptionActive: () => true, isPaused: () => false }),
+  extension: () => ({
+    ready: Promise.resolve(),
+    isSubscriptionActive: () => true,
+    isPaused: () => false,
+    getExtensionData: () => ({}),
+  }),
 }))
 mock.module("../token-pool", () => ({
   tokenPool: () => ({ tokenFor: async (hostname: string) => `token-for-${hostname}`, boundHostnames: async () => [] }),

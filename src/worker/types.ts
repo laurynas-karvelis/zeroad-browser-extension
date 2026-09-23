@@ -38,8 +38,10 @@ export type UserExtensionData = {
 export type SubscriptionExtensionData = {
   planName: SUBSCRIPTION_PLAN_NAME
   expiresAt: number // A UNIX timestamp
-  /** Set only on a developer token, naming the site it was issued to test. */
+  /** Restricts demo or developer access to one site. */
   hostname?: string
+  /** A complete token bound to hostname; its signing keys never leave the server. */
+  visitorToken?: string
 }
 
 export type Hostname = string

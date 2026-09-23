@@ -17,13 +17,14 @@ import { chromeMock } from "../../__fixtures__/chrome"
 delete (chromeMock.runtime as any).onMessageExternal
 
 const getExtensionData = mock(() => ({ user: { extensionToken: "secret" } }))
+const received = mock(async (_payload: unknown) => true)
 mock.module("../extension", () => ({
-  extension: () => ({ ready: Promise.resolve(), getExtensionData, isPaused: () => false }),
+  extension: () => ({ ready: Promise.resolve(), getExtensionData, isPaused: () => false, sync: received }),
 }))
 mock.module("../tab-tracker", () => ({ trackedTabs: () => ({ notifyIfActiveTabIsPublisher: mock() }) }))
 mock.module("../telemetry", () => ({ telemetry: () => ({ map: new Map(), export: () => ({}) }) }))
 
-const { EVENT, eventBroker } = await import("../event-broker")
+const { EVENT } = await import("../event-broker")
 await import("../messaging")
 
 const relayFromSite = (message: object, sender: object) =>
@@ -32,11 +33,8 @@ const relayFromSite = (message: object, sender: object) =>
 const contentScriptSender = (url: string) => ({ tab: { id: 1 }, url })
 
 describe("site messages relayed by the Firefox content script", () => {
-  let received: ReturnType<typeof mock>
-
   beforeEach(() => {
-    received = mock()
-    eventBroker().on(EVENT.EXTENSION.PAYLOAD_RECEIVED, received)
+    received.mockClear()
   })
 
   test("accepts a sync payload relayed from the account site", async () => {

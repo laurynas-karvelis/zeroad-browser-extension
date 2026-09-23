@@ -178,8 +178,7 @@ class Messaging {
 
     onSiteMessage<{ payload: ExtensionSyncData }>(EVENT.WEBSITE.SYNC_CLIENT_DATA, async (message) => {
       if (message?.payload) {
-        eventBroker().emit(EVENT.EXTENSION.PAYLOAD_RECEIVED, message?.payload)
-        return true
+        return extension().sync(message.payload)
       }
 
       return false
