@@ -15,7 +15,7 @@ const member: UserExtensionData = { firstName: "Ada", extensionToken: "refresh-t
 
 function subscription(overrides: Partial<SubscriptionExtensionData> = {}): SubscriptionExtensionData {
   return {
-    planName: SUBSCRIPTION_PLAN_NAME.CLEAN_WEB,
+    planName: SUBSCRIPTION_PLAN_NAME.FREEDOM,
     expiresAt: Date.now() + 20 * DAY,
     ...overrides,
   }
@@ -105,10 +105,10 @@ describe("a member without a subscription", () => {
 
 describe("a member with an active subscription", () => {
   test("sees the paragraph for their own plan and no other", async () => {
-    await new UserState(member, subscription({ planName: SUBSCRIPTION_PLAN_NAME.ONE_PASS })).render()
+    await new UserState(member, subscription({ planName: SUBSCRIPTION_PLAN_NAME.FREEDOM })).render()
 
-    expect(isShown("p.one-pass")).toBe(true)
-    expect(shownCount(".subscription-valid > p")).toBe(1)
+    expect(isShown(".subscription-valid .freedom")).toBe(true)
+    expect(shownCount(".subscription-valid > div")).toBe(1)
   })
 
   test("is told how long is left, phrased without a suffix", async () => {
@@ -136,17 +136,13 @@ describe("a member with an active subscription", () => {
     expect(isShown(".subscription-valid")).toBe(true)
   })
 
-  test("is not shown a stray line describing a plan they did not buy", async () => {
-    // The Freedom paragraph used to carry a nested <p>, which the HTML parser closes the outer one
-    // to open - hoisting that sentence out of the hidden block and onto every subscriber's popup.
-    await new UserState(member, subscription({ planName: SUBSCRIPTION_PLAN_NAME.CLEAN_WEB })).render()
+  test("only contains Freedom membership details", async () => {
+    await new UserState(member, subscription()).render()
 
-    const shownText = [...document.querySelectorAll<HTMLElement>(".subscription-valid *")]
-      .filter((element) => !element.closest("[hidden]"))
-      .map((element) => element.innerText)
-      .join(" ")
-
-    expect(shownText).not.toContain("paywalls")
+    const content = document.querySelector(".subscription-valid")!
+    expect(content.textContent).toContain("Freedom")
+    expect(content.textContent).not.toContain("Clean Web")
+    expect(content.textContent).not.toContain("One Pass")
   })
 })
 
@@ -250,7 +246,7 @@ describe("the pause control", () => {
 })
 
 describe("the publisher site section", () => {
-  const subscribed = (planName = SUBSCRIPTION_PLAN_NAME.CLEAN_WEB) =>
+  const subscribed = (planName = SUBSCRIPTION_PLAN_NAME.FREEDOM) =>
     new UserState(member, subscription({ planName })).render()
 
   test("stays out of the way on a site that is not a publisher", async () => {
@@ -279,7 +275,7 @@ describe("the publisher site section", () => {
   })
 
   test("leaves every row plain and untitled, whatever the plan", async () => {
-    await subscribed(SUBSCRIPTION_PLAN_NAME.CLEAN_WEB)
+    await subscribed(SUBSCRIPTION_PLAN_NAME.FREEDOM)
 
     await activeTabChangedTo({
       isPublisher: true,

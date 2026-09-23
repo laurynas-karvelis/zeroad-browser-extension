@@ -91,7 +91,7 @@ function UnsubscribedSection() {
           hidden
           href="/checkout"
         >
-          Choose your plan now {raw("&rarr;")}
+          Join Freedom {raw("&rarr;")}
         </a>
       </div>
     </div>
@@ -104,28 +104,6 @@ function ValidSubscription() {
       class="subscription-valid"
       hidden
     >
-      <div
-        class="clean-web"
-        hidden
-      >
-        <p>
-          You have the <b>Clean Web</b> plan active for <b class="valid-until"></b>.
-        </p>
-        <ul class="list-unstyled check-list d-flex flex-column gap-3 fg-2 mb-6">
-          <li>Enjoy a completely ad-free experience and fewer interruptions.</li>
-        </ul>
-      </div>
-      <div
-        class="one-pass"
-        hidden
-      >
-        <p>
-          You have the <b>One Pass</b> plan active for <b class="valid-until"></b>.
-        </p>
-        <ul class="list-unstyled check-list d-flex flex-column gap-3 fg-2 mb-6">
-          <li>Access content behind paywalls and unlock free access to subscriptions and streaming services.</li>
-        </ul>
-      </div>
       <div
         class="freedom"
         hidden

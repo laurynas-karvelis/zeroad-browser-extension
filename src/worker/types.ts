@@ -7,14 +7,10 @@ export type LeafValues<T> = {
 }[keyof T]
 
 export enum SUBSCRIPTION_PLAN_NAME {
-  CLEAN_WEB = "clean-web",
-  ONE_PASS = "one-pass",
   FREEDOM = "freedom",
 }
 
 export const SUBSCRIPTION_PLAN_LABEL = {
-  [SUBSCRIPTION_PLAN_NAME.CLEAN_WEB]: "Clean Web",
-  [SUBSCRIPTION_PLAN_NAME.ONE_PASS]: "One Pass",
   [SUBSCRIPTION_PLAN_NAME.FREEDOM]: "Freedom",
 }
 

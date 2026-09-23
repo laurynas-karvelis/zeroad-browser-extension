@@ -23,7 +23,7 @@ const HOUR = 60 * 60 * 1000
 
 const user = (extensionToken = "ext-token-1") => ({ firstName: "Ada", extensionToken })
 const subscription = (expiresAt = Date.now() + HOUR) => ({
-  planName: "clean-web",
+  planName: "freedom",
   expiresAt,
 })
 

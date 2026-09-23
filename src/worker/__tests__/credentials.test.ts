@@ -40,7 +40,7 @@ const HOUR = 60 * MINUTE
 const syncPayload = (expiresAt = Date.now() + HOUR) => ({
   payload: {
     user: { firstName: "Ada", extensionToken: "ext-1" },
-    subscription: { planName: "clean-web", expiresAt },
+    subscription: { planName: "freedom", expiresAt },
   },
 })
 

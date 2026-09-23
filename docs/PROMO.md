@@ -21,10 +21,8 @@ PAYS CREATORS FAIRLY
 
 ## How It Works
 
-1. PICK YOUR PLAN
-   Clean Web: Ad-free browsing, zero trackers
-   One Pass: Access paywalled content across publisher sites
-   Freedom: Everything included
+1. JOIN FREEDOM
+   One monthly subscription with all subscriber benefits included on partner sites.
 
 2. INSTALL AND FORGET
    Available for Chrome, Firefox, and Edge. Installs in seconds.
@@ -89,6 +87,6 @@ The token just says "this person is a subscriber" - nothing about who you are.
 
 Install the extension, sign up, and browse freely.
 
-Change plans or cancel anytime. No long-term commitment. No hassle.
+Cancel anytime. No long-term commitment. No hassle.
 
 Join thousands of people building a better web - one where users browse freely and creators get paid fairly.

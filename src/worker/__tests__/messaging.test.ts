@@ -179,7 +179,7 @@ describe("site messages over the Chrome external channel", () => {
   })
 
   test("hands a sync payload to the worker", async () => {
-    const payload = { user: { extensionToken: "r" }, subscription: { planName: "clean-web" } }
+    const payload = { user: { extensionToken: "r" }, subscription: { planName: "freedom" } }
 
     const response = await askSiteChannel({ command: EVENT.WEBSITE.SYNC_CLIENT_DATA, payload })
 
