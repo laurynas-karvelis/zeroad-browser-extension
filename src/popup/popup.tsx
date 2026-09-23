@@ -74,9 +74,7 @@ function UnsubscribedSection() {
         <li>Skip cookie consent pop-ups</li>
         <li>No unnecessary third-party trackers</li>
         <li>No marketing interruptions</li>
-        <li>Access content behind paywalls</li>
-        <li>Unlock free access to publisher subscriptions</li>
-        <li>Unlock free access to streaming services</li>
+        <li>Access partner sites’ base subscriptions or included content and features</li>
       </ul>
       <div class="d-grid">
         <a
@@ -113,7 +111,7 @@ function ValidSubscription() {
         </p>
         <ul class="list-unstyled check-list d-flex flex-column gap-3 fg-2 mb-6">
           <li>Enjoy a completely ad-free experience and fewer interruptions.</li>
-          <li>Access content behind paywalls and unlock free access to subscriptions and streaming services.</li>
+          <li>Access partner sites’ base subscriptions or their included content and features.</li>
         </ul>
       </div>
     </div>
@@ -158,7 +156,7 @@ function PublisherFeatures() {
           class="one_pass"
           hidden
         >
-          Free subscriptions and no paywalls
+          Included subscription content and features
         </li>
       </ul>
     </div>
