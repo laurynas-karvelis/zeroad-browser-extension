@@ -3,11 +3,17 @@ import { chromeMock } from "../../__fixtures__/chrome"
 
 const HOUR = 60 * 60 * 1000
 
-const state = { active: true, extensionToken: "ext-1" as string | undefined, expiresAt: Date.now() + HOUR }
+const state = {
+  active: true,
+  paused: false,
+  extensionToken: "ext-1" as string | undefined,
+  expiresAt: Date.now() + HOUR,
+}
 mock.module("../extension", () => ({
   extension: () => ({
     ready: Promise.resolve(),
     isSubscriptionActive: () => state.active,
+    isPaused: () => state.paused,
     getExtensionToken: () => state.extensionToken,
     getExtensionData: () => ({ subscription: { expiresAt: state.expiresAt } }),
   }),
@@ -42,6 +48,7 @@ describe("telemetrySync", () => {
 
   beforeEach(() => {
     state.active = true
+    state.paused = false
     state.extensionToken = "ext-1"
     state.expiresAt = Date.now() + HOUR
     exported = [{ publisherId: "client-a", source: "header", hostname: "a.test", views: 3, duration: 900 }]
@@ -80,6 +87,14 @@ describe("telemetrySync", () => {
     await telemetrySync().push()
 
     expect(acknowledge).toHaveBeenCalledWith(sent)
+  })
+
+  test("continues uploading recorded usage while Freedom is off", async () => {
+    state.paused = true
+    await telemetrySync().push()
+
+    expect(fetchSpy).toHaveBeenCalledTimes(1)
+    expect(acknowledge).toHaveBeenCalledWith(exported)
   })
 
   test("keeps the data when the push fails, so nothing is lost to a bad night", async () => {

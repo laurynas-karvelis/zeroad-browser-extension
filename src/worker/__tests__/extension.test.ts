@@ -234,13 +234,19 @@ describe("Extension", () => {
 
   describe("pausing", () => {
     test("pause takes the header rule down and resume puts it back", async () => {
+      const recordedUsage = {
+        "publisher.test": { publisherId: "publisher", source: "header", views: 2, duration: 5000 },
+      }
+      await chromeMock.storage.local.set({ telemetry: recordedUsage })
       await extension().pause()
       expect(extension().isPaused()).toBe(true)
       expect(removeAllRules).toHaveBeenCalled()
+      expect(chromeMock.storage.local.peek().telemetry).toEqual(recordedUsage)
 
       await extension().resume()
       expect(extension().isPaused()).toBe(false)
       expect(reset).toHaveBeenCalled()
+      expect(chromeMock.storage.local.peek().telemetry).toEqual(recordedUsage)
     })
 
     test("the pause is stored, so it survives the stored state being read back", async () => {

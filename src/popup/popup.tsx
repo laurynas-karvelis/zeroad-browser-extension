@@ -59,9 +59,7 @@ function UnsubscribedSection() {
         class="guest"
         hidden
       >
-        <p class="fg-2">
-          Sign up and activate a subscription to unlock your ad-free and enhanced browsing experience:
-        </p>
+        <p class="fg-2">Sign up and activate a subscription to unlock your ad-free and enhanced browsing experience:</p>
       </div>
       <div
         class="not-subscribed"
@@ -195,7 +193,7 @@ function DeveloperDetails() {
 
 function SubscriberControls() {
   return (
-    <div class="d-flex gap-2">
+    <div class="d-flex flex-wrap gap-2">
       <a
         id="choose-plan-btn"
         class="btn-solid theme-primary flex-grow-1"
@@ -220,23 +218,32 @@ function SubscriberControls() {
       <button
         type="button"
         id="pause-btn"
-        class="btn-outline theme-secondary"
+        class="btn-outline theme-secondary w-100"
         hidden
-        title="Pause the extension"
-        aria-label="Pause the extension"
+        title="Turn Freedom off on all websites"
+        aria-label="Turn Freedom off on all websites"
+        aria-describedby="freedom-comparison-help"
       >
-        <Icon name="circle-pause" />
+        <Icon name="circle-pause" /> Turn Freedom off
       </button>
       <button
         type="button"
         id="resume-btn"
-        class="btn-outline theme-success"
+        class="btn-outline theme-success w-100"
         hidden
-        title="Resume the extension"
-        aria-label="Resume the extension"
+        title="Turn Freedom on for all websites"
+        aria-label="Turn Freedom on for all websites"
+        aria-describedby="freedom-comparison-help"
       >
-        <Icon name="circle-play" />
+        <Icon name="circle-play" /> Turn Freedom on
       </button>
+      <p
+        id="freedom-comparison-help"
+        class="small fg-secondary mb-0"
+      >
+        Compare websites with Freedom on or off. Applies to all websites; reload pages after switching. Visit
+        measurement and uploads continue in both modes.
+      </p>
     </div>
   )
 }
@@ -337,7 +344,8 @@ export function Popup() {
               class="alert theme-warning"
               hidden
             >
-              Extension paused. Resume to continue ad-free browsing.
+              Freedom is off on all websites. Turn it on and reload to request subscriber access again. Visit
+              measurement and uploads continue.
             </div>
             <UnsubscribedSection />
             <SubscribedSection />
