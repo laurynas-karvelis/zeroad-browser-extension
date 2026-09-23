@@ -48,12 +48,11 @@ export class UserState {
     await this.setupPublisherSiteUi()
   }
 
-  private buildReportButtonUrl(baseUrl: string, visitedUrl: string, hostname: string) {
-    // Reports address a site by hostname - that is what identifies it now, and it is right there in
-    // the url the user is looking at
+  private buildReportButtonUrl(baseUrl: string, visitedUrl: string, hostname: string, publisherId: string) {
     const url = new URL(baseUrl)
     url.pathname = `${url.pathname.replace(/\/$/, "")}/${encodeURIComponent(hostname)}`
     url.searchParams.set("url", visitedUrl)
+    url.searchParams.set("publisherId", publisherId)
     return url.toString()
   }
 
@@ -73,7 +72,10 @@ export class UserState {
 
       // set up report button
       const reportBaseUrl = $reportBtn.data("href")
-      if (reportBaseUrl) $reportBtn.href(this.buildReportButtonUrl(reportBaseUrl, url, getHostname(url)))
+      if (reportBaseUrl)
+        $reportBtn.href(
+          this.buildReportButtonUrl(reportBaseUrl, url, getHostname(url), data.telemetryEntry.publisherId)
+        )
     })
 
     await worker.sendCommand(EVENT.POPUP.CHECK_IF_ACTIVE_TAB_PUBLISHER_REQUEST)

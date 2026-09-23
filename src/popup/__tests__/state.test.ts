@@ -331,6 +331,7 @@ describe("the publisher site section", () => {
     expect(href.origin).toBe(SITE_URL)
     expect(href.pathname).toBe("/report/site/news.example")
     expect(href.searchParams.get("url")).toBe("https://news.example/story?ref=a b")
+    expect(href.searchParams.get("publisherId")).toBe("publisher-id")
   })
 
   test("re-points Report when the user moves to a different publisher site", async () => {
