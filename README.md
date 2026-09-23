@@ -29,7 +29,7 @@ bun run package
 
 ## Local development
 
-Build an extension that accepts sync messages from `http://localhost:3000`:
+Build an extension that accepts sync messages from `https://local.zeroad.network`:
 
 ```sh
 bun run build:dev
@@ -44,14 +44,14 @@ and HTTP token injection for local sites:
 
 - `bun run build`: production servers, production site messaging, no developer
   toolbar, warning/error logs, HTTPS token injection only.
-- `bun run build:dev` or `bun run watch`: localhost servers and messaging,
+- `bun run build:dev` or `bun run watch`: local HTTPS servers and messaging,
   developer toolbar, debug logs, HTTP and HTTPS token injection.
 
 Loading a production build unpacked does not enable development behavior.
 Runtime development behavior also requires a development installation (unpacked
 or temporary). A normally installed development build uses production servers and
 disables developer tools, debug logs, and HTTP token injection; its manifest still
-permits localhost messaging.
+permits messaging from `https://local.zeroad.network`.
 
 ## Artifact locations
 

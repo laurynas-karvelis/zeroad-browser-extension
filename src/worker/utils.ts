@@ -4,7 +4,7 @@ import { ExtensionError } from "./error"
 export async function inDevMode() {
   const manifest = chrome.runtime.getManifest()
   const matches = manifest.externally_connectable?.matches ?? manifest.content_scripts?.flatMap((entry) => entry.matches)
-  if (!matches?.includes("https://zeroad.local/*")) return false
+  if (!matches?.includes("https://local.zeroad.network/*")) return false
   return (await chrome.management.getSelf()).installType === "development"
 }
 

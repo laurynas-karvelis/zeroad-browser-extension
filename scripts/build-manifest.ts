@@ -12,7 +12,7 @@ if (!target) {
 // Only development builds let the local HTTPS frontend talk to the extension.
 const isDevelopmentBuild = process.env.EXTENSION_DEV === "1"
 const externalMatches = isDevelopmentBuild
-  ? [...template.root.external_matches, "https://zeroad.local/*"]
+  ? [...template.root.external_matches, "https://local.zeroad.network/*"]
   : template.root.external_matches
 
 // Inject `package.json` into context.root

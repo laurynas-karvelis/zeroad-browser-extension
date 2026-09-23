@@ -3,7 +3,7 @@ import { chromeMock } from "../../__fixtures__/chrome"
 
 // What a freshly started worker finds: a development build, and a session rule installed by the worker
 // before it - session rules last until the browser restarts, the worker's memory does not.
-chromeMock.runtime.externalMatches.push("https://zeroad.local/*")
+chromeMock.runtime.externalMatches.push("https://local.zeroad.network/*")
 chromeMock.management.installType = "development"
 chromeMock.declarativeNetRequest.sessionRules = [{ id: 107, condition: { urlFilter: "|https://earlier.test^" } }]
 
