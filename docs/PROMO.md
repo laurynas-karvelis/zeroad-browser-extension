@@ -10,8 +10,9 @@ REMOVES THE ANNOYING STUFF
 • Marketing popups? Gone.
 
 UNLOCKS PREMIUM CONTENT
-• Read articles behind paywalls
-• Access basic subscription features
+• Read included paid articles
+• Access partner sites’ base subscriptions or custom included features
+• Higher tiers may remain separate
 • One subscription, multiple sites
 
 PAYS CREATORS FAIRLY
