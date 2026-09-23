@@ -117,6 +117,7 @@ class Messaging {
       })
     })
 
+    onPopupMessage(EVENT.POPUP.STOP_TESTING, () => extension().stopTesting())
     onPopupMessage(EVENT.POPUP.GET_CONFIG, getConfig)
     // Opening the popup can be what wakes the worker, so its state is read only once it is back.
     onPopupMessage(EVENT.POPUP.GET_EXTENSION_DATA, async () => {

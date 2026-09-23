@@ -16,11 +16,13 @@ const pool = {
   tokens: new Map<string, string>(),
   bound: [] as string[],
   exhausted: false,
+  binding: undefined as Promise<void> | undefined,
 }
 
 mock.module("../token-pool", () => ({
   tokenPool: () => ({
     async tokenFor(hostname: string) {
+      if (pool.binding) await pool.binding
       if (pool.exhausted) return undefined
       const existing = pool.tokens.get(hostname)
       if (existing) return existing
@@ -53,11 +55,34 @@ describe("headerInjection", () => {
     pool.tokens.clear()
     pool.bound = []
     pool.exhausted = false
+    pool.binding = undefined
     chromeMock.declarativeNetRequest.sessionRules = []
     chromeMock.declarativeNetRequest.updateSessionRuleCalls = []
     await headerInjection().removeAllRules()
     chromeMock.declarativeNetRequest.sessionRules = []
     chromeMock.declarativeNetRequest.updateSessionRuleCalls = []
+  })
+
+  test("switching to test access during a reset installs only the selected hostname", async () => {
+    pool.bound = ["ordinary.test"]
+    let finishBinding!: () => void
+    pool.binding = new Promise<void>((resolve) => {
+      finishBinding = resolve
+    })
+    const firstReset = headerInjection().reset()
+    await Bun.sleep(0)
+    state.subscription = {
+      planName: SUBSCRIPTION_PLAN_NAME.FREEDOM,
+      hostname: "publisher.test",
+      visitorToken: "test-token",
+      expiresAt: Date.now() + 86400000,
+    }
+    const testReset = headerInjection().reset()
+    finishBinding()
+    await Promise.all([firstReset, testReset])
+    expect(headerInjection().installedHostnames()).toEqual(["publisher.test"])
+    expect(rules()).toHaveLength(1)
+    expect(headerOf(rules()[0]).value).toBe("test-token")
   })
 
   describe("installing a rule for a publisher hostname", () => {

@@ -30,7 +30,7 @@ document.addEventListener("DOMContentLoaded", async () => {
   setVersion(config.VERSION)
   updateUrls(config.BASE_URL)
 
-  await new UserState(extensionData.user, extensionData.subscription).render()
+  await new UserState(extensionData.user, extensionData.subscription, !!extensionData.testAccess).render()
 
   if (config.DEV_MODE) enableDevTools()
 })

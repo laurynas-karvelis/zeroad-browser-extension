@@ -31,7 +31,7 @@ class TelemetrySync {
     // The push alarm can fire the instant the worker wakes up, before the stored state is back.
     await Promise.all([telemetry().ready, extension().ready])
 
-    if (!extension().isSubscriptionActive()) {
+    if (!extension().hasPaidSubscription()) {
       // Kept rather than discarded: a renewal that lands late makes it sendable again.
       log("warn", "[telemetry-sync]", "Inactive subscription. Skip telemetry push.")
       return

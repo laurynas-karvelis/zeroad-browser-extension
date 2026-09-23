@@ -184,6 +184,14 @@ describe("a developer token", () => {
   })
 })
 
+test("offers Stop testing only for explicit website test access", async () => {
+  await new UserState(member, subscription({ hostname: "publisher.test" }), true).render()
+  expect(isShown("#stop-testing-btn")).toBe(true)
+  click("#stop-testing-btn")
+  await settle()
+  expect(commandsSent()).toContain(EVENT.POPUP.STOP_TESTING)
+})
+
 describe("the pause control", () => {
   test("offers Pause and no banner while the extension is running", async () => {
     chromeMock.runtime.sendMessageResponses = { [EVENT.POPUP.IS_EXTENSION_PAUSED]: false }

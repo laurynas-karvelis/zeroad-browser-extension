@@ -94,10 +94,11 @@ class Credentials {
     if (!extensionToken) throw new Error("Client extension token doesn't exist")
 
     const config = await getConfig()
+    const testAccess = extension().getExtensionData().testAccess
     const { payload } = await httpPost<{ payload: ExtensionSyncData }>(
       config.GENERIC.EXTENSION_SYNC_URL,
       extensionToken,
-      {}
+      testAccess ? { options: { hostname: testAccess.hostname, planName: testAccess.planName } } : {}
     )
 
     return payload
@@ -112,18 +113,35 @@ class Credentials {
       return
     }
 
+    const requestedTestHostname = extension().getExtensionData().testAccess?.hostname
+    const requestedUserToken = extension().getExtensionToken()
     try {
       const payload = await this.request()
+      if (
+        requestedUserToken !== extension().getExtensionToken() ||
+        requestedTestHostname !== extension().getExtensionData().testAccess?.hostname
+      )
+        return
 
       // The platform's answer is stored even when the subscription has not been extended yet, so a
       // lapse turns injection off instead of leaving it running on the old period.
       eventBroker().emit(EVENT.EXTENSION.PAYLOAD_RECEIVED, payload)
 
-      if ((payload?.subscription?.expiresAt || 0) > Date.now()) {
+      if ((payload?.testAccess?.expiresAt || payload?.subscription?.expiresAt || 0) > Date.now()) {
         await this.cancelRenewalAttempts()
         return
       }
     } catch (error) {
+      if (
+        requestedUserToken !== extension().getExtensionToken() ||
+        requestedTestHostname !== extension().getExtensionData().testAccess?.hostname
+      )
+        return
+      if (isTokenRejected(error) && extension().getExtensionData().testAccess) {
+        await extension().stopTesting()
+        await this.scheduleRenewalRetry()
+        return
+      }
       if (isTokenRejected(error)) {
         log("warn", "[token-renew]", "the platform rejected the extension token, signing out")
         eventBroker().emit(EVENT.EXTENSION.REQUEST_RESET)

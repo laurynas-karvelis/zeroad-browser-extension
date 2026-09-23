@@ -4,8 +4,10 @@ import { EVENT, eventBroker } from "./event-broker"
 import { headerInjection } from "./header-injection"
 import { log, setLogLevel } from "./logger"
 import { telemetrySync } from "./telemetry-sync"
-import type { ExtensionSyncData, SubscriptionExtensionData, UserExtensionData } from "./types"
+import type { ExtensionSyncData, SubscriptionExtensionData, UserExtensionData, WebsiteTestAccess } from "./types"
 import { inDevMode } from "./utils"
+
+type StoredTestAccess = { websiteTest?: { extensionToken: string; access: WebsiteTestAccess } }
 
 type StoredPause = { isHeaderInjectionPaused?: boolean }
 
@@ -13,6 +15,7 @@ class Extension {
   private state: {
     user?: UserExtensionData
     subscription?: SubscriptionExtensionData
+    testAccess?: WebsiteTestAccess
     isHeaderInjectionPaused: boolean
   } = { isHeaderInjectionPaused: false }
 
@@ -49,7 +52,11 @@ class Extension {
   }
 
   getExtensionData() {
-    return { user: this.state.user, subscription: this.state.subscription }
+    return {
+      user: this.state.user,
+      subscription: this.state.testAccess ?? this.state.subscription,
+      testAccess: this.state.testAccess,
+    }
   }
 
   getExtensionToken() {
@@ -57,12 +64,26 @@ class Extension {
   }
 
   isSubscriptionActive() {
-    if (!this.state.subscription) return false
-    if (!this.state.subscription?.expiresAt) return false
+    return (this.getExtensionData().subscription?.expiresAt ?? 0) > Date.now()
+  }
 
-    // No longer gated on a server-minted token: there is none. What makes injection possible is a
-    // stocked token pool, and `headerInjection` already declines when the pool is empty.
-    return this.state.subscription.expiresAt > Date.now()
+  hasPaidSubscription() {
+    const subscription = this.state.subscription
+    return !!subscription && !subscription.hostname && subscription.expiresAt > Date.now()
+  }
+
+  canRecordUsage() {
+    return !this.state.testAccess && this.hasPaidSubscription()
+  }
+
+  async stopTesting() {
+    await this.ready
+    eventBroker().emit(EVENT.EXTENSION.ACCESS_WILL_CHANGE)
+    await chrome.storage.local.remove(["websiteTest"])
+    this.state.testAccess = undefined
+    await credentials().cancelRenewal()
+    await this.load()
+    await headerInjection().reset()
   }
 
   // Stored, not just held in memory: the worker restarts constantly, and a pause that silently lifted
@@ -92,7 +113,7 @@ class Extension {
 
     await this.reload(payload)
 
-    const { subscription } = this.state
+    const { subscription } = this.getExtensionData()
     if (subscription?.visitorToken) {
       await headerInjection().reset()
       if (!subscription.hostname || !headerInjection().installedHostnames().includes(subscription.hostname))
@@ -103,27 +124,29 @@ class Extension {
   }
 
   private async load() {
-    const [{ user, subscription }, { isHeaderInjectionPaused }] = await Promise.all([
+    const [{ user, subscription }, { isHeaderInjectionPaused, websiteTest }] = await Promise.all([
       chrome.storage.sync.get<ExtensionSyncData>(["user", "subscription"]),
-      chrome.storage.local.get<StoredPause>(["isHeaderInjectionPaused"]),
+      chrome.storage.local.get<StoredPause & StoredTestAccess>(["isHeaderInjectionPaused", "websiteTest"]),
     ])
 
     this.state.user = user
     this.state.subscription = subscription
+    this.state.testAccess = websiteTest?.extensionToken === user?.extensionToken ? websiteTest?.access : undefined
     this.state.isHeaderInjectionPaused = !!isHeaderInjectionPaused
 
     if (this.isSubscriptionActive()) {
       // Schedule for subscription data reload
-      await credentials().enableRenewal(this.state.subscription?.expiresAt || 0)
+      await credentials().enableRenewal(this.getExtensionData().subscription?.expiresAt || 0)
       eventBroker().emit(EVENT.EXTENSION.SUBSCRIPTION_ACTIVE)
     } else {
+      if (this.state.testAccess) await credentials().enableRenewal(Date.now() + 1000)
       if (!this.state.user?.extensionToken) await credentials().cancelRenewal()
       eventBroker().emit(EVENT.EXTENSION.SUBSCRIPTION_EXPIRED)
     }
   }
 
   private async reload(payload: ExtensionSyncData) {
-    const { user, subscription } = payload || {}
+    const { user, subscription, testAccess } = payload || {}
 
     // A payload can arrive straight from the website, so it is not trusted to be well-formed.
     if (!user?.extensionToken) {
@@ -131,6 +154,7 @@ class Extension {
       return
     }
 
+    eventBroker().emit(EVENT.EXTENSION.ACCESS_WILL_CHANGE)
     const previousToken = this.state.user?.extensionToken
 
     if (previousToken && previousToken !== user.extensionToken) {
@@ -141,6 +165,13 @@ class Extension {
     // Whether this sync brought a token we did not have before - a first install, or a switch to a
     // different user. A repeat sync of the same token is not news and must not re-announce.
     const hasNewToken = previousToken !== user.extensionToken
+
+    if (hasNewToken) await chrome.storage.local.remove(["websiteTest"])
+    if (testAccess?.hostname && testAccess.visitorToken) {
+      await chrome.storage.local.set<StoredTestAccess>({
+        websiteTest: { extensionToken: user.extensionToken, access: testAccess },
+      })
+    }
 
     if (subscription) {
       await chrome.storage.sync.set<ExtensionSyncData>({ user, subscription })

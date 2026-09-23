@@ -5,7 +5,7 @@ import { chromeMock } from "../../__fixtures__/chrome"
 // `extension` singleton drags in half the worker - stub it down to just that decision.
 let subscriptionActive = true
 mock.module("../extension", () => ({
-  extension: () => ({ isSubscriptionActive: () => subscriptionActive }),
+  extension: () => ({ canRecordUsage: () => subscriptionActive }),
 }))
 
 const { EVENT, eventBroker } = await import("../event-broker")

@@ -1,7 +1,7 @@
 import { beforeEach, describe, expect, mock, test } from "bun:test"
 import { chromeMock } from "../../__fixtures__/chrome"
 
-mock.module("../extension", () => ({ extension: () => ({ isSubscriptionActive: () => true }) }))
+mock.module("../extension", () => ({ extension: () => ({ canRecordUsage: () => true }) }))
 
 const { EVENT, eventBroker } = await import("../event-broker")
 const { Telemetry } = await import("../telemetry")

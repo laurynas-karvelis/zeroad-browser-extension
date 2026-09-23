@@ -17,6 +17,7 @@ export const SUBSCRIPTION_PLAN_LABEL = {
 export type ExtensionSyncData = {
   user: UserExtensionData
   subscription?: SubscriptionExtensionData
+  testAccess?: WebsiteTestAccess
 }
 
 export type UserExtensionData = {
@@ -29,6 +30,11 @@ export type UserExtensionData = {
    * before the platform started sending it.
    */
   publisherId?: string
+}
+
+export type WebsiteTestAccess = SubscriptionExtensionData & {
+  hostname: string
+  visitorToken: string
 }
 
 export type SubscriptionExtensionData = {

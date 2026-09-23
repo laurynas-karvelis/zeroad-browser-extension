@@ -41,6 +41,7 @@ class HeaderInjection {
   private nextRuleId = FIRST_RULE_ID
   private restoredRuleIds?: Promise<void>
   private resetting?: Promise<void>
+  private resetRequested = false
 
   constructor() {
     eventBroker()
@@ -51,10 +52,18 @@ class HeaderInjection {
 
   /** Reinstates rules for every hostname already holding a token, after a worker restart. */
   reset() {
-    this.resetting ??= this.resetRules().finally(() => {
+    this.resetRequested = true
+    this.resetting ??= this.resetPendingRules().finally(() => {
       this.resetting = undefined
     })
     return this.resetting
+  }
+
+  private async resetPendingRules() {
+    do {
+      this.resetRequested = false
+      await this.resetRules()
+    } while (this.resetRequested)
   }
 
   private async resetRules() {
@@ -123,6 +132,9 @@ class HeaderInjection {
         requestHeaders: [{ operation: "set", header: TOKEN_HEADER, value: token }],
       },
     }
+
+    // Access can change while a token is being bound or the URL filter is loaded.
+    if (!(await this.shouldInject()) || extension().getExtensionData().subscription !== subscription) return undefined
 
     // Added and removed in one call so no request slips through between the two
     await chrome.declarativeNetRequest.updateSessionRules({ addRules: [rule], removeRuleIds: [ruleId] })

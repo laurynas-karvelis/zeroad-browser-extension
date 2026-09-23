@@ -12,7 +12,7 @@ const state = {
 mock.module("../extension", () => ({
   extension: () => ({
     ready: Promise.resolve(),
-    isSubscriptionActive: () => state.active,
+    hasPaidSubscription: () => state.active,
     isPaused: () => state.paused,
     getExtensionToken: () => state.extensionToken,
     getExtensionData: () => ({ subscription: { expiresAt: state.expiresAt } }),

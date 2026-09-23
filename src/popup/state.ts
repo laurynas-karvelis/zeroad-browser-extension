@@ -18,7 +18,8 @@ function reportFailure(error: unknown) {
 export class UserState {
   constructor(
     private user?: UserExtensionData,
-    private subscription?: SubscriptionExtensionData
+    private subscription?: SubscriptionExtensionData,
+    private testing = false
   ) {}
 
   /** Resolves once the popup has settled, having reported rather than thrown any worker failure. */
@@ -99,6 +100,19 @@ export class UserState {
     if (this.subscription.hostname) {
       $("#developer-details").show()
       $("#developer-hostname-label span").text(this.subscription.hostname)
+    }
+
+    if (this.testing) {
+      $("#stop-testing-btn")
+        .show()
+        .onClick(async () => {
+          try {
+            await worker.sendCommand(EVENT.POPUP.STOP_TESTING)
+            window.location.reload()
+          } catch (error) {
+            reportFailure(error)
+          }
+        })
     }
 
     await this.setupPauseResumeButtons()

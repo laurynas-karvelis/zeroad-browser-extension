@@ -1,18 +1,24 @@
 import { afterEach, beforeEach, describe, expect, mock, spyOn, test } from "bun:test"
 import { chromeMock } from "../../__fixtures__/chrome"
+import type { WebsiteTestAccess } from "../types"
+import { SUBSCRIPTION_PLAN_NAME } from "../types"
 
 const state = {
   extensionToken: "ext-1" as string | undefined,
   isSubscriptionActive: true,
   ready: Promise.resolve() as Promise<void>,
   visitorToken: undefined as string | undefined,
+  testAccess: undefined as WebsiteTestAccess | undefined,
 }
 mock.module("../extension", () => ({
   extension: () => ({
     ready: state.ready,
     getExtensionToken: () => state.extensionToken,
     isSubscriptionActive: () => state.isSubscriptionActive,
-    getExtensionData: () => ({ subscription: { visitorToken: state.visitorToken } }),
+    getExtensionData: () => ({ subscription: { visitorToken: state.visitorToken }, testAccess: state.testAccess }),
+    stopTesting: async () => {
+      state.testAccess = undefined
+    },
   }),
 }))
 
@@ -59,6 +65,7 @@ describe("credentials", () => {
     state.isSubscriptionActive = true
     state.ready = Promise.resolve()
     state.visitorToken = undefined
+    state.testAccess = undefined
     pool.needsRefresh = true
     pool.refresh.mockClear()
     await chromeMock.alarms.clearAll()
@@ -69,6 +76,61 @@ describe("credentials", () => {
   afterEach(() => {
     // Without this, re-spying in beforeEach reuses the same spy and its call log keeps growing.
     fetchSpy.mockRestore()
+  })
+
+  test("renews the selected test hostname without a paid subscription", async () => {
+    state.testAccess = {
+      hostname: "publisher.test",
+      planName: SUBSCRIPTION_PLAN_NAME.FREEDOM,
+      visitorToken: "signed",
+      expiresAt: Date.now() + HOUR,
+    }
+    fetchSpy.mockResolvedValue(
+      jsonResponse({ payload: { user: { extensionToken: "ext-1" }, testAccess: state.testAccess } })
+    )
+    await chromeMock.alarms.onAlarm.dispatch({ name: EXPIRY_ALARM, scheduledTime: Date.now() })
+    expect(JSON.parse((fetchSpy.mock.calls[0][1] as RequestInit).body as string)).toEqual({
+      options: { hostname: "publisher.test", planName: "freedom" },
+    })
+    expect(alarms().has(RETRY_ALARM)).toBe(false)
+  })
+
+  test("ends test mode when permission is withdrawn instead of signing out", async () => {
+    state.testAccess = {
+      hostname: "publisher.test",
+      planName: SUBSCRIPTION_PLAN_NAME.FREEDOM,
+      visitorToken: "signed",
+      expiresAt: Date.now() + HOUR,
+    }
+    fetchSpy.mockResolvedValue(jsonResponse({}, 403))
+    await chromeMock.alarms.onAlarm.dispatch({ name: EXPIRY_ALARM, scheduledTime: Date.now() })
+    expect(state.testAccess).toBeUndefined()
+    expect(state.extensionToken).toBe("ext-1")
+    expect(alarms().has(RETRY_ALARM)).toBe(true)
+  })
+
+  test("a renewal response cannot restart test mode after the user stops", async () => {
+    const access = {
+      hostname: "publisher.test",
+      planName: SUBSCRIPTION_PLAN_NAME.FREEDOM,
+      visitorToken: "signed",
+      expiresAt: Date.now() + HOUR,
+    }
+    state.testAccess = access
+    const received = mock(() => {})
+    eventBroker().on(EVENT.EXTENSION.PAYLOAD_RECEIVED, received)
+    let resolveResponse!: (response: Response) => void
+    fetchSpy.mockReturnValue(
+      new Promise<Response>((resolve) => {
+        resolveResponse = resolve
+      })
+    )
+    const renewing = chromeMock.alarms.onAlarm.dispatch({ name: EXPIRY_ALARM, scheduledTime: Date.now() })
+    await Bun.sleep(0)
+    state.testAccess = undefined
+    resolveResponse(jsonResponse({ payload: { user: { extensionToken: "ext-1" }, testAccess: access } }))
+    await renewing
+    expect(received).not.toHaveBeenCalled()
   })
 
   describe("scheduling", () => {

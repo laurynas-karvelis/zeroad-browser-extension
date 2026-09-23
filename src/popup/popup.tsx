@@ -168,12 +168,12 @@ function DeveloperDetails() {
       hidden
     >
       <hr />
-      <h5>Developer token</h5>
+      <h5>Website test access</h5>
       <span
         id="developer-token-label"
         class="badge theme-warning me-1"
       >
-        Type: Developer Token
+        Mode: Testing
       </span>
       <span
         id="subscription-label"
@@ -187,6 +187,17 @@ function DeveloperDetails() {
       >
         Site: <span></span>
       </span>
+      <p class="small fg-secondary mt-2">
+        Access is limited to this hostname. Test visits do not contribute to publisher earnings.
+      </p>
+      <button
+        type="button"
+        id="stop-testing-btn"
+        class="btn-outline theme-secondary mt-2"
+        hidden
+      >
+        Stop testing
+      </button>
     </div>
   )
 }
@@ -241,8 +252,8 @@ function SubscriberControls() {
         id="freedom-comparison-help"
         class="small fg-secondary mb-0"
       >
-        Compare websites with Freedom on or off. Applies to all websites; reload pages after switching. Visit
-        measurement and uploads continue in both modes.
+        Compare websites with Freedom on or off. Applies to all websites; reload pages after switching. This toggle does
+        not pause visit measurement or uploads.
       </p>
     </div>
   )

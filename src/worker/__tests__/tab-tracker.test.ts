@@ -1,4 +1,4 @@
-import { afterAll, beforeEach, describe, expect, mock, test } from "bun:test"
+import { afterAll, beforeEach, describe, expect, mock, spyOn, test } from "bun:test"
 import { chromeMock } from "../../__fixtures__/chrome"
 import type { Entry } from "../telemetry"
 
@@ -81,6 +81,26 @@ describe("trackedTabs", () => {
       const [url, duration] = addDuration.mock.calls[0]
       expect(url).toBe("https://publisher.test/")
       expect(duration).toBeGreaterThanOrEqual(20)
+    })
+
+    test("access changes split elapsed time without losing tab focus", () => {
+      const now = spyOn(Date, "now").mockReturnValue(1000)
+      try {
+        makePublisher("publisher.test")
+        register(tab(1, "https://publisher.test/"), TAB_REGISTER_SOURCE.ON_TAB_ACTIVATED)
+        now.mockReturnValue(2000)
+        eventBroker().emit(EVENT.EXTENSION.ACCESS_WILL_CHANGE)
+        expect(addDuration).toHaveBeenLastCalledWith("https://publisher.test/", 1000)
+        expect(trackedTabs().hasFocus()).toBe(true)
+        now.mockReturnValue(7000)
+        eventBroker().emit(EVENT.EXTENSION.ACCESS_WILL_CHANGE)
+        expect(addDuration).toHaveBeenLastCalledWith("https://publisher.test/", 5000)
+        now.mockReturnValue(8000)
+        trackedTabs().flushActive()
+        expect(addDuration).toHaveBeenLastCalledWith("https://publisher.test/", 1000)
+      } finally {
+        now.mockRestore()
+      }
     })
 
     test("books nothing for a tab that is not a publisher", () => {

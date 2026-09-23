@@ -222,7 +222,7 @@ export class Telemetry {
     const entry = entryKey === undefined ? undefined : this.map.get(entryKey)
 
     if (!entry) return
-    if (!extension().isSubscriptionActive()) return
+    if (!extension().canRecordUsage()) return
 
     entry[key] += amount
 

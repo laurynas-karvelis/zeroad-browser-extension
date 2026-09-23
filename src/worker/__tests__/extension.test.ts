@@ -232,6 +232,69 @@ describe("Extension", () => {
     })
   })
 
+  describe("website test access", () => {
+    const testAccess = () => ({
+      planName: SUBSCRIPTION_PLAN_NAME.FREEDOM,
+      hostname: "demo.zeroad.network",
+      visitorToken: "test-token",
+      expiresAt: Date.now() + 7 * 24 * HOUR,
+    })
+
+    test("works without a subscription and survives ordinary dashboard sync", async () => {
+      const access = testAccess()
+      expect(await extension().sync({ user: user(), testAccess: access })).toBe(true)
+      expect(extension().isSubscriptionActive()).toBe(true)
+      expect(extension().hasPaidSubscription()).toBe(false)
+      expect(extension().canRecordUsage()).toBe(false)
+      await extension().sync({ user: user() })
+      expect(extension().getExtensionData().testAccess).toEqual(access)
+      expect(extension().getExtensionData().subscription).toEqual(access)
+      expect(chromeMock.storage.local.peek().websiteTest).toEqual({ extensionToken: "ext-token-1", access })
+      await extension().stopTesting()
+      expect(extension().isSubscriptionActive()).toBe(false)
+      expect(chromeMock.storage.local.peek().websiteTest).toBeUndefined()
+    })
+
+    test("keeps paid subscription updates separately and restores them on stop", async () => {
+      const paid = { ...subscription(), planName: SUBSCRIPTION_PLAN_NAME.FREEDOM }
+      await extension().sync({ user: user(), subscription: paid, testAccess: testAccess() })
+      expect(extension().hasPaidSubscription()).toBe(true)
+      expect(extension().canRecordUsage()).toBe(false)
+      const renewed = { ...paid, expiresAt: Date.now() + 60 * HOUR }
+      await extension().sync({ user: user(), subscription: renewed })
+      expect(extension().getExtensionData().subscription?.hostname).toBe("demo.zeroad.network")
+      await extension().stopTesting()
+      expect(extension().getExtensionData().subscription).toEqual(renewed)
+      expect(extension().canRecordUsage()).toBe(true)
+    })
+
+    test("does not restore a cancelled subscription after testing", async () => {
+      await extension().sync({
+        user: user(),
+        subscription: { ...subscription(), planName: SUBSCRIPTION_PLAN_NAME.FREEDOM },
+        testAccess: testAccess(),
+      })
+      await extension().sync({ user: user() })
+      await extension().stopTesting()
+      expect(extension().isSubscriptionActive()).toBe(false)
+      expect(extension().canRecordUsage()).toBe(false)
+    })
+
+    test("does not carry test access into another account", async () => {
+      await extension().sync({ user: user(), testAccess: testAccess() })
+      await extension().sync({ user: user("other-account") })
+      expect(extension().getExtensionData().testAccess).toBeUndefined()
+      expect(extension().isSubscriptionActive()).toBe(false)
+    })
+
+    test("demo access never measures payable usage", async () => {
+      await extension().sync({ user: user("demo"), subscription: testAccess() })
+      expect(extension().isSubscriptionActive()).toBe(true)
+      expect(extension().hasPaidSubscription()).toBe(false)
+      expect(extension().canRecordUsage()).toBe(false)
+    })
+  })
+
   describe("pausing", () => {
     test("pause takes the header rule down and resume puts it back", async () => {
       const recordedUsage = {
@@ -280,7 +343,11 @@ describe("Extension", () => {
       expect(chromeMock.storage.sync.peek()).toEqual({})
       expect(chromeMock.storage.local.peek()).toEqual({})
       expect(chromeMock.alarms.peek().size).toBe(0)
-      expect(extension().getExtensionData()).toEqual({ user: undefined, subscription: undefined })
+      expect(extension().getExtensionData()).toEqual({
+        user: undefined,
+        subscription: undefined,
+        testAccess: undefined,
+      })
     })
   })
 

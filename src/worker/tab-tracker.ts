@@ -357,3 +357,5 @@ chrome.webRequest.onCompleted.addListener(
   { types: ["main_frame"], urls: ["<all_urls>"] },
   ["responseHeaders"]
 )
+
+eventBroker().on(EVENT.EXTENSION.ACCESS_WILL_CHANGE, () => trackedTabs().checkpoint())
