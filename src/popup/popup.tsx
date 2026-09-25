@@ -11,6 +11,15 @@ import { Icon } from "./icon"
 const FIRST_NAME = "{FIRST_NAME}"
 const VERSION = "{VERSION}"
 
+// Keep aligned with SUBSCRIBER_ENTITLEMENTS in the main site's @config package.
+const PLAN_FEATURES = [
+  "Advertisements removed",
+  "Cookie consent screen removed",
+  "3rd party non-functional trackers removed",
+  "Marketing dialogs, including newsletter signup popups, removed",
+  "Access to the publisher’s base subscription or a custom level of paid content or features",
+]
+
 function Header() {
   return (
     <header class="mb-6">
@@ -68,11 +77,9 @@ function UnsubscribedSection() {
         <p class="fg-2">Activate a subscription to begin enjoying an ad-free and enhanced web experience:</p>
       </div>
       <ul class="list-unstyled check-list d-flex flex-column gap-3 mb-6">
-        <li>Enjoy a completely ad-free experience</li>
-        <li>Skip cookie consent pop-ups</li>
-        <li>No unnecessary third-party trackers</li>
-        <li>No marketing interruptions</li>
-        <li>Access partner sites’ base subscriptions or included content and features</li>
+        {PLAN_FEATURES.map((feature) => (
+          <li>{feature}</li>
+        ))}
       </ul>
       <div class="d-grid">
         <a
@@ -108,8 +115,9 @@ function ValidSubscription() {
           You have the <b>Freedom</b> plan active for <b class="valid-until"></b>.
         </p>
         <ul class="list-unstyled check-list d-flex flex-column gap-3 fg-2 mb-6">
-          <li>Enjoy a completely ad-free experience and fewer interruptions.</li>
-          <li>Access partner sites’ base subscriptions or their included content and features.</li>
+          {PLAN_FEATURES.map((feature) => (
+            <li>{feature}</li>
+          ))}
         </ul>
       </div>
     </div>
