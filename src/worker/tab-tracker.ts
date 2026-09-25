@@ -4,7 +4,7 @@ import { EVENT, eventBroker } from "./event-broker"
 import { extension } from "./extension"
 import { headerInjection } from "./header-injection"
 import { readBodyPublisherId, readMetaPublisherValue } from "./page-scan"
-import { isValidPublisherId, PUBLISHER_HEADER, parsePublisherHeader } from "./publisher-id"
+import { isValidPublisherId, parsePublisherHeader, readPublisherHeader } from "./publisher-id"
 import { isVerificationTab } from "./site-verification"
 import { type Entry, telemetry } from "./telemetry"
 
@@ -204,49 +204,25 @@ function canDiscoverPublisher(url: string | undefined) {
   }
 }
 
-const helpers = {
-  PUBLISHER_SITE_HEADER_NAME: PUBLISHER_HEADER.toLocaleLowerCase(),
-  testPublisherHeaderValue(url: string, headerValue: string | undefined, source: "header" | "meta") {
-    const publisherId = parsePublisherHeader(headerValue)
+function announcePublisher(publisherId: string, source: TabTrackerPublisherDetectedData["source"], url: string) {
+  eventBroker().emit<TabTrackerPublisherDetectedData>(EVENT.TAB_TRACKER.PUBLISHER_DETECTED, {
+    publisherId,
+    source,
+    url,
+  })
+}
 
-    if (!publisherId) return
+/** A meta tag identifies a website; otherwise visible body text can identify a creator page. */
+async function readPagePublisher(tab: chrome.tabs.Tab) {
+  if (!tab.id || !tab.url) return
 
-    eventBroker().emit<TabTrackerPublisherDetectedData>(EVENT.TAB_TRACKER.PUBLISHER_DETECTED, {
-      publisherId,
-      source,
-      url,
-    })
-  },
+  const publisherId = parsePublisherHeader(await readMetaPublisherValue(tab.id))
 
-  /**
-   * Reads a loaded page for its publisher id. A meta tag names a website; failing that, an id printed
-   * in the page content names a publisher on a platform they don't control (an creator integration).
-   */
-  async readPagePublisher(tab: chrome.tabs.Tab) {
-    if (!tab.id || !tab.url) return
+  if (publisherId) return announcePublisher(publisherId, "meta", tab.url)
 
-    const metaValue = await readMetaPublisherValue(tab.id)
+  const bodyPublisherId = await readBodyPublisherId(tab.id)
 
-    if (parsePublisherHeader(metaValue)) return helpers.testPublisherHeaderValue(tab.url, metaValue, "meta")
-
-    const bodyPublisherId = await readBodyPublisherId(tab.id)
-
-    if (!isValidPublisherId(bodyPublisherId)) return
-
-    eventBroker().emit<TabTrackerPublisherDetectedData>(EVENT.TAB_TRACKER.PUBLISHER_DETECTED, {
-      publisherId: bodyPublisherId,
-      source: "content",
-      url: tab.url,
-    })
-  },
-
-  testWebRequestHeaders(url: string, headers: chrome.webRequest.HttpHeader[]) {
-    const headerValue = headers.find(
-      (header) => header.name.toLocaleLowerCase() === helpers.PUBLISHER_SITE_HEADER_NAME
-    )?.value
-
-    helpers.testPublisherHeaderValue(url, headerValue, "header")
-  },
+  if (isValidPublisherId(bodyPublisherId)) announcePublisher(bodyPublisherId, "content", tab.url)
 }
 
 chrome.tabs.onActivated.addListener(async ({ tabId }) => {
@@ -260,7 +236,7 @@ async function recordPageView(tab: chrome.tabs.Tab) {
   if (!telemetry().hasPublisherEntryByUrl(tab.url)) {
     // This has to be awaited: the very first visit to a meta-tag or content publisher is only
     // recognised once the page has been read, and an un-awaited check would leave that view uncounted.
-    await helpers.readPagePublisher(tab)
+    await readPagePublisher(tab)
   }
 
   if (telemetry().hasPublisherEntryByUrl(tab.url)) {
@@ -376,7 +352,9 @@ chrome.webRequest.onCompleted.addListener(
     if (!canDiscoverPublisher(details.url) || isVerificationTab(details.tabId)) return
 
     await allReady()
-    helpers.testWebRequestHeaders(details.url, details.responseHeaders || [])
+    const publisherId = parsePublisherHeader(readPublisherHeader(details.responseHeaders))
+
+    if (publisherId) announcePublisher(publisherId, "header", details.url)
   },
   { types: ["main_frame"], urls: ["<all_urls>"] },
   ["responseHeaders"]

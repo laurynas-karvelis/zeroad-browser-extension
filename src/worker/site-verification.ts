@@ -1,5 +1,5 @@
 import { readBodyPublisherId, readMetaPublisherValue } from "./page-scan"
-import { isValidPublisherId, PUBLISHER_HEADER, parsePublisherHeader, publisherIdsMatch } from "./publisher-id"
+import { isValidPublisherId, parsePublisherHeader, publisherIdsMatch, readPublisherHeader } from "./publisher-id"
 import { isValidUrl } from "./utils"
 
 /**
@@ -36,7 +36,6 @@ export type VerifySiteResult = {
 }
 
 const LOAD_TIMEOUT_MS = 20000
-const PUBLISHER_HEADER_LOWERCASE = PUBLISHER_HEADER.toLowerCase()
 
 const verificationTabIds = new Set<number>()
 
@@ -70,11 +69,7 @@ function captureMainFrameHeaders() {
   const handler = (details: chrome.webRequest.OnCompletedDetails) => {
     if (details.type !== "main_frame") return
 
-    const headerValue = (details.responseHeaders || []).find(
-      (header) => header.name.toLowerCase() === PUBLISHER_HEADER_LOWERCASE
-    )?.value
-
-    headerByTabId.set(details.tabId, headerValue)
+    headerByTabId.set(details.tabId, readPublisherHeader(details.responseHeaders))
     finalUrlByTabId.set(details.tabId, details.url)
   }
 

@@ -10,13 +10,6 @@ export async function inDevMode() {
   return (await chrome.management.getSelf()).installType === "development"
 }
 
-export function arraysEqual(a: unknown[], b: unknown[]) {
-  if (a === b) return true
-  if (a.length !== b.length) return false
-
-  return a.every((v, i) => v === b[i])
-}
-
 export function isValidUrl(url: string | undefined): boolean {
   if (!url) return false
 
@@ -71,7 +64,7 @@ export async function httpPost<T>(url: string, token: string, payload: object, t
     }
 
     if ((response.headers.get("content-type") || "").includes(contentType)) {
-      return response.json()
+      return await response.json()
     }
 
     throw new ExtensionError(`Response is not JSON: ${url}`, { status: response.status })

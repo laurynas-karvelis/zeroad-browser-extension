@@ -1,23 +1,6 @@
 import { afterEach, beforeEach, describe, expect, spyOn, test } from "bun:test"
 import { ExtensionError } from "../error"
-import { arraysEqual, getHostname, httpPost, isValidUrl } from "../utils"
-
-describe("arraysEqual", () => {
-  test("compares by identity, length and element order", () => {
-    const same = [1, 2]
-
-    expect(arraysEqual(same, same)).toBe(true)
-    expect(arraysEqual(["a", "b"], ["a", "b"])).toBe(true)
-    expect(arraysEqual(["a", "b"], ["b", "a"])).toBe(false)
-    expect(arraysEqual(["a"], ["a", "b"])).toBe(false)
-    expect(arraysEqual([], [])).toBe(true)
-  })
-
-  test("compares elements strictly, so it never treats look-alikes as equal", () => {
-    expect(arraysEqual([1], ["1"])).toBe(false)
-    expect(arraysEqual([{ a: 1 }], [{ a: 1 }])).toBe(false)
-  })
-})
+import { getHostname, httpPost, isValidUrl } from "../utils"
 
 describe("isValidUrl", () => {
   test("accepts http and https only", () => {
@@ -154,6 +137,33 @@ describe("httpPost", () => {
     expect(error).toBeInstanceOf(ExtensionError)
     expect(error.message).toBe("Request timeout")
     expect(error.cause).toEqual({ url: "https://api.test/slow", timeoutMs: 10 })
+  })
+
+  test("keeps the timeout active until the JSON body finishes loading", async () => {
+    fetchSpy.mockImplementation(((_url, init) => {
+      const body = new ReadableStream({
+        start(controller) {
+          controller.enqueue(new TextEncoder().encode('{"ok":'))
+          init?.signal?.addEventListener("abort", () =>
+            controller.error(new DOMException("The operation was aborted.", "AbortError"))
+          )
+        },
+      })
+
+      return Promise.resolve(new Response(body, { headers: { "content-type": "application/json" } }))
+    }) as typeof fetch)
+
+    const request = httpPost("https://api.test/slow-body", "t", {}, 10)
+    const result = await Promise.race([
+      request.catch((error: unknown) => error),
+      Bun.sleep(100).then(() => "body timeout did not fire"),
+    ])
+
+    expect(result).toBeInstanceOf(ExtensionError)
+    expect(result).toMatchObject({
+      message: "Request timeout",
+      cause: { url: "https://api.test/slow-body", timeoutMs: 10 },
+    })
   })
 
   test("propagates network failures untouched", async () => {

@@ -46,3 +46,8 @@ export function parsePublisherHeader(headerValue: string | null | undefined): st
 
   return isValidPublisherId(publisherId) ? publisherId : undefined
 }
+
+/** Header names are case-insensitive; publisher ids remain case-sensitive. */
+export function readPublisherHeader(headers: chrome.webRequest.HttpHeader[] = []): string | undefined {
+  return headers.find((header) => header.name.toLowerCase() === PUBLISHER_HEADER.toLowerCase())?.value
+}

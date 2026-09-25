@@ -1,5 +1,5 @@
 import { describe, expect, test } from "bun:test"
-import { isValidPublisherId, parsePublisherHeader, publisherIdsMatch } from "../publisher-id"
+import { isValidPublisherId, parsePublisherHeader, publisherIdsMatch, readPublisherHeader } from "../publisher-id"
 
 const PUBLISHER_ID = "zapub_7Fq2xR9nKdW3mB6tYp1sVzAe"
 
@@ -54,5 +54,22 @@ describe("parsePublisherHeader", () => {
     expect(parsePublisherHeader(undefined)).toBeUndefined()
     expect(parsePublisherHeader("")).toBeUndefined()
     expect(parsePublisherHeader("not-an-id")).toBeUndefined()
+  })
+})
+
+describe("readPublisherHeader", () => {
+  test("ignores header-name casing without changing the publisher value", () => {
+    expect(
+      readPublisherHeader([
+        { name: "Content-Type", value: "text/html" },
+        { name: "BETTER-WEB-PUBLISHER", value: PUBLISHER_ID },
+      ])
+    ).toBe(PUBLISHER_ID)
+  })
+
+  test("returns undefined when the header or its value is absent", () => {
+    expect(readPublisherHeader()).toBeUndefined()
+    expect(readPublisherHeader([{ name: "Content-Type", value: "text/html" }])).toBeUndefined()
+    expect(readPublisherHeader([{ name: "Better-Web-Publisher" }])).toBeUndefined()
   })
 })

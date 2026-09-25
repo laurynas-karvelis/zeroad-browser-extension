@@ -20,9 +20,6 @@ export function from(
   const months = days / 30
   const years = days / 365
 
-  const isFuture = diff > 0
-  const suffix = options.withoutSuffix ? "" : isFuture ? " in" : " ago"
-
   let result: string
 
   if (seconds < 45) result = "a few seconds"
@@ -41,5 +38,5 @@ export function from(
     return result
   }
 
-  return isFuture ? `${suffix.trim()} ${result}` : `${result}${suffix}`
+  return diff > 0 ? `in ${result}` : `${result} ago`
 }

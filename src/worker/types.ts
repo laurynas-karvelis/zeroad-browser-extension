@@ -1,7 +1,3 @@
-export type LeafPaths<T, Prefix extends string = ""> = {
-  [K in keyof T]: T[K] extends string ? `${Prefix}${K & string}` : LeafPaths<T[K], `${Prefix}${K & string}.`>
-}[keyof T]
-
 export type LeafValues<T> = {
   [K in keyof T]: T[K] extends string ? T[K] : LeafValues<T[K]>
 }[keyof T]

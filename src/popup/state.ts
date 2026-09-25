@@ -23,12 +23,12 @@ export class UserState {
   ) {}
 
   /** Resolves once the popup has settled, having reported rather than thrown any worker failure. */
-  render(): Promise<void> {
+  async render(): Promise<void> {
     if (!this.user?.extensionToken) {
       // User is brand new or not signed in
-      $(".guest, .guest.greeting").show()
+      $(".guest").show()
 
-      return Promise.resolve()
+      return
     }
 
     $(".user.greeting").replace({
@@ -38,15 +38,14 @@ export class UserState {
     // The subscription record itself is the signal now. There is no server-minted token to check for -
     // tokens are built locally from credentials - and an expired record is handled further in, where
     // the expiry notice replaces the countdown.
-    const rendered = this.subscription ? this.onMemberWithSubscription() : this.onMemberWithoutSubscription()
+    try {
+      if (this.subscription) await this.onMemberWithSubscription()
+      else $(".user.not-subscribed, .user .not-subscribed").show()
 
-    return rendered.catch(reportFailure)
-  }
-
-  private async onMemberWithoutSubscription() {
-    // The `clientData` exists, user has account
-    $(".user.not-subscribed, .user .not-subscribed").show()
-    await this.setupPublisherSiteUi()
+      await this.setupPublisherSiteUi()
+    } catch (error) {
+      reportFailure(error)
+    }
   }
 
   private buildReportButtonUrl(baseUrl: string, visitedUrl: string, hostname: string, publisherId: string) {
@@ -122,7 +121,6 @@ export class UserState {
     }
 
     await this.setupPauseResumeButtons()
-    await this.setupPublisherSiteUi()
   }
 
   private async setupPauseResumeButtons() {
