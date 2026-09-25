@@ -1,4 +1,5 @@
 import { schedule } from "./alarm"
+import { PUBLISHER_DISCOVERY_EXCLUDED_HOSTNAMES } from "./config"
 import { EVENT, eventBroker } from "./event-broker"
 import { extension } from "./extension"
 import { headerInjection } from "./header-injection"
@@ -6,7 +7,6 @@ import { readBodyPublisherId, readMetaPublisherValue } from "./page-scan"
 import { isValidPublisherId, PUBLISHER_HEADER, parsePublisherHeader } from "./publisher-id"
 import { isVerificationTab } from "./site-verification"
 import { type Entry, telemetry } from "./telemetry"
-import { isValidUrl } from "./utils"
 
 type BrowserTab = chrome.tabs.Tab & { publisher: boolean }
 
@@ -192,6 +192,18 @@ export const trackedTabs = () => singleton
 /** Handlers run only once every store they read is back from storage - see `extension().ready`. */
 const allReady = () => Promise.all([trackedTabs().ready, extension().ready, telemetry().ready])
 
+function canDiscoverPublisher(url: string | undefined) {
+  if (!url) return false
+
+  try {
+    const { hostname, protocol } = new URL(url)
+
+    return (protocol === "http:" || protocol === "https:") && !PUBLISHER_DISCOVERY_EXCLUDED_HOSTNAMES.has(hostname)
+  } catch {
+    return false
+  }
+}
+
 const helpers = {
   PUBLISHER_SITE_HEADER_NAME: PUBLISHER_HEADER.toLocaleLowerCase(),
   testPublisherHeaderValue(url: string, headerValue: string | undefined, source: "header" | "meta") {
@@ -243,7 +255,7 @@ chrome.tabs.onActivated.addListener(async ({ tabId }) => {
 })
 
 async function recordPageView(tab: chrome.tabs.Tab) {
-  if (!isValidUrl(tab.url)) return
+  if (!canDiscoverPublisher(tab.url)) return
 
   if (!telemetry().hasPublisherEntryByUrl(tab.url)) {
     // This has to be awaited: the very first visit to a meta-tag or content publisher is only
@@ -361,7 +373,7 @@ eventBroker().on<TabTrackerPublisherDetectedData>(EVENT.TAB_TRACKER.PUBLISHER_DE
 
 chrome.webRequest.onCompleted.addListener(
   async (details) => {
-    if (!isValidUrl(details.url) || isVerificationTab(details.tabId)) return
+    if (!canDiscoverPublisher(details.url) || isVerificationTab(details.tabId)) return
 
     await allReady()
     helpers.testWebRequestHeaders(details.url, details.responseHeaders || [])

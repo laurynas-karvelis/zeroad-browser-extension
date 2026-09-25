@@ -455,6 +455,40 @@ describe("an id printed in the page content", () => {
     expect(seen.at(-1)).toEqual({ publisherId, source: "content", url: "https://video.test/watch?v=1" })
   })
 
+  test.each([
+    "https://zeroad.network/dashboard",
+    "https://local.zeroad.network/dashboard",
+    "http://local.zeroad.network:3000/dashboard",
+    "https://ZEROAD.NETWORK/dashboard",
+  ])("does not scan account pages for publisher IDs: %s", async (url) => {
+    servePage({ meta: publisherId, body: publisherId })
+
+    const scan = spyOn(chromeMock.scripting, "executeScript")
+    const seen = detections()
+
+    try {
+      await chromeMock.tabs.onUpdated.dispatch(1, { status: "complete" }, tab(1, url))
+
+      expect(scan).not.toHaveBeenCalled()
+      expect(seen).toEqual([])
+      expect(addViews).not.toHaveBeenCalled()
+      expect(enableForHostname).not.toHaveBeenCalled()
+    } finally {
+      scan.mockRestore()
+    }
+  })
+
+  test("still discovers publisher IDs on the demo subdomain", async () => {
+    servePage({ body: publisherId })
+
+    const seen = detections()
+    const url = "https://demo.zeroad.network/"
+
+    await chromeMock.tabs.onUpdated.dispatch(1, { status: "complete" }, tab(1, url))
+
+    expect(seen.at(-1)).toEqual({ publisherId, source: "content", url })
+  })
+
   test("never binds a token to the platform the id was printed on", async () => {
     servePage({ body: publisherId })
 
@@ -479,6 +513,20 @@ describe("an id printed in the page content", () => {
 
       return chromeMock.tabs.onUpdated.dispatch(1, { url }, tab(1, url, { status: "complete" }))
     }
+
+    test.each(["zeroad.network", "local.zeroad.network"])(
+      "does not discover dashboard IDs after in-page navigation on %s",
+      async (hostname) => {
+        servePage({ body: publisherId })
+
+        const seen = detections()
+
+        await navigate(`https://${hostname}/dashboard`)
+
+        expect(seen).toEqual([])
+        expect(addViews).not.toHaveBeenCalled()
+      }
+    )
 
     test("reads the new page once it has rendered, since single-page sites never load again", async () => {
       servePage({ body: publisherId })
@@ -552,6 +600,14 @@ describe("welcome-header detection", () => {
   describe("from a response header", () => {
     const complete = (url: string, headers: { name: string; value?: string }[]) =>
       chromeMock.webRequest.onCompleted.dispatch({ url, responseHeaders: headers })
+
+    test.each(["zeroad.network", "local.zeroad.network"])("ignores publisher headers on %s", async (hostname) => {
+      const seen = publisherDetections()
+
+      await complete(`https://${hostname}/dashboard`, [{ name: "Better-Web-Publisher", value: publisherValue }])
+
+      expect(seen).toEqual([])
+    })
 
     test("decodes the welcome header and announces the publisher", async () => {
       const seen = publisherDetections()

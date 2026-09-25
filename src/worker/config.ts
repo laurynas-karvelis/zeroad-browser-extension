@@ -10,6 +10,11 @@ enum API_SERVER {
   PROD = "https://api.zeroad.network",
 }
 
+// Account pages display publisher IDs for management, not as participating integrations.
+export const PUBLISHER_DISCOVERY_EXCLUDED_HOSTNAMES: ReadonlySet<string> = new Set(
+  Object.values(HOMEPAGE).map((url) => new URL(url).hostname)
+)
+
 export type GetConfigResult = Awaited<ReturnType<typeof getConfig>>
 
 export async function getConfig() {
