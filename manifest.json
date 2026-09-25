@@ -3,7 +3,7 @@
     "homepage_url": "https://zeroad.network",
     "extension_name": "browser-extension",
     "name": "Zero Ad Network",
-    "description": "Browse & support partnered Web without Ads, Paywalls or additional Subscriptions.",
+    "description": "Ad-free browsing and included paid content on participating sites. Support publishers with one paid Freedom membership.",
     "icons": {
       "512": "images/dove.png"
     },

@@ -1,93 +1,69 @@
-# Discover a Cleaner, Faster, and Fair Web
+# Chrome Web Store copy
 
-Sick of ads, cookie popups, and paywalls? The Zero Ad Network extension removes the clutter while making sure the sites you love actually get paid.
+## Extension name
 
-## What It Does
+Zero Ad Network
 
-REMOVES THE ANNOYING STUFF
-• Ads and tracking scripts disappear on publisher sites
-• No more cookie consent banners
-• Marketing popups? Gone.
+## Short description
 
-UNLOCKS PREMIUM CONTENT
-• Read included paid articles
-• Access partner sites’ base subscriptions or custom included features
-• Higher tiers may remain separate
-• One subscription, multiple sites
+Ad-free browsing and included paid content on participating sites. Support publishers with one paid Freedom membership.
 
-PAYS CREATORS FAIRLY
-• Sites you visit get paid based on your time spent
-• No more choosing between ad blockers and supporting creators
-• Your subscription fee goes directly to the content you consume
+## Detailed description
 
-## How It Works
+Spend more time enjoying the web, with fewer interruptions. Zero Ad Network connects your Freedom membership to participating websites, so they can welcome you with an ad-free experience and included paid content. Your membership also helps fund the sites and creators you spend time with.
 
-1. JOIN FREEDOM
-   One monthly subscription with all subscriber benefits included on partner sites.
+A paid Freedom membership is required for subscriber benefits. They are available on participating websites, and each site provides its own included access.
 
-2. INSTALL AND FORGET
-   Available for Chrome, Firefox, and Edge. Installs in seconds.
+### More of what you came for
 
-3. BROWSE NORMALLY
-   The extension handles everything automatically. Visit publisher sites and enjoy a cleaner experience.
+- **Read without the interruptions.** Participating websites provide pages without ads, cookie consent banners, marketing popups, or non-essential third-party tracking.
+- **Enjoy included paid content.** Access a partner site's base subscription or the paid articles and features it includes with Freedom. Higher tiers and other purchases may still cost extra.
+- **Support the people behind the content.** Part of your membership funds participating websites and creators. How much time you spend with them helps determine their share, alongside your allocation preferences.
+- **Keep it simple.** One monthly membership works across participating sites. After setup, the extension lets recognized partner websites know you're a member as you browse.
 
-## Why This Beats Regular Ad Blockers
+### Get started
 
-Ad blockers hurt creators. We don't.
+1. Install the extension and sign in or create an account at zeroad.network.
+2. Join Freedom, then open your dashboard to connect your membership to the extension. Already a member? Open your dashboard and check your membership in the extension popup.
+3. Visit a participating website. On your first visit, you may need to reload the page before its subscriber benefits appear.
 
-Traditional ad blockers cut off website revenue entirely. Zero Ad Network replaces that revenue fairly:
-• Sites get paid when you visit them
-• You get an ad-free experience
-• Everybody wins
+See current membership pricing at https://zeroad.network/#membership.
 
-PLUS:
-• Privacy-first (we don't sell your data)
-• One subscription instead of dozens
-• No configuration needed
-• Works on thousands of publisher sites
+### Where it works
 
-## How Sites Get Paid
+Look for websites that participate in Zero Ad Network. The extension confirms your membership; the website removes interruptions and provides its included content. Installing the extension does not remove ads or unlock paywalls across the whole web.
 
-When you visit a publisher site:
+Creators on other platforms can also participate by adding their Publisher ID to their content. When the extension recognizes one, your time can help support that creator. This does not remove the platform's ads or unlock its paid features.
 
-1. Extension sends a secure token proving you're a subscriber
-2. Site enables your benefits (removes ads, unlocks content)
-3. Anonymous metrics tracked (time spent, pages viewed)
-4. Monthly payout based on your actual usage
+Need help with a recognized site? Open the extension and use “Report a site issue.” You can also open your dashboard from the popup.
 
-The more you visit a site, the more they earn. Simple.
+### How your time helps
 
-## The Big Picture
+The extension measures time on recognized sites and creator pages while their tab and browser window are in focus. Background tabs do not earn time just by staying open. Reading without moving your mouse still counts. This activity helps divide the publisher share of membership payments each month; page views alone do not decide earnings.
 
-The web shouldn't force you to choose between privacy and supporting creators.
+### Your privacy and controls
 
-Right now, websites either:
-• Spam you with ads and tracking
-• Lock everything behind paywalls
-• Sell your data to survive
+To find participating sites and creators, the extension checks page information locally, including visible text. This is why it asks for access to websites you visit. It sends activity records, not copies of page text.
 
-Zero Ad Network offers a third option: direct support through a single subscription.
+Activity sent to Zero Ad Network is linked to your account. It includes publisher identifiers, website addresses, page-view counts, and time spent. For creator content on other platforms, it can include full page URLs. Uploads also include the extension version; the service records your IP address and when the upload arrives. Publishers receive activity totals rather than your account identity. We do not sell your data.
 
-No ads. No tracking. No juggling 20 different paywalls. Just a better web that works for everyone.
+The membership proof sent to a recognized partner website contains no account ID, name, or email. It is specific to that website and is sent over HTTPS.
 
-## Privacy Guarantee
+“Turn Freedom off” stops the extension requesting subscriber benefits on all websites. Reload pages after switching. Visit measurement and uploads continue; this is not a privacy pause, and a website's own login may keep you signed in.
 
-WHAT WE SEND:
-• A subscription token to all sites you visit (so publisher sites can recognize you)
-• Anonymous usage stats only for publisher sites
+Install Zero Ad Network and connect your Freedom membership to start browsing and supporting participating sites.
 
-WHAT WE DON'T DO:
-• Sell your data
-• Include personal info in tokens
-• Track you on non-publisher sites
-• Share your browsing history
+Learn more: https://zeroad.network/docs
+Privacy policy: https://zeroad.network/privacy
 
-The token just says "this person is a subscriber" - nothing about who you are.
+---
 
-## Get Started
+## Publishing notes — not part of the store description
 
-Install the extension, sign up, and browse freely.
+The short description is also used in `manifest.json`. Keep both copies aligned. Paste the detailed description into the store listing using plain headings and bullets if Markdown formatting is unavailable.
 
-Cancel anytime. No long-term commitment. No hassle.
+The structure follows [Chrome's listing guidance](https://developer.chrome.com/docs/webstore/best-listing): a concise summary, an opening overview, concrete benefits, and clear setup. [Dark Reader](https://chromewebstore.google.com/detail/dark-reader/eimadpbcbfnmbkopoojfekhnkhdbieeh) and [Bitwarden](https://chromewebstore.google.com/detail/bitwarden-password-manage/nngceckbapebfimnlniiiahkandclblb) were reviewed as widely used examples of direct benefit language and scannable feature descriptions. Public user counts do not establish which wording converts best; this copy has not been conversion-tested.
 
-Join thousands of people building a better web - one where users browse freely and creators get paid fairly.
+Claims were checked against publisher discovery, hostname-specific membership proof, focused-tab measurement, account-linked uploads, popup controls, and their tests in `src/worker` and `src/popup`, plus the platform's onboarding and telemetry endpoint. Keep the participating-site boundary, paid membership requirement, creator-platform distinction, and privacy disclosure when adapting this copy.
+
+Do not add unverified user or partner counts, guaranteed speed improvements, universal ad-blocking or paywall access, or anonymous/no-tracking claims. Match screenshots to actual participating-site behavior and the released extension. Updating this file does not publish a store listing or release the manifest change.

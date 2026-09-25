@@ -38,7 +38,7 @@ function Header() {
             <a href="/#features">Features</a>
           </li>
           <li>
-            <a href="/#pricing">Pricing</a>
+            <a href="/#membership">Pricing</a>
           </li>
         </ul>
       </nav>
