@@ -54,6 +54,7 @@ let verificationQueue: Promise<unknown> = Promise.resolve()
 export function verifySite(url: string, publisherId: string | undefined): Promise<VerifySiteResult> {
   const verification = verificationQueue.then(() => runVerification(url, publisherId))
   verificationQueue = verification.catch(() => undefined)
+
   return verification
 }
 
@@ -199,6 +200,7 @@ async function checkPage(url: string, publisherId: string): Promise<VerifySiteRe
     }
   } finally {
     capture.dispose()
+
     if (tabId !== undefined) {
       try {
         await chrome.tabs.remove(tabId)

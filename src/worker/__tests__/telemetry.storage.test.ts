@@ -56,6 +56,7 @@ describe("Telemetry persistence", () => {
   test("an acknowledged push is persisted, so a sent batch is never counted twice", async () => {
     const entry = { publisherId: "client-c", source: "header" as const, views: 2, duration: 200 }
     chromeMock.storage.local.seed({ telemetry: { "c.test": entry } })
+
     const telemetry = new Telemetry()
     await telemetry.ready
 
@@ -68,6 +69,7 @@ describe("Telemetry persistence", () => {
     chromeMock.storage.local.seed({
       telemetry: { "d.test": { publisherId: "client-d", source: "header", views: 2, duration: 200 } },
     })
+
     const telemetry = new Telemetry()
     await telemetry.ready
 

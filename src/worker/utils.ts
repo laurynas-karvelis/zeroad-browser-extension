@@ -6,6 +6,7 @@ export async function inDevMode() {
   const matches =
     manifest.externally_connectable?.matches ?? manifest.content_scripts?.flatMap((entry) => entry.matches)
   if (!matches?.includes("https://local.zeroad.network/*")) return false
+
   return (await chrome.management.getSelf()).installType === "development"
 }
 
@@ -21,6 +22,7 @@ export function isValidUrl(url: string | undefined): boolean {
 
   try {
     const parsed = new URL(url)
+
     return ["http:", "https:"].includes(parsed.protocol)
   } catch {
     return false
@@ -77,6 +79,7 @@ export async function httpPost<T>(url: string, token: string, payload: object, t
     if (error instanceof DOMException && error.name === "AbortError") {
       throw new ExtensionError("Request timeout", { url, timeoutMs })
     }
+
     throw error
   } finally {
     clearTimeout(timeoutId)

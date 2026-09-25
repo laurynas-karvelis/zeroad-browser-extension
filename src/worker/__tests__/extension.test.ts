@@ -70,6 +70,7 @@ describe("Extension", () => {
   describe("receiving a sync payload", () => {
     test("does not report demo success when no rule was installed", async () => {
       installedHostnames.mockReturnValueOnce([])
+
       expect(
         await extension().sync({
           user: user("demo"),
@@ -105,12 +106,15 @@ describe("Extension", () => {
         })
         .then((result) => {
           finished = true
+
           return result
         })
 
       await Bun.sleep(0)
+
       expect(finished).toBe(false)
       finishReset()
+
       expect(await syncing).toBe(true)
     })
 
@@ -131,6 +135,7 @@ describe("Extension", () => {
       // a repeat sync of the same token is not news.
       eventBroker().emit(EVENT.EXTENSION.PAYLOAD_RECEIVED, { user: user(), subscription: subscription() })
       await Bun.sleep(0)
+
       const synced = mock()
       eventBroker().on(EVENT.EXTENSION.SYNCED, synced)
 
@@ -143,6 +148,7 @@ describe("Extension", () => {
     test("announces again when the token changes, e.g. a different user signs in", async () => {
       eventBroker().emit(EVENT.EXTENSION.PAYLOAD_RECEIVED, { user: user("ext-token-1"), subscription: subscription() })
       await Bun.sleep(0)
+
       const synced = mock()
       eventBroker().on(EVENT.EXTENSION.SYNCED, synced)
 
@@ -157,6 +163,7 @@ describe("Extension", () => {
       // being injected with credentials the server had already withdrawn.
       eventBroker().emit(EVENT.EXTENSION.PAYLOAD_RECEIVED, { user: user(), subscription: subscription() })
       await Bun.sleep(0)
+
       expect(extension().isSubscriptionActive()).toBe(true)
 
       eventBroker().emit(EVENT.EXTENSION.PAYLOAD_RECEIVED, { user: user() })
@@ -244,6 +251,7 @@ describe("Extension", () => {
       const paid = { ...subscription(), planName: SUBSCRIPTION_PLAN_NAME.FREEDOM }
       await extension().sync({ user: user(), subscription: paid, testAccess: testAccess() })
       await extension().sync({ user: { ...user(), firstName: null, accountClosed: true }, subscription: paid })
+
       expect(extension().getExtensionData().user?.firstName).toBeNull()
       expect(chromeMock.storage.sync.peek().user).toMatchObject({ firstName: null })
       expect(extension().getExtensionData().testAccess).toBeUndefined()
@@ -254,15 +262,18 @@ describe("Extension", () => {
 
     test("works without a subscription and survives ordinary dashboard sync", async () => {
       const access = testAccess()
+
       expect(await extension().sync({ user: user(), testAccess: access })).toBe(true)
       expect(extension().isSubscriptionActive()).toBe(true)
       expect(extension().hasPaidSubscription()).toBe(false)
       expect(extension().canRecordUsage()).toBe(false)
       await extension().sync({ user: user() })
+
       expect(extension().getExtensionData().testAccess).toEqual(access)
       expect(extension().getExtensionData().subscription).toEqual(access)
       expect(chromeMock.storage.local.peek().websiteTest).toEqual({ extensionToken: "ext-token-1", access })
       await extension().stopTesting()
+
       expect(extension().isSubscriptionActive()).toBe(false)
       expect(chromeMock.storage.local.peek().websiteTest).toBeUndefined()
     })
@@ -270,12 +281,16 @@ describe("Extension", () => {
     test("keeps paid subscription updates separately and restores them on stop", async () => {
       const paid = { ...subscription(), planName: SUBSCRIPTION_PLAN_NAME.FREEDOM }
       await extension().sync({ user: user(), subscription: paid, testAccess: testAccess() })
+
       expect(extension().hasPaidSubscription()).toBe(true)
       expect(extension().canRecordUsage()).toBe(false)
+
       const renewed = { ...paid, expiresAt: Date.now() + 60 * HOUR }
       await extension().sync({ user: user(), subscription: renewed })
+
       expect(extension().getExtensionData().subscription?.hostname).toBe("demo.zeroad.network")
       await extension().stopTesting()
+
       expect(extension().getExtensionData().subscription).toEqual(renewed)
       expect(extension().canRecordUsage()).toBe(true)
     })
@@ -288,6 +303,7 @@ describe("Extension", () => {
       })
       await extension().sync({ user: user() })
       await extension().stopTesting()
+
       expect(extension().isSubscriptionActive()).toBe(false)
       expect(extension().canRecordUsage()).toBe(false)
     })
@@ -295,12 +311,14 @@ describe("Extension", () => {
     test("does not carry test access into another account", async () => {
       await extension().sync({ user: user(), testAccess: testAccess() })
       await extension().sync({ user: user("other-account") })
+
       expect(extension().getExtensionData().testAccess).toBeUndefined()
       expect(extension().isSubscriptionActive()).toBe(false)
     })
 
     test("demo access never measures payable usage", async () => {
       await extension().sync({ user: user("demo"), subscription: testAccess() })
+
       expect(extension().isSubscriptionActive()).toBe(true)
       expect(extension().hasPaidSubscription()).toBe(false)
       expect(extension().canRecordUsage()).toBe(false)
@@ -312,13 +330,16 @@ describe("Extension", () => {
       const recordedUsage = {
         "publisher.test": { publisherId: "publisher", source: "header", views: 2, duration: 5000 },
       }
+
       await chromeMock.storage.local.set({ telemetry: recordedUsage })
       await extension().pause()
+
       expect(extension().isPaused()).toBe(true)
       expect(removeAllRules).toHaveBeenCalled()
       expect(chromeMock.storage.local.peek().telemetry).toEqual(recordedUsage)
 
       await extension().resume()
+
       expect(extension().isPaused()).toBe(false)
       expect(reset).toHaveBeenCalled()
       expect(chromeMock.storage.local.peek().telemetry).toEqual(recordedUsage)
@@ -327,6 +348,7 @@ describe("Extension", () => {
     test("the pause is stored, so it survives the stored state being read back", async () => {
       // A sync re-reads everything from storage, exactly as a restarted worker does.
       await extension().pause()
+
       expect(chromeMock.storage.local.peek().isHeaderInjectionPaused).toBe(true)
 
       eventBroker().emit(EVENT.EXTENSION.PAYLOAD_RECEIVED, { user: user(), subscription: subscription() })

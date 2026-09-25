@@ -35,6 +35,7 @@ describe("badge", () => {
     expect(chromeMock.action.badgeText).toBe("TWO")
 
     await Bun.sleep(30)
+
     expect(chromeMock.action.badgeText).toBe("")
   })
 

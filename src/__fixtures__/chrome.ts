@@ -23,6 +23,7 @@ function createEvent<TArgs extends unknown[]>(): MockEvent<TArgs> {
     addListener: (listener) => void listeners.push(listener as Listener),
     removeListener(listener) {
       const index = listeners.indexOf(listener as Listener)
+
       if (index >= 0) listeners.splice(index, 1)
     },
     hasListener: (listener) => listeners.includes(listener as Listener),
@@ -30,9 +31,11 @@ function createEvent<TArgs extends unknown[]>(): MockEvent<TArgs> {
     clear: () => void listeners.splice(0, listeners.length),
     async dispatch(...args) {
       const results: unknown[] = []
+
       for (const listener of [...listeners]) {
         results.push(await (listener as (...a: TArgs) => unknown)(...args))
       }
+
       return results
     },
   }
@@ -52,9 +55,11 @@ function createStorageArea() {
     async get(keys?: string | string[] | null) {
       const wanted = keys === undefined || keys === null ? Object.keys(store) : Array.isArray(keys) ? keys : [keys]
       const result: StorageRecord = {}
+
       for (const key of wanted) {
         if (key in store) result[key] = structuredClone(store[key])
       }
+
       return result
     },
     async set(values: StorageRecord) {
@@ -93,6 +98,7 @@ function createAlarms(onAlarm: MockEvent<[Alarm]>) {
     },
     async clearAll() {
       alarms.clear()
+
       return true
     },
     /** Fires an alarm the way Chrome would, whether or not it was ever created. */
@@ -178,6 +184,7 @@ export function createChromeMock() {
             (rule) => rule.id !== ruleId
           )
         }
+
         mock.declarativeNetRequest.sessionRules.push(...(options.addRules || []))
       },
     },
@@ -190,7 +197,9 @@ export function createChromeMock() {
       onRemoved: createEvent<[number]>(),
       async get(tabId: number) {
         const tab = mock.tabs.byId.get(tabId)
+
         if (!tab) throw new Error(`No tab with id: ${tabId}`)
+
         return tab
       },
       async query(info: { active?: boolean; currentWindow?: boolean }) {
@@ -198,6 +207,7 @@ export function createChromeMock() {
       },
       async create(options: { url: string }) {
         mock.tabs.created.push(options)
+
         return { id: mock.tabs.byId.size + 1, ...options }
       },
       removed: [] as number[],
@@ -233,6 +243,7 @@ export function createChromeMock() {
       executeScriptCalls: [] as unknown[],
       async executeScript(injection: unknown) {
         mock.scripting.executeScriptCalls.push(injection)
+
         return mock.scripting.executeScriptResult
       },
     },

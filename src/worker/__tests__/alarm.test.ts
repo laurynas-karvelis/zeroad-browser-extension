@@ -64,9 +64,11 @@ describe("schedule", () => {
       schedule.on("renew", callback)
 
       await chromeMock.alarms.fire("something-else")
+
       expect(callback).not.toHaveBeenCalled()
 
       await chromeMock.alarms.fire("renew")
+
       expect(callback).toHaveBeenCalledTimes(1)
     })
 

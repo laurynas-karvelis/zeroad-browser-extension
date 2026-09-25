@@ -57,6 +57,7 @@ const register = (t: chrome.tabs.Tab, source: Source) => trackedTabs().register(
 const activeTabEvents = () => {
   const seen: TabTrackActiveTabEventData[] = []
   eventBroker().on<TabTrackActiveTabEventData>(EVENT.TAB_TRACKER.IS_ACTIVE_TAB_PUBLISHER, (data) => seen.push(data))
+
   return seen
 }
 
@@ -78,25 +79,31 @@ describe("trackedTabs", () => {
       register(tab(2, "https://other.test/"), TAB_REGISTER_SOURCE.ON_TAB_ACTIVATED)
 
       expect(addDuration).toHaveBeenCalledTimes(1)
+
       const [url, duration] = addDuration.mock.calls[0]
+
       expect(url).toBe("https://publisher.test/")
       expect(duration).toBeGreaterThanOrEqual(20)
     })
 
     test("access changes split elapsed time without losing tab focus", () => {
       const now = spyOn(Date, "now").mockReturnValue(1000)
+
       try {
         makePublisher("publisher.test")
         register(tab(1, "https://publisher.test/"), TAB_REGISTER_SOURCE.ON_TAB_ACTIVATED)
         now.mockReturnValue(2000)
         eventBroker().emit(EVENT.EXTENSION.ACCESS_WILL_CHANGE)
+
         expect(addDuration).toHaveBeenLastCalledWith("https://publisher.test/", 1000)
         expect(trackedTabs().hasFocus()).toBe(true)
         now.mockReturnValue(7000)
         eventBroker().emit(EVENT.EXTENSION.ACCESS_WILL_CHANGE)
+
         expect(addDuration).toHaveBeenLastCalledWith("https://publisher.test/", 5000)
         now.mockReturnValue(8000)
         trackedTabs().flushActive()
+
         expect(addDuration).toHaveBeenLastCalledWith("https://publisher.test/", 1000)
       } finally {
         now.mockRestore()
@@ -117,9 +124,11 @@ describe("trackedTabs", () => {
 
       // A duplicate activation (Chrome fires these) must not discard the elapsed time.
       register(tab(1, "https://publisher.test/"), TAB_REGISTER_SOURCE.ON_TAB_ACTIVATED)
+
       expect(addDuration).not.toHaveBeenCalled()
 
       register(tab(2, "https://other.test/"), TAB_REGISTER_SOURCE.ON_TAB_ACTIVATED)
+
       expect(addDuration.mock.calls[0][1]).toBeGreaterThanOrEqual(20)
     })
 
@@ -165,9 +174,11 @@ describe("trackedTabs", () => {
       await Bun.sleep(25)
 
       register(tab(1, "https://left.test/"), TAB_REGISTER_SOURCE.ON_WINDOW_FOCUS_CHANGED)
+
       expect(addDuration).not.toHaveBeenCalled()
 
       trackedTabs().flushActive()
+
       expect(addDuration.mock.calls[0][1]).toBeGreaterThanOrEqual(20)
     })
 
@@ -205,6 +216,7 @@ describe("trackedTabs", () => {
 
       // The next booking starts from the checkpoint, not from the start of the visit.
       trackedTabs().flushActive()
+
       expect(addDuration.mock.calls[1][1]).toBeLessThan(20)
     })
 
@@ -329,6 +341,7 @@ describe("trackedTabs", () => {
   describe("notifyIfActiveTabIsPublisher", () => {
     test("reports the focused publisher tab with its telemetry entry", () => {
       makePublisher("publisher.test", "publisher-x")
+
       const seen = activeTabEvents()
 
       register(tab(7, "https://publisher.test/page"), TAB_REGISTER_SOURCE.ON_TAB_ACTIVATED)
@@ -357,6 +370,7 @@ describe("trackedTabs", () => {
     test("says nothing about a tab that is not the focused one", () => {
       makePublisher("publisher.test")
       register(tab(1, "https://publisher.test/"), TAB_REGISTER_SOURCE.ON_TAB_ACTIVATED)
+
       const seen = activeTabEvents()
 
       register(tab(2, "https://publisher.test/", { windowId: 2 }), TAB_REGISTER_SOURCE.ON_TAB_UPDATED)
@@ -375,6 +389,7 @@ describe("trackedTabs", () => {
     test("re-announces the focused tab on demand, which is what the popup asks for", () => {
       makePublisher("publisher.test")
       register(tab(1, "https://publisher.test/"), TAB_REGISTER_SOURCE.ON_TAB_ACTIVATED)
+
       const seen = activeTabEvents()
 
       trackedTabs().notifyIfActiveTabIsPublisher()
@@ -386,6 +401,7 @@ describe("trackedTabs", () => {
   test("a publisher recognised after its tab loaded still lights up the badge", () => {
     // Detection is asynchronous, so the tab can be registered before its site is known.
     register(tab(1, "https://publisher.test/"), TAB_REGISTER_SOURCE.ON_TAB_ACTIVATED)
+
     const seen = activeTabEvents()
 
     makePublisher("publisher.test")
@@ -404,6 +420,7 @@ describe("an id printed in the page content", () => {
   const servePage = (page: { meta?: string; body?: string }) => {
     chromeMock.scripting.executeScript = async (injection: unknown) => {
       const [arg] = (injection as { args: string[] }).args
+
       return [{ result: arg === "zapub_" ? page.body : page.meta }]
     }
   }
@@ -411,6 +428,7 @@ describe("an id printed in the page content", () => {
   const detections = () => {
     const seen: TabTrackerPublisherDetectedData[] = []
     eventBroker().on<TabTrackerPublisherDetectedData>(EVENT.TAB_TRACKER.PUBLISHER_DETECTED, (data) => seen.push(data))
+
     return seen
   }
 
@@ -429,6 +447,7 @@ describe("an id printed in the page content", () => {
 
   test("names a publisher on a platform they don't control, credited for that page", async () => {
     servePage({ body: publisherId })
+
     const seen = detections()
 
     await chromeMock.tabs.onUpdated.dispatch(1, { status: "complete" }, tab(1, "https://video.test/watch?v=1"))
@@ -446,6 +465,7 @@ describe("an id printed in the page content", () => {
 
   test("a meta tag outranks an id in the content", async () => {
     servePage({ meta: publisherId, body: "zapub_ZzZzZzZzZzZzZzZzZzZzZzZz" })
+
     const seen = detections()
 
     await chromeMock.tabs.onUpdated.dispatch(1, { status: "complete" }, tab(1, "https://site.test/"))
@@ -456,11 +476,13 @@ describe("an id printed in the page content", () => {
   describe("in-page navigation", () => {
     const navigate = (url: string, current = url) => {
       chromeMock.tabs.byId.set(1, { id: 1, url: current, status: "complete", active: true, windowId: 1 })
+
       return chromeMock.tabs.onUpdated.dispatch(1, { url }, tab(1, url, { status: "complete" }))
     }
 
     test("reads the new page once it has rendered, since single-page sites never load again", async () => {
       servePage({ body: publisherId })
+
       const seen = detections()
 
       await navigate("https://video.test/watch?v=2")
@@ -478,11 +500,13 @@ describe("an id printed in the page content", () => {
 
       expect(addDuration.mock.calls[0][0]).toBe("https://site.test/one")
       trackedTabs().flushActive()
+
       expect(addDuration.mock.calls.at(-1)?.[0]).toBe("https://site.test/two")
     })
 
     test("skips a page the tab has already navigated away from", async () => {
       servePage({ body: publisherId })
+
       const seen = detections()
 
       await navigate("https://video.test/watch?v=3", "https://video.test/watch?v=4")
@@ -492,6 +516,7 @@ describe("an id printed in the page content", () => {
 
     test("ignores the url change that starts an ordinary page load", async () => {
       servePage({ body: publisherId })
+
       const seen = detections()
 
       await chromeMock.tabs.onUpdated.dispatch(
@@ -512,6 +537,7 @@ describe("welcome-header detection", () => {
   const publisherDetections = () => {
     const seen: unknown[] = []
     eventBroker().on(EVENT.TAB_TRACKER.PUBLISHER_DETECTED, (data) => seen.push(data))
+
     return seen
   }
 
@@ -624,6 +650,7 @@ describe("welcome-header detection", () => {
       chromeMock.scripting.executeScriptResult = [{ result: publisherValue }]
       chromeMock.scripting.executeScriptCalls.length = 0
       verificationTabIds.add(9)
+
       const seen = publisherDetections()
 
       await finishLoading(tab(9, "https://meta.test/"))
@@ -652,6 +679,7 @@ describe("welcome-header detection", () => {
       chromeMock.scripting.executeScript = async () => {
         throw new Error("Cannot access contents of the page")
       }
+
       const seen = publisherDetections()
 
       await finishLoading(tab(1, "https://blocked.test/"))

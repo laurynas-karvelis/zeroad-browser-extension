@@ -25,12 +25,14 @@ const TOKEN_POOL_CHECK_INTERVAL_IN_MINUTES = 60
 
 const getAttempt = async () => {
   const { renewalAttempts } = await chrome.storage.local.get<StoredAttempt>(["renewalAttempts"])
+
   return renewalAttempts || 0
 }
 
 const increaseAttempt = async () => {
   const renewalAttempts = (await getAttempt()) + 1
   await chrome.storage.local.set<StoredAttempt>({ renewalAttempts })
+
   return renewalAttempts
 }
 
@@ -55,6 +57,7 @@ class Credentials {
     schedule
       .on(this.TOKEN_POOL_CHECK_ALARM, async () => {
         await extension().ready
+
         if (extension().getExtensionToken() !== "demo") await this.attemptToRenewToken()
         await this.maintainTokenPool()
       })
@@ -65,6 +68,7 @@ class Credentials {
 
   async enableRenewal(when: number) {
     await this.cancelRenewalAttempts()
+
     if (when) await schedule.recreate(this.EXTENSION_TOKEN_EXPIRATION_ALARM, { when })
   }
 
@@ -78,6 +82,7 @@ class Credentials {
    */
   async maintainTokenPool() {
     await extension().ready
+
     if (!extension().isSubscriptionActive()) return
     if (extension().getExtensionData().subscription?.visitorToken) return
 
@@ -95,6 +100,7 @@ class Credentials {
 
   private async request() {
     const extensionToken = extension().getExtensionToken()
+
     if (!extensionToken) throw new Error("Client extension token doesn't exist")
 
     const config = await getConfig()
@@ -114,13 +120,16 @@ class Credentials {
 
     if (!extension().getExtensionToken()) {
       await this.cancelRenewal()
+
       return
     }
 
     const requestedTestHostname = extension().getExtensionData().testAccess?.hostname
     const requestedUserToken = extension().getExtensionToken()
+
     try {
       const payload = await this.request()
+
       if (
         requestedUserToken !== extension().getExtensionToken() ||
         requestedTestHostname !== extension().getExtensionData().testAccess?.hostname
@@ -133,6 +142,7 @@ class Credentials {
 
       if ((payload?.testAccess?.expiresAt || payload?.subscription?.expiresAt || 0) > Date.now()) {
         await this.cancelRenewalAttempts()
+
         return
       }
     } catch (error) {
@@ -144,11 +154,14 @@ class Credentials {
       if (isTokenRejected(error) && extension().getExtensionData().testAccess) {
         await extension().stopTesting()
         await this.scheduleRenewalRetry()
+
         return
       }
+
       if (isTokenRejected(error)) {
         log("warn", "[token-renew]", "the platform rejected the extension token, signing out")
         eventBroker().emit(EVENT.EXTENSION.REQUEST_RESET)
+
         return
       }
 
@@ -165,6 +178,7 @@ class Credentials {
       // Stop polling but stay signed in - the next sync from the website picks the subscription back up.
       log("debug", "[token-renew]", "max attempts reached, give up")
       await this.cancelRenewalAttempts()
+
       return
     }
 

@@ -27,6 +27,7 @@ export class UserState {
     if (!this.user?.extensionToken) {
       // User is brand new or not signed in
       $(".guest, .guest.greeting").show()
+
       return Promise.resolve()
     }
 
@@ -53,6 +54,7 @@ export class UserState {
     url.pathname = `${url.pathname.replace(/\/$/, "")}/${encodeURIComponent(hostname)}`
     url.searchParams.set("url", visitedUrl)
     url.searchParams.set("publisherId", publisherId)
+
     return url.toString()
   }
 
@@ -72,6 +74,7 @@ export class UserState {
 
       // set up report button
       const reportBaseUrl = $reportBtn.data("href")
+
       if (reportBaseUrl)
         $reportBtn.href(
           this.buildReportButtonUrl(reportBaseUrl, url, getHostname(url), data.telemetryEntry.publisherId)
@@ -83,6 +86,7 @@ export class UserState {
 
   private async onMemberWithSubscription() {
     if (!this.subscription) return
+
     $(".user.subscribed, .user .subscribed").show()
 
     if (this.subscription.expiresAt < Date.now()) {

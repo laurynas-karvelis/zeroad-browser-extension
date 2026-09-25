@@ -26,6 +26,7 @@ describe("trackedTabs after a worker restart", () => {
     trackedTabs().flushActive()
 
     const [url, duration] = addDuration.mock.calls[0]
+
     expect(url).toBe("https://publisher.test/article")
     expect(duration).toBeGreaterThanOrEqual(90_000)
   })

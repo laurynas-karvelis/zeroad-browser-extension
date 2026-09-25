@@ -65,6 +65,7 @@ async function runCommand(command: string, args: string[] = []) {
 }
 
 const buildExitCode = await runCommand("bun", ["run", "build"])
+
 if (buildExitCode !== 0) process.exit(buildExitCode)
 
 // Initialize watchers

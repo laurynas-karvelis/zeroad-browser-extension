@@ -24,6 +24,7 @@ const seedStored = (telemetry: StoredMap) => chromeMock.storage.local.seed({ tel
 async function createTelemetry() {
   const instance = new Telemetry()
   await instance.ready
+
   return instance
 }
 
@@ -123,6 +124,7 @@ describe("Telemetry", () => {
 
     test("re-detecting the same publisher leaves its counters alone", async () => {
       seedStored({ "a.test": entry("client-a", 3, 500) })
+
       const telemetry = await createTelemetry()
 
       eventBroker().emit(EVENT.TAB_TRACKER.PUBLISHER_DETECTED, {
@@ -137,6 +139,7 @@ describe("Telemetry", () => {
     test("a hostname changing owner adopts the new publisherId and drops the old counters", async () => {
       // Otherwise every later visit is credited to whoever used to own the domain.
       seedStored({ "a.test": entry("old-client", 9, 900) })
+
       const telemetry = await createTelemetry()
 
       eventBroker().emit(EVENT.TAB_TRACKER.PUBLISHER_DETECTED, {
@@ -150,6 +153,7 @@ describe("Telemetry", () => {
 
     test("addDuration accumulates milliseconds", async () => {
       seedStored({ "a.test": entry("client-a", 1, 10) })
+
       const telemetry = await createTelemetry()
 
       telemetry.addDuration("https://a.test/", 250)
@@ -185,6 +189,7 @@ describe("Telemetry", () => {
     test("counts nothing while the subscription is inactive", async () => {
       // The user is not paying, so nothing they browse may earn a publisher a payout.
       seedStored({ "a.test": entry("client-a", 1, 10) })
+
       const telemetry = await createTelemetry()
       subscriptionActive = false
 
@@ -196,6 +201,7 @@ describe("Telemetry", () => {
 
     test("rejects durations that are absent, negative or not finite", async () => {
       seedStored({ "a.test": entry("client-a", 1, 10) })
+
       const telemetry = await createTelemetry()
 
       telemetry.addDuration("https://a.test/", -50)
@@ -215,6 +221,7 @@ describe("Telemetry", () => {
         "blog.a.test": entry("client-a", 3, 300),
         "b.test": entry("client-b", 1, 100),
       })
+
       const telemetry = await createTelemetry()
 
       // One observation per hostname - a publisher with several sites needs each credited on its own
@@ -228,6 +235,7 @@ describe("Telemetry", () => {
     test("includes a publisher that was viewed but never dwelled on", async () => {
       // Revenue is duration-weighted, but the visit still belongs in the user's stats.
       seedStored({ "a.test": entry("client-a", 4, 0) })
+
       const telemetry = await createTelemetry()
 
       expect(telemetry.export()).toEqual([observation("client-a", "a.test", 4, 0)])
@@ -236,6 +244,7 @@ describe("Telemetry", () => {
     test("carries the detection source through to the observation", async () => {
       // The source decides the integration type server-side, so it must survive to the payload.
       seedStored({ "meta.test": entry("client-a", 1, 100, "meta") })
+
       const telemetry = await createTelemetry()
 
       expect(telemetry.export()).toEqual([observation("client-a", "meta.test", 1, 100, "meta")])
@@ -243,6 +252,7 @@ describe("Telemetry", () => {
 
     test("upgrades a meta detection to a header one when the stronger proof arrives", async () => {
       seedStored({ "a.test": entry("client-a", 1, 100, "meta") })
+
       const telemetry = await createTelemetry()
 
       eventBroker().emit(EVENT.TAB_TRACKER.PUBLISHER_DETECTED, {
@@ -347,6 +357,7 @@ describe("Telemetry", () => {
   describe("after a push", () => {
     test("acknowledging takes the sent amounts off but keeps the publishers, so re-detection is not needed", async () => {
       seedStored({ "a.test": entry("client-a", 2, 200) })
+
       const telemetry = await createTelemetry()
 
       await telemetry.acknowledge(telemetry.export())
@@ -357,6 +368,7 @@ describe("Telemetry", () => {
 
     test("acknowledging skips a hostname that changed hands while the push was in flight", async () => {
       seedStored({ "a.test": entry("client-a", 2, 200) })
+
       const telemetry = await createTelemetry()
       const sent = telemetry.export()
 
@@ -375,6 +387,7 @@ describe("Telemetry", () => {
   describe("losing the subscription", () => {
     test("an expired subscription keeps unsent usage, which a late renewal makes sendable again", async () => {
       seedStored({ "a.test": entry("client-a", 2, 200) })
+
       const telemetry = await createTelemetry()
 
       eventBroker().emit(EVENT.EXTENSION.SUBSCRIPTION_EXPIRED)
@@ -384,6 +397,7 @@ describe("Telemetry", () => {
 
     test("a reset request clears everything", async () => {
       seedStored({ "a.test": entry("client-a", 2, 200) })
+
       const telemetry = await createTelemetry()
 
       eventBroker().emit(EVENT.EXTENSION.REQUEST_RESET)

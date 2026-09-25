@@ -140,7 +140,9 @@ describe("a member with an active subscription", () => {
     await new UserState(member, subscription()).render()
 
     const content = document.querySelector(".subscription-valid")
+
     if (!content) throw new Error("Missing membership details")
+
     expect(content.textContent).toContain("Freedom")
     expect(content.textContent).not.toContain("Clean Web")
     expect(content.textContent).not.toContain("One Pass")
@@ -187,9 +189,11 @@ describe("a developer token", () => {
 
 test("offers Stop testing only for explicit website test access", async () => {
   await new UserState(member, subscription({ hostname: "publisher.test" }), true).render()
+
   expect(isShown("#stop-testing-btn")).toBe(true)
   click("#stop-testing-btn")
   await settle()
+
   expect(commandsSent()).toContain(EVENT.POPUP.STOP_TESTING)
 })
 

@@ -4,15 +4,18 @@ import type { LeafValues } from "./types"
 class EventBroker extends EventTarget {
   emit<T = unknown>(eventName: EventType, data?: T) {
     const logData: unknown[] = ["[event-broker]", eventName]
+
     if (data !== undefined) logData.push(data)
     log("debug", ...logData)
 
     this.dispatchEvent(new CustomEvent(eventName, { detail: data }))
+
     return this
   }
 
   on<T = unknown>(eventName: EventType, callback: (data: T) => void) {
     this.addEventListener(eventName, (event) => callback((event as CustomEvent<T>).detail))
+
     return this
   }
 }

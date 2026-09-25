@@ -53,9 +53,11 @@ describe("$", () => {
 describe("visibility", () => {
   test("show and hide flip the hidden attribute on every match", () => {
     $(".subscription-valid p").show()
+
     expect($(".subscription-valid p").elements.every((element) => !element.hidden)).toBe(true)
 
     $(".subscription-valid p").hide()
+
     expect($(".subscription-valid p").elements.every((element) => element.hidden)).toBe(true)
   })
 
@@ -64,11 +66,13 @@ describe("visibility", () => {
 
     for (const falsy of [false, undefined, null, 0, ""]) {
       $("#extension-paused").toggle(falsy)
+
       expect(banner()?.hidden).toBe(true)
     }
 
     for (const truthy of [true, 1, "no", {}]) {
       $("#extension-paused").toggle(truthy)
+
       expect(banner()?.hidden).toBe(false)
     }
   })
@@ -117,17 +121,21 @@ describe("replace", () => {
 describe("toggleClass", () => {
   test("adds and removes a single class", () => {
     $("#version").toggleClass("marked", true)
+
     expect(classesOf("#version")).toContain("marked")
 
     $("#version").toggleClass("marked", false)
+
     expect(classesOf("#version")).not.toContain("marked")
   })
 
   test("applies every class in a list", () => {
     $("#version").toggleClass(["a", "b"], true)
+
     expect(classesOf("#version")).toEqual(expect.arrayContaining(["a", "b"]))
 
     $("#version").toggleClass(["a", "b"], 0)
+
     expect(classesOf("#version")).not.toContain("a")
     expect(classesOf("#version")).not.toContain("b")
   })
@@ -189,6 +197,7 @@ describe("updateUrls", () => {
     updateUrls(SITE_URL)
 
     expect(document.querySelectorAll<HTMLAnchorElement>("a[href]").length).toBeGreaterThan(0)
+
     for (const anchor of document.querySelectorAll<HTMLAnchorElement>("a[href]")) {
       expect(anchor.target).toBe("_blank")
     }

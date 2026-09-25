@@ -34,6 +34,7 @@ function servePage(page: Page) {
   chromeMock.scripting.executeScript = async (injection: unknown) => {
     const [arg] = (injection as { args: string[] }).args
     openedDuringCheck.push(isVerificationTab(nextTabId - 1))
+
     return [{ result: arg === "zapub_" ? page.body : page.meta }]
   }
 }
@@ -57,6 +58,7 @@ describe("verifySite", () => {
 
       expect(result).toMatchObject({ success: false, method: null, error: expect.stringContaining("dashboard") })
     }
+
     expect(chromeMock.tabs.removed).toEqual([])
   })
 
@@ -120,6 +122,7 @@ describe("verifySite", () => {
     servePage({ body: PUBLISHER_ID })
 
     await verifySite("https://site.test/", PUBLISHER_ID)
+
     const tabId = chromeMock.tabs.removed[0]
 
     expect(chromeMock.tabs.removed).toHaveLength(1)

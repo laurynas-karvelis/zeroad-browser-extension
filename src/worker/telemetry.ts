@@ -100,6 +100,7 @@ export class Telemetry {
 
   findPublisherEntryByUrl(url: string | undefined): Entry | undefined {
     const key = this.keyFor(url)
+
     return key === undefined ? undefined : this.map.get(key)
   }
 
@@ -135,14 +136,17 @@ export class Telemetry {
     if (!url) return undefined
 
     const hostname = getHostname(url)
+
     if (this.map.has(hostname)) return hostname
 
     const page = pageKey(url)
+
     return this.map.has(page) ? page : undefined
   }
 
   private clear() {
     this.map.clear()
+
     return this.save()
   }
 
@@ -183,6 +187,7 @@ export class Telemetry {
       this.save()
 
       eventBroker().emit(EVENT.TELEMETRY.PUBLISHER_ADDED, { publisherId })
+
       return
     }
 
@@ -206,6 +211,7 @@ export class Telemetry {
     if (this.map.has(hostname)) return
 
     const key = pageKey(url)
+
     if (!key || this.map.get(key)?.publisherId === publisherId) return
 
     // New, or the page now names a different publisher: its counters start over for the new one.

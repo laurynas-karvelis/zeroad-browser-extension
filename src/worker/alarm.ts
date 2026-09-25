@@ -14,6 +14,7 @@ export const schedule = {
    */
   async create(name: string, options: chrome.alarms.AlarmCreateInfo) {
     const existing = await chrome.alarms.get(name)
+
     if (existing && existing.periodInMinutes === options.periodInMinutes) return
 
     await chrome.alarms.create(name, options)
@@ -27,6 +28,7 @@ export const schedule = {
       if (!nameWhitelist.includes(alarm.name)) return
 
       log("debug", `[alarm] ${alarm.name} triggered`)
+
       return callback()
     })
 

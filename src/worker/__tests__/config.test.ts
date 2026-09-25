@@ -32,6 +32,7 @@ describe("getConfig", () => {
     chromeMock.management.installType = "normal"
 
     const config = await getConfig()
+
     expect(config.DEV_MODE).toBe(false)
     expect(config.BASE_URL).toBe("https://zeroad.network")
     expect(config.DATA_INGEST.INGEST_URL).toBe("https://api.zeroad.network/extension/telemetry")
@@ -41,6 +42,7 @@ describe("getConfig", () => {
     chromeMock.runtime.externalMatches.push("https://local.zeroad.network/*")
 
     const config = await getConfig()
+
     expect(config.DEV_MODE).toBe(true)
     expect(config.BASE_URL).toBe("https://local.zeroad.network")
     expect(config.DATA_INGEST.INGEST_URL).toBe("https://api.local.zeroad.network/extension/telemetry")
@@ -58,6 +60,7 @@ describe("getConfig", () => {
 
     try {
       const config = await getConfig()
+
       expect(config.DEV_MODE).toBe(true)
       expect(config.BASE_URL).toBe("https://local.zeroad.network")
     } finally {

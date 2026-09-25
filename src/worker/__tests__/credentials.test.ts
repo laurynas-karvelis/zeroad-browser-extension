@@ -10,6 +10,7 @@ const state = {
   visitorToken: undefined as string | undefined,
   testAccess: undefined as WebsiteTestAccess | undefined,
 }
+
 mock.module("../extension", () => ({
   extension: () => ({
     ready: state.ready,
@@ -39,6 +40,7 @@ const POOL_ALARM = "TOKEN_POOL_CHECK_ALARM"
 
 // Created at import, before the per-test reset clears every alarm.
 await Bun.sleep(0)
+
 const poolAlarmAtStartup = chromeMock.alarms.peek().get(POOL_ALARM)
 const MINUTE = 60 * 1000
 const HOUR = 60 * MINUTE
@@ -85,10 +87,12 @@ describe("credentials", () => {
       visitorToken: "signed",
       expiresAt: Date.now() + HOUR,
     }
+
     fetchSpy.mockResolvedValue(
       jsonResponse({ payload: { user: { extensionToken: "ext-1" }, testAccess: state.testAccess } })
     )
     await chromeMock.alarms.onAlarm.dispatch({ name: EXPIRY_ALARM, scheduledTime: Date.now() })
+
     expect(JSON.parse((fetchSpy.mock.calls[0][1] as RequestInit).body as string)).toEqual({
       options: { hostname: "publisher.test", planName: "freedom" },
     })
@@ -98,10 +102,12 @@ describe("credentials", () => {
   test("hourly sync receives account closure without waiting for subscription expiry", async () => {
     const received = mock(() => {})
     eventBroker().on(EVENT.EXTENSION.PAYLOAD_RECEIVED, received)
+
     const data = syncPayload()
     const payload = { ...data.payload, user: { ...data.payload.user, firstName: null, accountClosed: true } }
     fetchSpy.mockResolvedValue(jsonResponse({ payload }))
     await chromeMock.alarms.fire(POOL_ALARM)
+
     expect(received).toHaveBeenCalledWith(payload)
   })
 
@@ -109,6 +115,7 @@ describe("credentials", () => {
     state.extensionToken = "demo"
     state.visitorToken = "demo-visitor"
     await chromeMock.alarms.fire(POOL_ALARM)
+
     expect(fetchSpy).not.toHaveBeenCalled()
   })
 
@@ -119,8 +126,10 @@ describe("credentials", () => {
       visitorToken: "signed",
       expiresAt: Date.now() + HOUR,
     }
+
     fetchSpy.mockResolvedValue(jsonResponse({}, 403))
     await chromeMock.alarms.onAlarm.dispatch({ name: EXPIRY_ALARM, scheduledTime: Date.now() })
+
     expect(state.testAccess).toBeUndefined()
     expect(state.extensionToken).toBe("ext-1")
     expect(alarms().has(RETRY_ALARM)).toBe(true)
@@ -133,20 +142,24 @@ describe("credentials", () => {
       visitorToken: "signed",
       expiresAt: Date.now() + HOUR,
     }
+
     state.testAccess = access
     const received = mock(() => {})
     eventBroker().on(EVENT.EXTENSION.PAYLOAD_RECEIVED, received)
+
     let resolveResponse!: (response: Response) => void
     fetchSpy.mockReturnValue(
       new Promise<Response>((resolve) => {
         resolveResponse = resolve
       })
     )
+
     const renewing = chromeMock.alarms.onAlarm.dispatch({ name: EXPIRY_ALARM, scheduledTime: Date.now() })
     await Bun.sleep(0)
     state.testAccess = undefined
     resolveResponse(jsonResponse({ payload: { user: { extensionToken: "ext-1" }, testAccess: access } }))
     await renewing
+
     expect(received).not.toHaveBeenCalled()
   })
 
@@ -200,12 +213,14 @@ describe("credentials", () => {
     test("fetches a fresh payload and hands it on", async () => {
       const body = syncPayload()
       fetchSpy.mockResolvedValue(jsonResponse(body))
+
       const received = mock()
       eventBroker().on(EVENT.EXTENSION.PAYLOAD_RECEIVED, received)
 
       await chromeMock.alarms.fire(EXPIRY_ALARM)
 
       const [url, init] = fetchSpy.mock.calls[0] as [string, RequestInit]
+
       expect(url).toBe("https://zeroad.network/extension/sync")
       expect((init.headers as Record<string, string>).Authorization).toBe("Bearer ext-1")
       expect(received).toHaveBeenCalledWith(body.payload)
@@ -241,11 +256,13 @@ describe("credentials", () => {
       state.ready = new Promise((resolve) => {
         finishLoading = resolve
       })
+
       const reset = mock()
       eventBroker().on(EVENT.EXTENSION.REQUEST_RESET, reset)
 
       const renewal = chromeMock.alarms.fire(EXPIRY_ALARM)
       await Bun.sleep(0)
+
       expect(fetchSpy).not.toHaveBeenCalled()
 
       finishLoading()
@@ -278,6 +295,7 @@ describe("credentials", () => {
     for (const [description, body] of cases) {
       test(`stores ${description} and keeps retrying, without signing out`, async () => {
         fetchSpy.mockResolvedValue(jsonResponse(body))
+
         const received = mock()
         const reset = mock()
         eventBroker().on(EVENT.EXTENSION.PAYLOAD_RECEIVED, received)
@@ -296,6 +314,7 @@ describe("credentials", () => {
   describe("retrying", () => {
     test("backs off from a minute to hourly, since renewal payments take hours to land", async () => {
       fetchSpy.mockResolvedValue(jsonResponse({ error: "nope" }, 500))
+
       const delays: number[] = []
 
       for (let attempt = 0; attempt < 6; attempt++) {
@@ -308,6 +327,7 @@ describe("credentials", () => {
 
     test("a rejected token signs the extension out", async () => {
       fetchSpy.mockResolvedValue(jsonResponse({}, 403))
+
       const reset = mock()
       eventBroker().on(EVENT.EXTENSION.REQUEST_RESET, reset)
 
@@ -319,6 +339,7 @@ describe("credentials", () => {
 
     test("a server error is retried, never treated as a rejected token", async () => {
       fetchSpy.mockResolvedValue(jsonResponse({}, 500))
+
       const reset = mock()
       eventBroker().on(EVENT.EXTENSION.REQUEST_RESET, reset)
 
@@ -330,6 +351,7 @@ describe("credentials", () => {
 
     test("stops polling after about three days but stays signed in", async () => {
       fetchSpy.mockResolvedValue(jsonResponse({}, 500))
+
       const reset = mock()
       eventBroker().on(EVENT.EXTENSION.REQUEST_RESET, reset)
       await chromeMock.storage.local.set({ renewalAttempts: 75 })
@@ -354,6 +376,7 @@ describe("credentials", () => {
     test("does not request subscriber credentials for demo access", async () => {
       state.visitorToken = "demo-token"
       await credentials().maintainTokenPool()
+
       expect(pool.refresh).not.toHaveBeenCalled()
     })
 

@@ -88,13 +88,16 @@ type StoredPool = {
 const toBase64Url = (bytes: Uint8Array) => {
   let binary = ""
   for (let index = 0; index < bytes.length; index++) binary += String.fromCharCode(bytes[index])
+
   return btoa(binary).replace(/\+/g, "-").replace(/\//g, "_").replace(/=+$/, "")
 }
 
 const fromBase64Url = (value: string) => {
   const binary = atob(value.replace(/-/g, "+").replace(/_/g, "/"))
   const bytes = new Uint8Array(binary.length)
+
   for (let index = 0; index < binary.length; index++) bytes[index] = binary.charCodeAt(index)
+
   return bytes
 }
 
@@ -127,6 +130,7 @@ class TokenPool {
   /** Unspent credentials remaining, for the popup and for deciding whether to refresh early. */
   async size() {
     const pool = await this.load()
+
     return this.isUsable(pool) ? pool.unused.length : 0
   }
 
@@ -162,6 +166,7 @@ class TokenPool {
 
   private async fetchBatch() {
     const extensionToken = extension().getExtensionToken()
+
     if (!extensionToken) throw new Error("Cannot refresh the token pool without an extension token")
 
     const keyPairs = await Promise.all(Array.from({ length: BATCH_SIZE }, () => generateEphemeralKeyPair()))
@@ -217,6 +222,7 @@ class TokenPool {
    */
   tokenFor(hostname: Hostname): Promise<string | undefined> {
     const pending = this.bindingByHostname.get(hostname)
+
     if (pending) return pending
 
     const binding = this.bind(hostname).finally(() => this.bindingByHostname.delete(hostname))
@@ -227,15 +233,18 @@ class TokenPool {
 
   private async bind(hostname: Hostname): Promise<string | undefined> {
     const pool = await this.load()
+
     if (!this.isUsable(pool)) return undefined
 
     const existing = pool.bound[hostname]
+
     if (existing && existing.expiresAt > nowSeconds()) return existing.token
 
     const credential = pool.unused.pop()
 
     if (!credential) {
       log("debug", "[token-pool]", "exhausted, cannot bind", hostname)
+
       return undefined
     }
 
@@ -250,6 +259,7 @@ class TokenPool {
   /** Hostnames already carrying a token, so their injection rules can be reinstated after a restart. */
   async boundHostnames(): Promise<Hostname[]> {
     const pool = await this.load()
+
     return this.isUsable(pool) ? Object.keys(pool.bound) : []
   }
 }

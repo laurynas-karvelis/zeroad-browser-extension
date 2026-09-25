@@ -21,6 +21,7 @@ function trustedSiteHostnames(): string[] {
     .flatMap((entry) => entry.matches || [])
     .flatMap((match) => {
       const hostname = getHostname(match)
+
       return hostname ? [hostname] : []
     })
 }
@@ -58,11 +59,13 @@ function onSiteMessage<T = unknown, P = unknown>(
 
       if (!trustedSiteHostnames().includes(getHostname(sender.url))) {
         log("warn", "[messaging]", "Rejected message from untrusted origin:", sender.url)
+
         return
       }
 
       if (message?.command === eventName) {
         log("debug", "[messaging]", "site message", eventName, "from", sender.url)
+
         return callback(message)
       }
     })
@@ -73,6 +76,7 @@ function onSiteMessage<T = unknown, P = unknown>(
 
       log("debug", "[messaging]", "external message", eventName, "from", sender?.origin || sender?.url)
       respondWith(callback(message), sendResponse)
+
       return true
     })
   }
@@ -89,10 +93,12 @@ function onPopupMessage<T = unknown, P = unknown>(
 
     if (!isFromExtensionPage(sender)) {
       log("warn", "[messaging]", "Rejected popup command from", sender?.url)
+
       return false
     }
 
     respondWith(callback(message), sendResponse)
+
     return true
   })
 }
@@ -122,11 +128,13 @@ class Messaging {
     // Opening the popup can be what wakes the worker, so its state is read only once it is back.
     onPopupMessage(EVENT.POPUP.GET_EXTENSION_DATA, async () => {
       await extension().ready
+
       return extension().getExtensionData()
     })
     onPopupMessage(EVENT.POPUP.PUSH_TELEMETRY_REQUEST, async () => eventBroker().emit(EVENT.TELEMETRY.PUSH))
     onPopupMessage(EVENT.POPUP.IS_EXTENSION_PAUSED, async () => {
       await extension().ready
+
       return extension().isPaused()
     })
     onPopupMessage(EVENT.POPUP.EXTENSION_PAUSE_REQUEST, () => extension().pause())
@@ -173,7 +181,9 @@ class Messaging {
         userAgent: navigator.userAgent,
         reply: "PONG" as const,
       }
+
       log("debug", "[messaging]", "PING -> PONG", response.version)
+
       return response
     })
 
@@ -192,6 +202,7 @@ class Messaging {
       await extension().ready
       const response = await verifySite(message.payload?.url, extension().getExtensionData().user?.publisherId)
       log("debug", "[messaging]", "verifySite", response)
+
       return response
     })
   }

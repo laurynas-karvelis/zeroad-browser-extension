@@ -43,6 +43,7 @@ async function fakeAuthority() {
           message.set(fromBase64Url(encodedKey), 30)
 
           const signature = await crypto.subtle.sign({ name: "Ed25519" }, keyPair.privateKey, message)
+
           return Buffer.from(new Uint8Array(signature)).toString("base64url")
         })
       )
@@ -59,6 +60,7 @@ let fetchSpy: ReturnType<typeof spyOn<typeof globalThis, "fetch">>
 function respondWith(build: (publicKeys: string[]) => Promise<unknown> | unknown) {
   fetchSpy.mockImplementation((async (_url, init) => {
     lastRequestBody = JSON.parse(String((init as RequestInit).body))
+
     const payload = await build(lastRequestBody?.publicKeys ?? [])
 
     return new Response(JSON.stringify({ payload }), {
@@ -102,6 +104,7 @@ describe("tokenPool", () => {
     test("asks for the same number every time, whatever the demand was", async () => {
       // Sizing the request to demand would tell the platform how much this subscriber browses
       await tokenPool().refresh()
+
       for (const hostname of ["a.test", "b.test", "c.test"]) await tokenPool().tokenFor(hostname)
 
       await tokenPool().refresh()
@@ -128,6 +131,7 @@ describe("tokenPool", () => {
     test("refuses a batch of the wrong size", async () => {
       respondWith(async (publicKeys) => {
         const batch = await authority.sign(publicKeys, nowSeconds() + HOUR)
+
         return { ...batch, signatures: batch.signatures.slice(0, 10) }
       })
 
@@ -155,6 +159,7 @@ describe("tokenPool", () => {
     test("discards the previous batch, so two anonymity sets never mix", async () => {
       await tokenPool().refresh()
       await tokenPool().tokenFor("publisher.test")
+
       expect(await tokenPool().boundHostnames()).toEqual(["publisher.test"])
 
       await tokenPool().refresh()
@@ -364,6 +369,7 @@ describe("tokenPool", () => {
     await tokenPool().refresh()
     await tokenPool().tokenFor("one.test")
     await tokenPool().tokenFor("two.test")
+
     const refreshed = mock()
     eventBroker().on(EVENT.TOKEN_POOL.REFRESHED, refreshed)
 

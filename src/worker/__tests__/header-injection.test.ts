@@ -24,11 +24,14 @@ mock.module("../token-pool", () => ({
     async tokenFor(hostname: string) {
       if (pool.binding) await pool.binding
       if (pool.exhausted) return undefined
+
       const existing = pool.tokens.get(hostname)
+
       if (existing) return existing
 
       const token = `token-for-${hostname}`
       pool.tokens.set(hostname, token)
+
       return token
     },
     async boundHostnames() {
@@ -69,6 +72,7 @@ describe("headerInjection", () => {
     pool.binding = new Promise<void>((resolve) => {
       finishBinding = resolve
     })
+
     const firstReset = headerInjection().reset()
     await Bun.sleep(0)
     state.subscription = {
@@ -77,9 +81,11 @@ describe("headerInjection", () => {
       visitorToken: "test-token",
       expiresAt: Date.now() + 86400000,
     }
+
     const testReset = headerInjection().reset()
     finishBinding()
     await Promise.all([firstReset, testReset])
+
     expect(headerInjection().installedHostnames()).toEqual(["publisher.test"])
     expect(rules()).toHaveLength(1)
     expect(headerOf(rules()[0]).value).toBe("test-token")
@@ -93,9 +99,11 @@ describe("headerInjection", () => {
         hostname: "demo.zeroad.network",
         visitorToken: "demo-visitor-token",
       }
+
       pool.exhausted = true
 
       await headerInjection().reset()
+
       expect(rules()).toHaveLength(1)
       expect(headerOf(rules()[0]).value).toBe("demo-visitor-token")
       expect(await headerInjection().enableForHostname("another.test")).toBeUndefined()
@@ -129,6 +137,7 @@ describe("headerInjection", () => {
       expect(rules()).toHaveLength(2)
 
       const values = rules().map((rule) => headerOf(rule).value)
+
       expect(new Set(values).size).toBe(2)
       expect(rules().map((rule) => rule.id)).toEqual([...new Set(rules().map((rule) => rule.id))])
     })
@@ -229,6 +238,7 @@ describe("headerInjection", () => {
 
     test("removing an unknown hostname is a no-op", async () => {
       await headerInjection().enableForHostname("one.test")
+
       const callsBefore = chromeMock.declarativeNetRequest.updateSessionRuleCalls.length
 
       await headerInjection().removeRuleForHostname("never-seen.test")

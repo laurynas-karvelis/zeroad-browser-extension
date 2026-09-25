@@ -13,12 +13,15 @@
 
     if (!trustedOriginHostnames || trustedOriginHostnames.length === 0) {
       console.error("[content.js] No trusted origins configured!")
+
       return
     }
 
     const originHostname = new URL(event.origin).hostname
+
     if (!trustedOriginHostnames.includes(originHostname)) {
       console.warn("[content.js] Rejected message from untrusted origin:", originHostname)
+
       return
     }
 

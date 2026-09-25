@@ -5,6 +5,7 @@ import { arraysEqual, getHostname, httpPost, isValidUrl } from "../utils"
 describe("arraysEqual", () => {
   test("compares by identity, length and element order", () => {
     const same = [1, 2]
+
     expect(arraysEqual(same, same)).toBe(true)
     expect(arraysEqual(["a", "b"], ["a", "b"])).toBe(true)
     expect(arraysEqual(["a", "b"], ["b", "a"])).toBe(false)
@@ -81,7 +82,9 @@ describe("httpPost", () => {
     const result = await httpPost<{ payload: { ok: boolean } }>("https://api.test/x", "token-123", { a: 1 })
 
     expect(result).toEqual({ payload: { ok: true } })
+
     const [url, init] = fetchSpy.mock.calls[0] as [string, RequestInit]
+
     expect(url).toBe("https://api.test/x")
     expect(init.method).toBe("POST")
     expect(init.body).toBe('{"a":1}')
@@ -95,6 +98,7 @@ describe("httpPost", () => {
     await httpPost("https://api.test/x", "", {})
 
     const [, init] = fetchSpy.mock.calls[0] as [string, RequestInit]
+
     expect((init.headers as Record<string, string>).Authorization).toBeUndefined()
   })
 

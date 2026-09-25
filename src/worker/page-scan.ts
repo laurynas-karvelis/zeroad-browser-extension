@@ -14,9 +14,11 @@ const PUBLISHER_META_NAME = PUBLISHER_HEADER.toLowerCase()
 async function runInPage<T>(tabId: number, func: (...args: string[]) => T, args: string[]): Promise<T | undefined> {
   try {
     const [injection] = await chrome.scripting.executeScript({ target: { tabId }, func, args })
+
     return injection?.result as T | undefined
   } catch (error) {
     log("warn", "[page-scan]", "Could not read the page", error)
+
     return undefined
   }
 }
@@ -50,9 +52,11 @@ export function readBodyPublisherId(tabId: number): Promise<string | undefined> 
 
       const bodyText = document.body?.innerText || ""
       const schemeAt = bodyText.toLowerCase().indexOf(scheme.toLowerCase())
+
       if (schemeAt === -1) return undefined
 
       const random = bodyText.slice(schemeAt + scheme.length).match(/^[A-Za-z0-9]+/)
+
       return random ? bodyText.slice(schemeAt, schemeAt + scheme.length) + random[0] : undefined
     },
     [PUBLISHER_ID_SCHEME]

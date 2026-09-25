@@ -158,6 +158,7 @@ class TrackedTabs {
     if (this.focused?.tabId === tab.id) return
 
     this.flushActive()
+
     if (tab.id) this.setFocused({ tabId: tab.id, url: tab.url, since: Date.now() })
   }
 
@@ -165,6 +166,7 @@ class TrackedTabs {
     if (!this.focused) return
 
     const { url, since } = this.focused
+
     if (telemetry().hasPublisherEntryByUrl(url)) telemetry().addDuration(url, Math.floor(Date.now() - since))
   }
 
@@ -194,6 +196,7 @@ const helpers = {
   PUBLISHER_SITE_HEADER_NAME: PUBLISHER_HEADER.toLocaleLowerCase(),
   testPublisherHeaderValue(url: string, headerValue: string | undefined, source: "header" | "meta") {
     const publisherId = parsePublisherHeader(headerValue)
+
     if (!publisherId) return
 
     eventBroker().emit<TabTrackerPublisherDetectedData>(EVENT.TAB_TRACKER.PUBLISHER_DETECTED, {
@@ -211,9 +214,11 @@ const helpers = {
     if (!tab.id || !tab.url) return
 
     const metaValue = await readMetaPublisherValue(tab.id)
+
     if (parsePublisherHeader(metaValue)) return helpers.testPublisherHeaderValue(tab.url, metaValue, "meta")
 
     const bodyPublisherId = await readBodyPublisherId(tab.id)
+
     if (!isValidPublisherId(bodyPublisherId)) return
 
     eventBroker().emit<TabTrackerPublisherDetectedData>(EVENT.TAB_TRACKER.PUBLISHER_DETECTED, {
@@ -269,7 +274,9 @@ chrome.tabs.onUpdated.addListener(async (tabId, changeInfo, tab) => {
     await new Promise((resolve) => setTimeout(resolve, IN_PAGE_NAVIGATION_SETTLE_MS))
 
     const current = await chrome.tabs.get(tabId).catch(() => undefined)
+
     if (current?.url === tab.url) await recordPageView(tab)
+
     return
   }
 
@@ -283,12 +290,14 @@ chrome.windows.onFocusChanged.addListener(async (windowId) => {
   // The user moved to another application - the page is no longer being read.
   if (windowId === chrome.windows.WINDOW_ID_NONE) {
     trackedTabs().flushActive()
+
     return
   }
 
   // A special case: the `onActivated` event won't fire when switching between windows, so this is
   // the only signal that the user moved their attention to whatever is active over here.
   const [tab] = await chrome.tabs.query({ active: true, currentWindow: true })
+
   if (tab) trackedTabs().register(tab, TAB_REGISTER_SOURCE.ON_WINDOW_FOCUS_CHANGED)
 })
 
@@ -300,6 +309,7 @@ chrome.idle.onStateChanged.addListener(async (state) => {
 
   if (state === "locked") {
     trackedTabs().flushActive()
+
     return
   }
 
@@ -307,9 +317,11 @@ chrome.idle.onStateChanged.addListener(async (state) => {
 
   // Unlocked: resume on the active tab, but only if the browser is what the user came back to.
   const lastFocusedWindow = await chrome.windows.getLastFocused()
+
   if (!lastFocusedWindow.focused) return
 
   const [tab] = await chrome.tabs.query({ active: true, windowId: lastFocusedWindow.id })
+
   if (tab) trackedTabs().register(tab, TAB_REGISTER_SOURCE.ON_SCREEN_UNLOCKED)
 })
 

@@ -30,6 +30,7 @@ export function isValidPublisherId(value: string | null | undefined): value is s
 /** Two publisher ids match when both are well-formed and exactly equal. */
 export function publisherIdsMatch(a: string | null | undefined, b: string | null | undefined): boolean {
   if (!isValidPublisherId(a) || !isValidPublisherId(b)) return false
+
   return a === b
 }
 
@@ -42,5 +43,6 @@ export function parsePublisherHeader(headerValue: string | null | undefined): st
   if (!headerValue) return undefined
 
   const publisherId = headerValue.split(";")[0].trim()
+
   return isValidPublisherId(publisherId) ? publisherId : undefined
 }

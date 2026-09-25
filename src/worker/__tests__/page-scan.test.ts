@@ -15,6 +15,7 @@ function loadPage(html: string) {
 
   chromeMock.scripting.executeScript = async (injection: unknown) => {
     const { func, args } = injection as Injection
+
     return [{ result: func(...args) as string | undefined }]
   }
 }

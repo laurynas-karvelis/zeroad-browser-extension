@@ -29,6 +29,7 @@ export function $(selector: string, within?: Selection): Selection {
 
   const each = (apply: (element: HTMLElement) => void): Selection => {
     elements.forEach(apply)
+
     return selection
   }
 

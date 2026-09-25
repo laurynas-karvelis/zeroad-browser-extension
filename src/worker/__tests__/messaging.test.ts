@@ -12,6 +12,7 @@ const extensionStub = {
   pause: mock(async () => "paused"),
   resume: mock(async () => "resumed"),
 }
+
 mock.module("../extension", () => ({ extension: () => extensionStub }))
 
 const notifyIfActiveTabIsPublisher = mock()
@@ -39,6 +40,7 @@ async function askPopupChannel(command: string, sender: object = POPUP_SENDER) {
   })
   // Handlers reply asynchronously, after awaiting the worker's stored state.
   await Bun.sleep(0)
+
   return { response, keptChannelOpen: results.filter(Boolean).length }
 }
 
@@ -49,6 +51,7 @@ async function askSiteChannel(message: object) {
   })
   // Handlers reply asynchronously, after awaiting the worker's stored state.
   await Bun.sleep(0)
+
   return response
 }
 
@@ -56,6 +59,7 @@ describe("popup messages", () => {
   beforeEach(() => {
     chromeMock.runtime.sentMessages = []
     notifyIfActiveTabIsPublisher.mockClear()
+
     for (const spy of [
       extensionStub.getExtensionData,
       extensionStub.isPaused,
@@ -82,9 +86,11 @@ describe("popup messages", () => {
     expect((await askPopupChannel(EVENT.POPUP.IS_EXTENSION_PAUSED)).response).toBe(false)
 
     await askPopupChannel(EVENT.POPUP.EXTENSION_PAUSE_REQUEST)
+
     expect(extensionStub.pause).toHaveBeenCalled()
 
     await askPopupChannel(EVENT.POPUP.EXTENSION_RESUME_REQUEST)
+
     expect(extensionStub.resume).toHaveBeenCalled()
   })
 
@@ -148,12 +154,15 @@ describe("popup messages", () => {
     extensionStub.ready = new Promise((resolve) => {
       finishLoading = resolve
     })
+
     const pending = askPopupChannel(EVENT.POPUP.GET_EXTENSION_DATA)
 
     await Bun.sleep(0)
+
     expect(extensionStub.getExtensionData).not.toHaveBeenCalled()
 
     finishLoading()
+
     expect((await pending).response).toMatchObject({ user: { firstName: "Ada" } })
     extensionStub.ready = Promise.resolve()
   })
@@ -198,6 +207,7 @@ describe("site messages over the Chrome external channel", () => {
 
   test("reports failure when the extension could not install demo access", async () => {
     extensionStub.sync.mockResolvedValueOnce(false)
+
     expect(
       await askSiteChannel({ command: EVENT.WEBSITE.SYNC_CLIENT_DATA, payload: { user: { extensionToken: "demo" } } })
     ).toBe(false)

@@ -69,6 +69,7 @@ class Extension {
 
   hasPaidSubscription() {
     const subscription = this.state.subscription
+
     return !!subscription && !subscription.hostname && subscription.expiresAt > Date.now()
   }
 
@@ -93,6 +94,7 @@ class Extension {
     await this.ready
     this.state.isHeaderInjectionPaused = true
     await chrome.storage.local.set<StoredPause>({ isHeaderInjectionPaused: true })
+
     return headerInjection().removeAllRules()
   }
 
@@ -100,6 +102,7 @@ class Extension {
     await this.ready
     this.state.isHeaderInjectionPaused = false
     await chrome.storage.local.remove<StoredPause>(["isHeaderInjectionPaused"])
+
     return headerInjection().reset()
   }
 
@@ -109,13 +112,16 @@ class Extension {
 
   async sync(payload: ExtensionSyncData): Promise<boolean> {
     await this.ready
+
     if (!payload?.user?.extensionToken) return false
 
     await this.reload(payload)
 
     const { subscription } = this.getExtensionData()
+
     if (subscription?.visitorToken) {
       await headerInjection().reset()
+
       if (!subscription.hostname || !headerInjection().installedHostnames().includes(subscription.hostname))
         return false
     }
@@ -151,10 +157,12 @@ class Extension {
     // A payload can arrive straight from the website, so it is not trusted to be well-formed.
     if (!user?.extensionToken) {
       log("warn", "[extension]", "Ignoring a sync payload that carries no extension token")
+
       return
     }
 
     eventBroker().emit(EVENT.EXTENSION.ACCESS_WILL_CHANGE)
+
     const previousToken = this.state.user?.extensionToken
 
     if (previousToken && previousToken !== user.extensionToken) {

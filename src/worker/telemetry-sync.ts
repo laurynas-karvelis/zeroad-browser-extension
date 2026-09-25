@@ -34,18 +34,23 @@ class TelemetrySync {
     if (!extension().hasPaidSubscription()) {
       // Kept rather than discarded: a renewal that lands late makes it sendable again.
       log("warn", "[telemetry-sync]", "Inactive subscription. Skip telemetry push.")
+
       return
     }
 
     const extensionToken = extension().getExtensionToken()
+
     if (!extensionToken) {
       log("warn", "[telemetry-sync]", "Extension token is empty. Skip telemetry push.")
+
       return
     }
 
     const observations = telemetry().export()
+
     if (!observations.length) {
       log("warn", "[telemetry-sync]", "No useful telemetry data. Skip telemetry push.")
+
       return
     }
 

@@ -9,6 +9,7 @@ const state = {
   extensionToken: "ext-1" as string | undefined,
   expiresAt: Date.now() + HOUR,
 }
+
 mock.module("../extension", () => ({
   extension: () => ({
     ready: Promise.resolve(),
@@ -71,6 +72,7 @@ describe("telemetrySync", () => {
     await telemetrySync().push()
 
     const [url, init] = fetchSpy.mock.calls[0] as [string, RequestInit]
+
     expect(url).toBe("https://api.zeroad.network/extension/telemetry")
     expect((init.headers as Record<string, string>).Authorization).toBe("Bearer ext-1")
     expect(JSON.parse(init.body as string)).toEqual({

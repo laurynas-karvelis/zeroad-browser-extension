@@ -56,6 +56,7 @@ class HeaderInjection {
     this.resetting ??= this.resetPendingRules().finally(() => {
       this.resetting = undefined
     })
+
     return this.resetting
   }
 
@@ -72,8 +73,10 @@ class HeaderInjection {
     if (!(await this.shouldInject())) return
 
     const { subscription } = extension().getExtensionData()
+
     if (subscription?.visitorToken && subscription.hostname) {
       await this.enableForHostname(subscription.hostname)
+
       return
     }
 
@@ -94,6 +97,7 @@ class HeaderInjection {
     await this.restoreRuleIds()
 
     const ruleId = this.ruleIdByHostname.get(hostname)
+
     if (ruleId === undefined) return
 
     this.ruleIdByHostname.delete(hostname)
@@ -112,10 +116,12 @@ class HeaderInjection {
     await this.restoreRuleIds()
 
     const { subscription } = extension().getExtensionData()
+
     if (subscription?.hostname && subscription.hostname !== hostname) return undefined
     if (subscription?.visitorToken && !subscription.hostname) return undefined
 
     const token = subscription?.visitorToken || (await tokenPool().tokenFor(hostname))
+
     if (!token) return undefined
 
     const ruleId = this.ruleIdByHostname.get(hostname) ?? this.nextRuleId++
@@ -155,6 +161,7 @@ class HeaderInjection {
   private async shouldInject() {
     // A paused extension stays paused no matter who asks for a rule to go up
     await extension().ready
+
     return !extension().isPaused() && extension().isSubscriptionActive()
   }
 
@@ -174,6 +181,7 @@ class HeaderInjection {
     this.restoredRuleIds ??= chrome.declarativeNetRequest.getSessionRules().then((rules) => {
       for (const rule of rules) {
         const hostname = hostnameFromUrlFilter(rule.condition.urlFilter)
+
         if (hostname && !this.ruleIdByHostname.has(hostname)) this.ruleIdByHostname.set(hostname, rule.id)
         this.nextRuleId = Math.max(this.nextRuleId, rule.id + 1)
       }

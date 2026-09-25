@@ -39,10 +39,12 @@ function first(selector: string): HTMLElement | null {
  */
 export function isShown(selector: string): boolean {
   let element = first(selector)
+
   if (!element) return false
 
   while (element) {
     if (element.hidden) return false
+
     element = element.parentElement
   }
 
@@ -53,10 +55,13 @@ export function isShown(selector: string): boolean {
 export function shownCount(selector: string): number {
   return [...document.querySelectorAll<HTMLElement>(selector)].filter((element) => {
     let node: HTMLElement | null = element
+
     while (node) {
       if (node.hidden) return false
+
       node = node.parentElement
     }
+
     return true
   }).length
 }

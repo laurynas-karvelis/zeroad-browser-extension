@@ -16,6 +16,7 @@ export const worker = {
       chrome.runtime.sendMessage({ command }, (response) => {
         if (chrome.runtime.lastError) {
           reject(new Error(chrome.runtime.lastError.message || "The worker could not be reached"))
+
           return
         }
 
@@ -23,6 +24,7 @@ export const worker = {
         // the popup makes on a command result reads a failure as a "yes".
         if (isErrorResponse(response)) {
           reject(new Error(response.error))
+
           return
         }
 
