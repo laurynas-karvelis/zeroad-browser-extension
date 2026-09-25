@@ -51,7 +51,9 @@ describe("getConfig", () => {
       manifest_version: 3,
       name: "Zero Ad Network",
       version: "1.2.3",
-      content_scripts: [{ matches: ["https://zeroad.network/*", "https://local.zeroad.network/*"], js: ["js/content.js"] }],
+      content_scripts: [
+        { matches: ["https://zeroad.network/*", "https://local.zeroad.network/*"], js: ["js/content.js"] },
+      ],
     })
 
     try {

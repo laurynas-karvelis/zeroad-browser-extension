@@ -3,7 +3,8 @@ import { ExtensionError } from "./error"
 // Development builds allow messaging from the local HTTPS frontend.
 export async function inDevMode() {
   const manifest = chrome.runtime.getManifest()
-  const matches = manifest.externally_connectable?.matches ?? manifest.content_scripts?.flatMap((entry) => entry.matches)
+  const matches =
+    manifest.externally_connectable?.matches ?? manifest.content_scripts?.flatMap((entry) => entry.matches)
   if (!matches?.includes("https://local.zeroad.network/*")) return false
   return (await chrome.management.getSelf()).installType === "development"
 }

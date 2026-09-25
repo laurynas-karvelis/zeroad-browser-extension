@@ -55,7 +55,7 @@ describe("Telemetry persistence", () => {
 
   test("an acknowledged push is persisted, so a sent batch is never counted twice", async () => {
     const entry = { publisherId: "client-c", source: "header" as const, views: 2, duration: 200 }
-    await chromeMock.storage.local.seed({ telemetry: { "c.test": entry } })
+    chromeMock.storage.local.seed({ telemetry: { "c.test": entry } })
     const telemetry = new Telemetry()
     await telemetry.ready
 
@@ -65,7 +65,7 @@ describe("Telemetry persistence", () => {
   })
 
   test("acknowledging keeps whatever was recorded while the push was in flight", async () => {
-    await chromeMock.storage.local.seed({
+    chromeMock.storage.local.seed({
       telemetry: { "d.test": { publisherId: "client-d", source: "header", views: 2, duration: 200 } },
     })
     const telemetry = new Telemetry()
@@ -80,7 +80,7 @@ describe("Telemetry persistence", () => {
   })
 
   test("`ready` resolves only after the stored map is in place", async () => {
-    await chromeMock.storage.local.seed({
+    chromeMock.storage.local.seed({
       telemetry: { "e.test": { publisherId: "client-e", source: "header", views: 1, duration: 1 } },
     })
 
@@ -96,7 +96,7 @@ describe("Telemetry persistence", () => {
   })
 
   test("usage recorded before the stored map is read is merged in, not overwritten", async () => {
-    await chromeMock.storage.local.seed({
+    chromeMock.storage.local.seed({
       telemetry: { "f.test": { publisherId: "client-f", source: "header", views: 1, duration: 100 } },
     })
 

@@ -4,8 +4,8 @@
   const CONTENT_JS_LOOKUP = "js/content.js"
   const trustedOriginHostnames = browser.runtime
     .getManifest()
-    .content_scripts?.find((entry) => entry.js?.[0].endsWith(CONTENT_JS_LOOKUP))
-    ?.matches.map((trustedOrigin) => new URL(trustedOrigin).hostname)
+    .content_scripts?.find((entry) => entry.js?.[0]?.endsWith(CONTENT_JS_LOOKUP))
+    ?.matches?.map((trustedOrigin) => new URL(trustedOrigin).hostname)
 
   // Listen for messages to proxy to the extension background worker
   window.addEventListener("message", async (event) => {

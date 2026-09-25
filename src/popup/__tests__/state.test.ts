@@ -139,7 +139,8 @@ describe("a member with an active subscription", () => {
   test("only contains Freedom membership details", async () => {
     await new UserState(member, subscription()).render()
 
-    const content = document.querySelector(".subscription-valid")!
+    const content = document.querySelector(".subscription-valid")
+    if (!content) throw new Error("Missing membership details")
     expect(content.textContent).toContain("Freedom")
     expect(content.textContent).not.toContain("Clean Web")
     expect(content.textContent).not.toContain("One Pass")

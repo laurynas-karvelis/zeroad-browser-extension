@@ -218,6 +218,7 @@ function SubscriberControls() {
           turns out to be a publisher site - see `updateUrls` in `dom.ts`. */}
       <a
         id="report-site-btn"
+        role="link"
         class="btn-outline theme-danger"
         hidden
         data-href="/report/site"
