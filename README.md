@@ -7,15 +7,19 @@
 
 ## Project setup
 
-Under project's root directory install required dependencies:
+Source builds require a Bun workspace with the `@styles` dependency available.
+Install dependencies from the workspace root:
 
 ```sh
 bun install
 ```
 
+Prebuilt Chrome and Firefox ZIPs are available from successful GitHub Actions runs
+in the `browser-extensions` artifact.
+
 ## Build & package
 
-To build all final browser extensions, run:
+From the extension directory, build all browser targets:
 
 ```sh
 bun run build

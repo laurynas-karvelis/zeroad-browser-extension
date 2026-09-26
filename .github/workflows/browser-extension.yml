@@ -1,39 +1,79 @@
 name: Browser Extension
 
 on:
+  push:
+  pull_request:
   workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: extension-${{ github.ref }}
+  cancel-in-progress: true
 
 jobs:
   build:
+    # Fork PRs cannot access the private shared styles. Review and test them on a local branch.
+    if: github.event_name != 'pull_request' || github.event.pull_request.head.repo.full_name == github.repository
     runs-on: ubuntu-latest
+    timeout-minutes: 5
+    defaults:
+      run:
+        working-directory: workspace/apps/browser-extension
 
     steps:
-      - name: Set up Bun
-        uses: oven-sh/setup-bun@v2
-        with:
-          bun-version: 1.4.2
+      - name: Check shared workspace access is configured
+        env:
+          BETTER_WEB_READ_TOKEN: ${{ secrets.BETTER_WEB_READ_TOKEN }}
+        working-directory: .
+        run: test -n "$BETTER_WEB_READ_TOKEN"
 
-      - name: Checkout code
-        uses: actions/checkout@v6
+      - name: Checkout shared styles
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          repository: laurynas-karvelis/better-web
+          ref: ${{ vars.BETTER_WEB_REF || 'main' }}
+          token: ${{ secrets.BETTER_WEB_READ_TOKEN }}
+          persist-credentials: false
+          path: workspace
+          sparse-checkout: packages/styles
+
+      - name: Checkout extension under test
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          path: workspace/apps/browser-extension
+          persist-credentials: false
+
+      - name: Set up Bun
+        uses: oven-sh/setup-bun@0c5077e51419868618aeaa5fe8019c62421857d6 # v2.2.0
+        with:
+          bun-version: "1.4.2"
+
+      - name: Prepare minimal build workspace
+        working-directory: workspace
+        # The monorepo lock describes all apps, including other submodules. This standalone
+        # build resolves only the extension and styles manifests, which have no shared lock.
+        run: |
+          bun --no-env-file -e 'await Bun.write("package.json", JSON.stringify({private: true, workspaces: ["apps/browser-extension", "packages/styles"]}))'
+          rm -f bun.lock
 
       - name: Install dependencies
-        run: |
-          bun install --frozen-lockfile
+        working-directory: workspace
+        run: bun --no-env-file install
 
       - name: Run tests
-        run: |
-          bun run test
+        run: bun --no-env-file test --isolate
 
       - name: Build app
-        run: |
-          bun run build
+        run: bun --no-env-file run build
 
       - name: Package extension
-        run: |
-          bun run package
+        run: bun --no-env-file run package
 
-      - name: Upload all zip files
-        uses: actions/upload-artifact@v7
+      - name: Upload browser packages
+        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
         with:
           name: browser-extensions
-          path: ./targets/**/*.zip
+          path: workspace/apps/browser-extension/targets/**/*.zip
+          if-no-files-found: error
