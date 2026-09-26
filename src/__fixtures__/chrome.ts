@@ -121,6 +121,8 @@ export function createChromeMock() {
       getManifest: () => ({
         version: mock.runtime.manifestVersion,
         externally_connectable: { matches: mock.runtime.externalMatches },
+        icons: { 128: "images/logo.png" },
+        action: { default_icon: { 128: "images/logo-gray.png" } },
       }),
       getURL: (path: string) => `chrome-extension://test-extension-id/${path.replace(/^\.?\//, "")}`,
       setUninstallURL: (url: string) => {
@@ -161,11 +163,11 @@ export function createChromeMock() {
 
     action: {
       badgeText: "",
-      icons: [] as { tabId?: number; path: string }[],
+      icons: [] as { tabId?: number; path: Record<string, string> }[],
       async setBadgeText({ text }: { text: string }) {
         mock.action.badgeText = text
       },
-      async setIcon({ tabId, path }: { tabId?: number; path: string }) {
+      async setIcon({ tabId, path }: { tabId?: number; path: Record<string, string> }) {
         mock.action.icons.push({ tabId, path })
       },
     },

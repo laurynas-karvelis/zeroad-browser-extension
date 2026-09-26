@@ -4,13 +4,9 @@
     "extension_name": "browser-extension",
     "name": "Zero Ad Network",
     "description": "Ad-free browsing and included paid content on participating sites. Support publishers with one paid Freedom membership.",
-    "icons": {
-      "512": "images/dove.png"
-    },
     "permissions": ["scripting", "declarativeNetRequest", "webRequest", "storage", "alarms", "tabs", "idle"],
     "popup": {
-      "default_popup": "popup.html",
-      "default_icon": "images/dove-gray-128.png"
+      "default_popup": "popup.html"
     },
     "background_script": "js/worker.js",
     "hosts": ["https://*/*", "http://*/*"],
@@ -22,12 +18,12 @@
     "homepage_url": "${root.homepage_url}",
     "name": "${root.name}",
     "description": "${root.description}",
-    "icons": { "$eval": "root.icons" },
+    "icons": { "128": "images/logo.png" },
     "permissions": { "$eval": "root.permissions" },
     "host_permissions": { "$eval": "root.hosts" },
     "action": {
       "default_popup": "${root.popup.default_popup}",
-      "default_icon": "${root.popup.default_icon}"
+      "default_icon": { "128": "images/logo-gray.png" }
     },
     "background": {
       "service_worker": "${root.background_script}",
@@ -43,7 +39,7 @@
     "homepage_url": "${root.homepage_url}",
     "name": "${root.name}",
     "description": "${root.description}",
-    "icons": { "$eval": "root.icons" },
+    "icons": { "48": "images/logo.svg" },
     "permissions": { "$eval": "root.permissions" },
     "host_permissions": { "$eval": "root.hosts" },
     "background": {
@@ -51,7 +47,7 @@
     },
     "action": {
       "default_popup": "${root.popup.default_popup}",
-      "default_icon": "${root.popup.default_icon}"
+      "default_icon": { "48": "images/logo-gray.svg" }
     },
     "content_scripts": [
       {

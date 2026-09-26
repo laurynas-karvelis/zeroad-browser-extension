@@ -1,11 +1,11 @@
-import { beforeEach, describe, expect, test } from "bun:test"
+import { beforeEach, describe, expect, spyOn, test } from "bun:test"
 import { chromeMock } from "../../__fixtures__/chrome"
 
 const { EVENT, eventBroker } = await import("../event-broker")
 const { badge } = await import("../badge")
 
-const ACTIVE_ICON = "chrome-extension://test-extension-id/images/dove-128.png"
-const INACTIVE_ICON = "chrome-extension://test-extension-id/images/dove-gray-128.png"
+const ACTIVE_ICON = { 128: "chrome-extension://test-extension-id/images/logo.png" }
+const INACTIVE_ICON = { 128: "chrome-extension://test-extension-id/images/logo-gray.png" }
 
 describe("badge", () => {
   beforeEach(() => {
@@ -64,6 +64,25 @@ describe("badge", () => {
     expect(chromeMock.action.icons).toEqual([
       { tabId: 1, path: ACTIVE_ICON },
       { tabId: 2, path: INACTIVE_ICON },
+    ])
+  })
+
+  test("uses whichever icon format the target's manifest declares", () => {
+    const manifestSpy = spyOn(chrome.runtime, "getManifest").mockReturnValue({
+      manifest_version: 3,
+      name: "Zero Ad Network",
+      version: "1.0.0",
+      icons: { 48: "images/logo.svg" },
+      action: { default_icon: { 48: "images/logo-gray.svg" } },
+    })
+
+    eventBroker().emit(EVENT.TAB_TRACKER.IS_ACTIVE_TAB_PUBLISHER, { tabId: 1, isPublisher: true })
+    eventBroker().emit(EVENT.TAB_TRACKER.IS_ACTIVE_TAB_PUBLISHER, { tabId: 2, isPublisher: false })
+    manifestSpy.mockRestore()
+
+    expect(chromeMock.action.icons).toEqual([
+      { tabId: 1, path: { 48: "chrome-extension://test-extension-id/images/logo.svg" } },
+      { tabId: 2, path: { 48: "chrome-extension://test-extension-id/images/logo-gray.svg" } },
     ])
   })
 })

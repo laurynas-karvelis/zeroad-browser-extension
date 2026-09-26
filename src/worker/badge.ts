@@ -1,25 +1,25 @@
 import { EVENT, eventBroker } from "./event-broker"
 import type { TabTrackActiveTabEventData } from "./tab-tracker"
 
-enum BADGE_ICON {
-  ACTIVE = "./images/dove-128.png",
-  INACTIVE = "./images/dove-gray-128.png",
-}
-
 class Badge {
   private badgeTimeout?: ReturnType<typeof setTimeout>
 
   constructor() {
     eventBroker()
       .on(EVENT.EXTENSION.SYNCED, () => this.setText("ON"))
-      .on<TabTrackActiveTabEventData>(EVENT.TAB_TRACKER.IS_ACTIVE_TAB_PUBLISHER, ({ tabId, isPublisher }) => {
-        if (isPublisher) this.setIcon(tabId, BADGE_ICON.ACTIVE)
-        else this.setIcon(tabId, BADGE_ICON.INACTIVE)
-      })
+      .on<TabTrackActiveTabEventData>(EVENT.TAB_TRACKER.IS_ACTIVE_TAB_PUBLISHER, ({ tabId, isPublisher }) =>
+        this.setIcon(tabId, isPublisher)
+      )
   }
 
-  private setIcon(tabId: number | undefined, icon: BADGE_ICON) {
-    return chrome.action.setIcon({ tabId, path: chrome.runtime.getURL(icon) })
+  // Each target's manifest lists icons in a format its browser accepts (Chrome rejects SVG). The color
+  // extension icon marks publishers; the grayscale action default marks everything else.
+  private setIcon(tabId: number | undefined, isPublisher: boolean) {
+    const manifest = chrome.runtime.getManifest() as chrome.runtime.ManifestV3
+    const icon = (isPublisher ? manifest.icons : manifest.action?.default_icon) as chrome.runtime.ManifestIcons
+    const path = Object.fromEntries(Object.entries(icon).map(([size, file]) => [size, chrome.runtime.getURL(file)]))
+
+    return chrome.action.setIcon({ tabId, path })
   }
 
   async setText(text: string, durationMs = 5000) {
