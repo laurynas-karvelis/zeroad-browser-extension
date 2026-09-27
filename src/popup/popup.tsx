@@ -13,10 +13,10 @@ const VERSION = "{VERSION}"
 
 // Keep aligned with SUBSCRIBER_ENTITLEMENTS in the main site's @config package.
 const PLAN_FEATURES = [
-  "Advertisements removed",
-  "Cookie consent screen removed",
-  "3rd party non-functional trackers removed",
-  "Marketing dialogs, including newsletter signup popups, removed",
+  "Ads removed",
+  "Cookie consent screens removed",
+  "Non-essential third-party trackers removed",
+  "Marketing popups removed, including newsletter prompts",
   "Access to the publisher’s base subscription or a custom level of paid content or features",
 ]
 
@@ -150,7 +150,7 @@ function PublisherFeatures() {
       hidden
     >
       <hr />
-      <h5>This site offers</h5>
+      <h5>This website offers</h5>
       <ul class="list-unstyled check-list d-flex flex-column gap-3 mb-0">
         <li
           class="clean_web"
@@ -193,7 +193,7 @@ function DeveloperDetails() {
         id="developer-hostname-label"
         class="badge theme-warning"
       >
-        Site: <span></span>
+        Website: <span></span>
       </span>
       <p class="small fg-secondary mt-2">
         Access is limited to this hostname. Test visits do not contribute to publisher earnings.
@@ -230,8 +230,8 @@ function SubscriberControls() {
         class="btn-outline theme-danger"
         hidden
         data-href="/report/site"
-        title="Report a site issue"
-        aria-label="Report a site issue"
+        title="Report a website issue"
+        aria-label="Report a website issue"
       >
         <Icon name="bug" />
       </a>
