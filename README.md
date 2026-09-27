@@ -31,6 +31,37 @@ To create final zip artifact files:
 bun run package
 ```
 
+## Release
+
+Pushing a tag builds, tests and submits the extension to both stores. The tag must
+equal the `package.json` version (for example `1.0.2`), or the build fails before
+anything is submitted:
+
+```sh
+git tag 1.0.2
+git push origin 1.0.2
+```
+
+Both stores review each version before it goes live. A version number can be
+submitted only once per store, so bump `package.json` before retrying a rejected
+release.
+
+The workflow reads credentials from two GitHub environments:
+
+- `chrome-web-store`
+  - Variables: `CHROME_PUBLISHER_ID` and `CHROME_EXTENSION_ID`.
+  - Secrets: `CHROME_CLIENT_ID`, `CHROME_CLIENT_SECRET` and `CHROME_REFRESH_TOKEN`,
+    from an OAuth client with the `https://www.googleapis.com/auth/chromewebstore`
+    scope. Set its consent screen to **In production**: refresh tokens for apps in
+    testing expire after 7 days.
+- `firefox-add-ons`
+  - Secrets: `AMO_JWT_ISSUER` and `AMO_JWT_SECRET`, from the
+    [AMO API keys page](https://addons.mozilla.org/developers/addon/api/key/).
+
+Firefox submissions include a source archive (this extension, `packages/styles` and
+the generated lockfile) plus build instructions, because Mozilla reviewers must be
+able to rebuild bundled code. Only Mozilla's reviewers can access it.
+
 ## Local development
 
 Build an extension that accepts sync messages from `https://local.zeroad.network`:

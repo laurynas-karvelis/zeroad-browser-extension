@@ -10,7 +10,8 @@ permissions:
 
 concurrency:
   group: extension-${{ github.ref }}
-  cancel-in-progress: true
+  # Never interrupt a store submission halfway.
+  cancel-in-progress: ${{ !startsWith(github.ref, 'refs/tags/') }}
 
 jobs:
   build:
@@ -45,6 +46,15 @@ jobs:
           path: workspace/apps/browser-extension
           persist-credentials: false
 
+      - name: Check release tag matches package version
+        if: startsWith(github.ref, 'refs/tags/')
+        run: |
+          version=$(jq -r .version package.json)
+          if [ "$GITHUB_REF_NAME" != "$version" ]; then
+            echo "::error::Tag $GITHUB_REF_NAME does not match package.json version $version"
+            exit 1
+          fi
+
       - name: Set up Bun
         uses: oven-sh/setup-bun@0c5077e51419868618aeaa5fe8019c62421857d6 # v2.2.0
         with:
@@ -77,3 +87,103 @@ jobs:
           name: browser-extensions
           path: workspace/apps/browser-extension/targets/**/*.zip
           if-no-files-found: error
+
+      # AMO requires reviewers to rebuild bundled code, including the private styles package.
+      - name: Package Firefox review source
+        if: startsWith(github.ref, 'refs/tags/')
+        working-directory: workspace
+        run: >
+          zip -qr "$RUNNER_TEMP/firefox-source.zip" package.json bun.lock packages/styles apps/browser-extension
+          -x '*/node_modules/*' '*/.git' '*/.git/*' 'apps/browser-extension/build/*' 'apps/browser-extension/targets/*'
+
+      - name: Upload Firefox review source
+        if: startsWith(github.ref, 'refs/tags/')
+        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
+        with:
+          name: firefox-source
+          path: ${{ runner.temp }}/firefox-source.zip
+          if-no-files-found: error
+
+  publish-chrome:
+    needs: build
+    if: startsWith(github.ref, 'refs/tags/')
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    environment: chrome-web-store
+
+    steps:
+      - name: Download browser packages
+        uses: actions/download-artifact@3e5f45b2cfb9172054b4087a40e8e0b5a5461e7c # v8.0.1
+        with:
+          name: browser-extensions
+
+      - name: Upload and publish to Chrome Web Store
+        # Explicit bash enables pipefail, so a failed curl stops the step.
+        shell: bash
+        env:
+          CLIENT_ID: ${{ secrets.CHROME_CLIENT_ID }}
+          CLIENT_SECRET: ${{ secrets.CHROME_CLIENT_SECRET }}
+          REFRESH_TOKEN: ${{ secrets.CHROME_REFRESH_TOKEN }}
+          ITEM: publishers/${{ vars.CHROME_PUBLISHER_ID }}/items/${{ vars.CHROME_EXTENSION_ID }}
+        run: |
+          api=https://chromewebstore.googleapis.com
+          token=$(curl -sS --fail-with-body https://oauth2.googleapis.com/token \
+            -d client_id="$CLIENT_ID" -d client_secret="$CLIENT_SECRET" \
+            -d refresh_token="$REFRESH_TOKEN" -d grant_type=refresh_token | jq -r .access_token)
+          echo "::add-mask::$token"
+          auth="Authorization: Bearer $token"
+
+          state=$(curl -sS --fail-with-body -H "$auth" -X POST -T chrome/chrome-*.zip "$api/upload/v2/$ITEM:upload" | jq -r .uploadState)
+          # Large packages finish processing asynchronously; the job timeout bounds this wait.
+          while [ "$state" = IN_PROGRESS ]; do
+            sleep 5
+            state=$(curl -sS --fail-with-body -H "$auth" "$api/v2/$ITEM:fetchStatus" | jq -r .lastAsyncUploadState)
+          done
+          if [ "$state" != SUCCEEDED ]; then
+            echo "::error::Chrome Web Store upload ended in state $state"
+            exit 1
+          fi
+
+          curl -sS --fail-with-body -H "$auth" --json '{}' "$api/v2/$ITEM:publish"
+
+  publish-firefox:
+    needs: build
+    if: startsWith(github.ref, 'refs/tags/')
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    environment: firefox-add-ons
+
+    steps:
+      - name: Download browser packages
+        uses: actions/download-artifact@3e5f45b2cfb9172054b4087a40e8e0b5a5461e7c # v8.0.1
+        with:
+          name: browser-extensions
+
+      - name: Download Firefox review source
+        uses: actions/download-artifact@3e5f45b2cfb9172054b4087a40e8e0b5a5461e7c # v8.0.1
+        with:
+          name: firefox-source
+
+      - name: Set up Bun
+        uses: oven-sh/setup-bun@0c5077e51419868618aeaa5fe8019c62421857d6 # v2.2.0
+        with:
+          bun-version: "1.4.2"
+
+      - name: Submit to Firefox Add-ons
+        env:
+          WEB_EXT_API_KEY: ${{ secrets.AMO_JWT_ISSUER }}
+          WEB_EXT_API_SECRET: ${{ secrets.AMO_JWT_SECRET }}
+        run: |
+          unzip -q firefox/firefox-*.zip -d "$RUNNER_TEMP/firefox"
+          cat > "$RUNNER_TEMP/amo-metadata.json" <<'JSON'
+          {
+            "version": {
+              "approval_notes": "Build on Ubuntu 24.04 with Bun 1.4.2, jq, rsync and zip installed. From the source archive root:\n\nbun --no-env-file install --frozen-lockfile\ncd apps/browser-extension\nbun --no-env-file run build\n\nThe Firefox build is written to apps/browser-extension/targets/firefox/."
+            }
+          }
+          JSON
+
+          # Listed versions are queued for Mozilla review; the job does not wait for approval.
+          bunx web-ext@10.7.0 sign --channel=listed --approval-timeout=0 \
+            --source-dir="$RUNNER_TEMP/firefox" --artifacts-dir="$RUNNER_TEMP/web-ext" \
+            --upload-source-code=firefox-source.zip --amo-metadata="$RUNNER_TEMP/amo-metadata.json"
