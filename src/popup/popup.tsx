@@ -261,8 +261,8 @@ function SubscriberControls() {
         id="freedom-comparison-help"
         class="small fg-secondary mb-0"
       >
-        Compare websites with Freedom on or off. Applies to all websites; reload pages after switching. This toggle does
-        not pause visit measurement or uploads.
+        Compare websites with Freedom on or off. Applies to all websites; reload pages after switching. Off also pauses
+        website discovery and visit measurement.
       </p>
     </div>
   )
@@ -364,8 +364,8 @@ export function Popup() {
               class="alert theme-warning"
               hidden
             >
-              Freedom is off on all websites. Turn it on and reload to request subscriber access again. Visit
-              measurement and uploads continue.
+              Freedom is off on all websites. Website discovery and visit measurement are paused; visits recorded
+              earlier still upload. Turn it on and reload to request subscriber access again.
             </div>
             <UnsubscribedSection />
             <SubscribedSection />

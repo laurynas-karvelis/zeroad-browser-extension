@@ -49,7 +49,7 @@ Activity sent to Zero Ad Network is linked to your account. It includes publishe
 
 The membership proof sent to a recognized partner website contains no account ID, name, or email. It is specific to that website and is sent over HTTPS.
 
-“Turn Freedom off” stops the extension requesting subscriber benefits on all websites. Reload pages after switching. Visit measurement and uploads continue; this is not a privacy pause, and a website's own login may keep you signed in.
+“Turn Freedom off” stops the extension requesting subscriber benefits on all websites and pauses website discovery and visit measurement. Visits recorded before that still upload. Reload pages after switching; a website's own login may keep you signed in.
 
 Install Zero Ad Network and connect your Freedom membership to start browsing and supporting participating sites.
 

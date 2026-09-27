@@ -91,7 +91,7 @@ describe("telemetrySync", () => {
     expect(acknowledge).toHaveBeenCalledWith(sent)
   })
 
-  test("continues uploading recorded usage while Freedom is off", async () => {
+  test("still uploads usage recorded before Freedom was turned off", async () => {
     state.paused = true
     await telemetrySync().push()
 

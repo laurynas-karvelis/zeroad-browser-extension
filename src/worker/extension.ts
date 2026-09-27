@@ -9,6 +9,7 @@ import { inDevMode } from "./utils"
 
 type StoredTestAccess = { websiteTest?: { extensionToken: string; access: WebsiteTestAccess } }
 
+// Named from when a pause only stopped header injection; kept so a pause stored before an update holds.
 type StoredPause = { isHeaderInjectionPaused?: boolean }
 
 class Extension {
@@ -16,8 +17,8 @@ class Extension {
     user?: UserExtensionData
     subscription?: SubscriptionExtensionData
     testAccess?: WebsiteTestAccess
-    isHeaderInjectionPaused: boolean
-  } = { isHeaderInjectionPaused: false }
+    paused: boolean
+  } = { paused: false }
 
   /**
    * Resolves once the stored state has been read back. The worker is usually woken by the very event it
@@ -74,7 +75,7 @@ class Extension {
   }
 
   canRecordUsage() {
-    return !this.state.testAccess && this.hasPaidSubscription()
+    return !this.state.paused && !this.state.testAccess && this.hasPaidSubscription()
   }
 
   async stopTesting() {
@@ -87,12 +88,18 @@ class Extension {
     await headerInjection().reset()
   }
 
-  // Stored, not just held in memory: the worker restarts constantly, and a pause that silently lifted
-  // itself within a minute would not be a pause.
+  /**
+   * Stops discovery, measurement and header injection. Usage recorded before the pause still uploads.
+   *
+   * Stored, not just held in memory: the worker restarts constantly, and a pause that silently lifted
+   * itself within a minute would not be a pause.
+   */
   async pause() {
     // Otherwise the initial load, still in flight, would overwrite the pause with the stored state
     await this.ready
-    this.state.isHeaderInjectionPaused = true
+    // Books the focused visit up to now, while it still counts
+    eventBroker().emit(EVENT.EXTENSION.ACCESS_WILL_CHANGE)
+    this.state.paused = true
     await chrome.storage.local.set<StoredPause>({ isHeaderInjectionPaused: true })
 
     return headerInjection().removeAllRules()
@@ -100,14 +107,16 @@ class Extension {
 
   async resume() {
     await this.ready
-    this.state.isHeaderInjectionPaused = false
+    // Drops the time spent paused, so the focused visit is measured from now on
+    eventBroker().emit(EVENT.EXTENSION.ACCESS_WILL_CHANGE)
+    this.state.paused = false
     await chrome.storage.local.remove<StoredPause>(["isHeaderInjectionPaused"])
 
     return headerInjection().reset()
   }
 
   isPaused() {
-    return this.state.isHeaderInjectionPaused
+    return this.state.paused
   }
 
   async sync(payload: ExtensionSyncData): Promise<boolean> {
@@ -138,7 +147,7 @@ class Extension {
     this.state.user = user
     this.state.subscription = subscription
     this.state.testAccess = websiteTest?.extensionToken === user?.extensionToken ? websiteTest?.access : undefined
-    this.state.isHeaderInjectionPaused = !!isHeaderInjectionPaused
+    this.state.paused = !!isHeaderInjectionPaused
 
     if (this.isSubscriptionActive()) {
       // Schedule for subscription data reload
@@ -200,7 +209,7 @@ class Extension {
   }
 
   private async reset() {
-    this.state = { isHeaderInjectionPaused: false }
+    this.state = { paused: false }
     await Promise.all([chrome.storage.local.clear(), chrome.storage.sync.clear(), chrome.alarms.clearAll()])
   }
 }

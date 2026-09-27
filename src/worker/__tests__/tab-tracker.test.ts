@@ -32,6 +32,7 @@ const verificationTabIds = new Set<number>()
 mock.module("../site-verification", () => ({ isVerificationTab: (tabId: number) => verificationTabIds.has(tabId) }))
 
 const { EVENT, eventBroker } = await import("../event-broker")
+const { extension } = await import("../extension")
 const { trackedTabs } = await import("../tab-tracker")
 
 type TabTrackActiveTabEventData = import("../tab-tracker").TabTrackActiveTabEventData
@@ -595,6 +596,29 @@ describe("welcome-header detection", () => {
     trackedTabs().flushActive()
     addViews.mockClear()
     chromeMock.scripting.executeScriptResult = [{ result: undefined }]
+  })
+
+  test("discovers and counts nothing while Freedom is off", async () => {
+    const paused = spyOn(extension(), "isPaused").mockReturnValue(true)
+    const seen = publisherDetections()
+    makePublisher("known.test")
+    chromeMock.scripting.executeScriptResult = [{ result: publisherValue }]
+    chromeMock.scripting.executeScriptCalls.length = 0
+
+    try {
+      await chromeMock.webRequest.onCompleted.dispatch({
+        url: "https://header.test/",
+        responseHeaders: [{ name: "Better-Web-Publisher", value: publisherValue }],
+      })
+      await chromeMock.tabs.onUpdated.dispatch(1, { status: "complete" }, tab(1, "https://meta.test/"))
+      await chromeMock.tabs.onUpdated.dispatch(2, { status: "complete" }, tab(2, "https://known.test/"))
+    } finally {
+      paused.mockRestore()
+    }
+
+    expect(seen).toEqual([])
+    expect(chromeMock.scripting.executeScriptCalls).toEqual([])
+    expect(addViews).not.toHaveBeenCalled()
   })
 
   describe("from a response header", () => {

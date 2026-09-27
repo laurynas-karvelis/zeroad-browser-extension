@@ -192,8 +192,9 @@ export const trackedTabs = () => singleton
 /** Handlers run only once every store they read is back from storage - see `extension().ready`. */
 const allReady = () => Promise.all([trackedTabs().ready, extension().ready, telemetry().ready])
 
+/** Discovery stops while Freedom is off: a paused extension reads no response headers or pages. */
 function canDiscoverPublisher(url: string | undefined) {
-  if (!url) return false
+  if (!url || extension().isPaused()) return false
 
   try {
     const { hostname, protocol } = new URL(url)
@@ -349,9 +350,12 @@ eventBroker().on<TabTrackerPublisherDetectedData>(EVENT.TAB_TRACKER.PUBLISHER_DE
 
 chrome.webRequest.onCompleted.addListener(
   async (details) => {
-    if (!canDiscoverPublisher(details.url) || isVerificationTab(details.tabId)) return
+    if (isVerificationTab(details.tabId)) return
 
     await allReady()
+
+    if (!canDiscoverPublisher(details.url)) return
+
     const publisherId = parsePublisherHeader(readPublisherHeader(details.responseHeaders))
 
     if (publisherId) announcePublisher(publisherId, "header", details.url)

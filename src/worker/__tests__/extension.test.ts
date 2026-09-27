@@ -345,6 +345,26 @@ describe("Extension", () => {
       expect(chromeMock.storage.local.peek().telemetry).toEqual(recordedUsage)
     })
 
+    test("stops usage recording, booking the visit up to the pause and dropping the time spent paused", async () => {
+      await extension().sync({
+        user: user(),
+        subscription: { ...subscription(), planName: SUBSCRIPTION_PLAN_NAME.FREEDOM },
+      })
+      const recordableAtCheckpoint: boolean[] = []
+      eventBroker().on(EVENT.EXTENSION.ACCESS_WILL_CHANGE, () =>
+        recordableAtCheckpoint.push(extension().canRecordUsage())
+      )
+
+      await extension().pause()
+
+      expect(extension().canRecordUsage()).toBe(false)
+
+      await extension().resume()
+
+      expect(extension().canRecordUsage()).toBe(true)
+      expect(recordableAtCheckpoint).toEqual([true, false])
+    })
+
     test("the pause is stored, so it survives the stored state being read back", async () => {
       // A sync re-reads everything from storage, exactly as a restarted worker does.
       await extension().pause()
