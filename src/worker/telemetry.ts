@@ -13,6 +13,11 @@ export type Entry = {
   url?: string
   views: number
   duration: number
+  /**
+   * Whether a view has been counted. Kept apart from `views`, which a push takes back to 0 while the
+   * visit that earned it goes on - time alone must not count that visit a second time.
+   */
+  viewed?: boolean
 }
 
 /**
@@ -131,6 +136,21 @@ export class Telemetry {
     return observations
   }
 
+  /**
+   * Drops entries with nothing left to send, so the map does not grow forever - the site is simply
+   * rediscovered on its next page load. An entry an open tab is on stays: a page can be read for hours
+   * without loading again, and its time could not be booked once its entry was gone.
+   */
+  async prune(openTabUrls: (string | undefined)[]) {
+    const inUse = new Set(openTabUrls.map((url) => this.keyFor(url)))
+    const idle = [...this.map].filter(([key, { views, duration }]) => !views && !duration && !inUse.has(key))
+
+    if (!idle.length) return
+
+    for (const [key] of idle) this.map.delete(key)
+    await this.save()
+  }
+
   /** The entry crediting `url`: its website if the hostname is one, otherwise its content page, if any. */
   private keyFor(url: string | undefined): EntryKey | undefined {
     if (!url) return undefined
@@ -159,15 +179,16 @@ export class Telemetry {
     const { telemetry } = await chrome.storage.local.get<{ telemetry: StoredTelemetryMap }>(["telemetry"])
 
     // Merged into, not swapped for, the in-memory map: an event can land before this read returns.
-    // Entries with nothing left to send are dropped - the site is simply rediscovered on its next visit.
+    // Idle entries are kept until `prune` knows which pages are still open.
     for (const [key, stored] of Object.entries(telemetry || {})) {
       const current = this.map.get(key)
 
       if (!current) {
-        if (stored.views || stored.duration) this.map.set(key, stored)
+        this.map.set(key, stored)
       } else if (current.publisherId === stored.publisherId) {
         current.views += stored.views
         current.duration += stored.duration
+        current.viewed ||= stored.viewed
       }
     }
 
@@ -197,6 +218,7 @@ export class Telemetry {
       entry.source = source
       entry.views = 0
       entry.duration = 0
+      entry.viewed = false
 
       this.save()
     } else if (source === "header" && entry.source !== "header") {
@@ -232,12 +254,10 @@ export class Telemetry {
 
     entry[key] += amount
 
-    if (key === "duration" && !entry.views) {
-      // After the subscription is applied while publishered sites are already loaded in tabs,
-      // it can be that duration will be bumped up, but the views haven't been set yet.
-      // Hence, set `views` to 1
-      entry.views = 1
-    }
+    // A publisher's page already open when the subscription is applied earns time before any page load
+    // is counted, so that time counts as its one view.
+    if (key === "duration" && !entry.viewed) entry.views ||= 1
+    entry.viewed = true
 
     this.save()
     eventBroker().emit(eventName, { publisherId: entry.publisherId, [key]: amount })

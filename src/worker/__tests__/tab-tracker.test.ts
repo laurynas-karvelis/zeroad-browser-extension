@@ -20,6 +20,7 @@ const telemetryStub = {
   findPublisherEntryByUrl: (url?: string) => publishers.get(hostOf(url)),
   addViews,
   addDuration,
+  prune: async () => {},
 }
 
 mock.module("../telemetry", () => ({ telemetry: () => telemetryStub }))

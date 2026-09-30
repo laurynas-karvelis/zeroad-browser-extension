@@ -15,8 +15,10 @@ const extensionStub = {
 
 mock.module("../extension", () => ({ extension: () => extensionStub }))
 
+let finishRestoringTabs = () => {}
 const notifyIfActiveTabIsPublisher = mock()
-mock.module("../tab-tracker", () => ({ trackedTabs: () => ({ notifyIfActiveTabIsPublisher }) }))
+const trackedTabsStub = { ready: Promise.resolve() as Promise<void>, notifyIfActiveTabIsPublisher }
+mock.module("../tab-tracker", () => ({ trackedTabs: () => trackedTabsStub }))
 
 mock.module("../telemetry", () => ({ telemetry: () => ({ map: new Map(), export: () => ({}) }) }))
 
@@ -116,6 +118,24 @@ describe("popup messages", () => {
     await askPopupChannel(EVENT.POPUP.CHECK_IF_ACTIVE_TAB_PUBLISHER_REQUEST)
 
     expect(notifyIfActiveTabIsPublisher).toHaveBeenCalled()
+  })
+
+  test("describes the current tab only once a waking worker has restored the open tabs", async () => {
+    trackedTabsStub.ready = new Promise((resolve) => {
+      finishRestoringTabs = resolve
+    })
+
+    const pending = askPopupChannel(EVENT.POPUP.CHECK_IF_ACTIVE_TAB_PUBLISHER_REQUEST)
+
+    await Bun.sleep(0)
+
+    expect(notifyIfActiveTabIsPublisher).not.toHaveBeenCalled()
+
+    finishRestoringTabs()
+    await pending
+
+    expect(notifyIfActiveTabIsPublisher).toHaveBeenCalled()
+    trackedTabsStub.ready = Promise.resolve()
   })
 
   test("exactly one handler claims a known command", async () => {
@@ -241,14 +261,18 @@ describe("events proxied to the popup", () => {
     chromeMock.runtime.sentMessages = []
   })
 
-  test("a subscription change tells the popup to reload", () => {
+  test("a change to the stored account tells the popup to reload", () => {
+    eventBroker().emit(EVENT.EXTENSION.CHANGED)
+
+    expect(chromeMock.runtime.sentMessages).toEqual([{ event: EVENT.MESSAGING.POPUP_RELOAD_REQUEST }])
+  })
+
+  test("a worker reading its stored subscription back does not reload the popup that woke it", () => {
+    // The popup already renders that very state; reloading it only renders it twice.
     eventBroker().emit(EVENT.EXTENSION.SUBSCRIPTION_ACTIVE)
     eventBroker().emit(EVENT.EXTENSION.SUBSCRIPTION_EXPIRED)
 
-    expect(chromeMock.runtime.sentMessages).toEqual([
-      { event: EVENT.MESSAGING.POPUP_RELOAD_REQUEST },
-      { event: EVENT.MESSAGING.POPUP_RELOAD_REQUEST },
-    ])
+    expect(chromeMock.runtime.sentMessages).toEqual([])
   })
 
   test("the active-tab verdict is forwarded with its data", () => {
@@ -262,7 +286,7 @@ describe("events proxied to the popup", () => {
   test("a closed popup is not an error", () => {
     chromeMock.runtime.lastError = { message: "Could not establish connection" }
 
-    expect(() => eventBroker().emit(EVENT.EXTENSION.SUBSCRIPTION_ACTIVE)).not.toThrow()
+    expect(() => eventBroker().emit(EVENT.EXTENSION.CHANGED)).not.toThrow()
 
     chromeMock.runtime.lastError = undefined
   })

@@ -68,18 +68,41 @@ describe("Telemetry", () => {
       expect(telemetry.map.get("a.test")).toEqual(entry("client-a", 2, 30))
     })
 
-    test("drops entries that carry no activity, so the map does not grow forever", async () => {
-      seedStored({ "stale.test": entry("client-a"), "busy.test": entry("client-b", 1, 0) })
+    test("keeps entries with nothing left to send, which only pruning against the open tabs may drop", async () => {
+      seedStored({ "idle.test": entry("client-a"), "busy.test": entry("client-b", 1, 0) })
 
       const telemetry = await createTelemetry()
 
-      expect([...telemetry.map.keys()]).toEqual(["busy.test"])
+      expect([...telemetry.map.keys()]).toEqual(["idle.test", "busy.test"])
     })
 
     test("starts empty when nothing was stored", async () => {
       const telemetry = await createTelemetry()
 
       expect(telemetry.map.size).toBe(0)
+    })
+  })
+
+  describe("prune", () => {
+    test("drops entries that carry no activity, so the map does not grow forever", async () => {
+      seedStored({ "idle.test": entry("client-a"), "busy.test": entry("client-b", 1, 0) })
+
+      const telemetry = await createTelemetry()
+      await telemetry.prune([])
+
+      expect([...telemetry.map.keys()]).toEqual(["busy.test"])
+      expect(Object.keys(chromeMock.storage.local.peek().telemetry as object)).toEqual(["busy.test"])
+    })
+
+    test("keeps an idle entry an open tab is on, so a page read after a push still has its time booked", async () => {
+      // A push takes the counters back to 0 while the page is still being read. Without its entry, the
+      // time spent on that page could not be booked until it loaded again.
+      seedStored({ "reading.test": entry("client-a"), "closed.test": entry("client-b") })
+
+      const telemetry = await createTelemetry()
+      await telemetry.prune(["https://reading.test/long-article", undefined])
+
+      expect([...telemetry.map.keys()]).toEqual(["reading.test"])
     })
   })
 
@@ -148,7 +171,7 @@ describe("Telemetry", () => {
         url: "https://a.test/",
       })
 
-      expect(telemetry.map.get("a.test")).toEqual(entry("new-client"))
+      expect(telemetry.map.get("a.test")).toEqual({ ...entry("new-client"), viewed: false })
     })
 
     test("addDuration accumulates milliseconds", async () => {
@@ -175,6 +198,23 @@ describe("Telemetry", () => {
       telemetry.addDuration("https://a.test/", 400)
 
       expect(telemetry.map.get("a.test")).toMatchObject({ views: 1, duration: 400 })
+    })
+
+    test("duration after a push does not count the same visit as another view", async () => {
+      // The push takes `views` back to 0 while the visit that earned it goes on.
+      const telemetry = await createTelemetry()
+      eventBroker().emit(EVENT.TAB_TRACKER.PUBLISHER_DETECTED, {
+        source: "header",
+        publisherId: "client-a",
+        url: "https://a.test/",
+      })
+      telemetry.addViews("https://a.test/")
+      telemetry.addDuration("https://a.test/", 400)
+      await telemetry.acknowledge(telemetry.export())
+
+      telemetry.addDuration("https://a.test/", 600)
+
+      expect(telemetry.export()).toEqual([observation("client-a", "a.test", 0, 600)])
     })
 
     test("ignores hostnames that are not publishers", async () => {
@@ -380,7 +420,7 @@ describe("Telemetry", () => {
       telemetry.addViews("https://a.test/")
       await telemetry.acknowledge(sent)
 
-      expect(telemetry.map.get("a.test")).toEqual(entry("client-b", 1, 0))
+      expect(telemetry.map.get("a.test")).toEqual({ ...entry("client-b", 1, 0), viewed: true })
     })
   })
 

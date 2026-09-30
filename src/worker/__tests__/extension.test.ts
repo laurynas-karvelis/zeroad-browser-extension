@@ -158,6 +158,26 @@ describe("Extension", () => {
       expect(synced).toHaveBeenCalled()
     })
 
+    test("announces a change only when the payload differs from what is stored", async () => {
+      // The hourly renewal check brings the same payload back; an open popup must not reload for it.
+      const payload = { user: user(), subscription: subscription() }
+      eventBroker().emit(EVENT.EXTENSION.PAYLOAD_RECEIVED, payload)
+      await Bun.sleep(0)
+
+      const changed = mock()
+      eventBroker().on(EVENT.EXTENSION.CHANGED, changed)
+
+      eventBroker().emit(EVENT.EXTENSION.PAYLOAD_RECEIVED, payload)
+      await Bun.sleep(0)
+
+      expect(changed).not.toHaveBeenCalled()
+
+      eventBroker().emit(EVENT.EXTENSION.PAYLOAD_RECEIVED, { user: user() })
+      await Bun.sleep(0)
+
+      expect(changed).toHaveBeenCalledTimes(1)
+    })
+
     test("a payload without a subscription takes the live one down", async () => {
       // Cancelling used to leave the old subscription in memory, so the Hello header kept
       // being injected with credentials the server had already withdrawn.

@@ -68,11 +68,11 @@ class TrackedTabs {
   // `storage.session`, since the worker is torn down mid-visit all the time.
   private focused?: FocusedVisit
 
-  /** Resolves once a focused visit persisted by an earlier worker has been restored. */
+  /** Resolves once the focused visit and the open tabs an earlier worker knew are restored. */
   readonly ready: Promise<void>
 
   constructor() {
-    this.ready = this.restoreFocus()
+    this.ready = this.restore()
   }
 
   notifyIfActiveTabIsPublisher(tab?: BrowserTab) {
@@ -123,8 +123,7 @@ class TrackedTabs {
       this.setFocused({ tabId: tab.id, url: tab.url, since: Date.now() })
     }
 
-    const trackedTab = { ...tab, publisher: telemetry().hasPublisherEntryByUrl(tab.url) }
-    this.map.set(tab.id, trackedTab)
+    const trackedTab = this.track(tab.id, tab)
 
     // A tab finishing its load says nothing about where the user is looking - only switching does.
     if (source !== TAB_REGISTER_SOURCE.ON_TAB_UPDATED) this.focus(tab)
@@ -153,6 +152,13 @@ class TrackedTabs {
     }
   }
 
+  private track(tabId: number, tab: chrome.tabs.Tab) {
+    const trackedTab = { ...tab, publisher: telemetry().hasPublisherEntryByUrl(tab.url) }
+    this.map.set(tabId, trackedTab)
+
+    return trackedTab
+  }
+
   private focus(tab: chrome.tabs.Tab) {
     // Re-focusing the same tab keeps its clock running instead of discarding the elapsed time.
     if (this.focused?.tabId === tab.id) return
@@ -178,11 +184,25 @@ class TrackedTabs {
       : chrome.storage.session.remove([FOCUSED_VISIT_STORAGE_KEY]))
   }
 
-  private async restoreFocus() {
-    const stored = await chrome.storage.session.get<{ focusedVisit?: FocusedVisit }>([FOCUSED_VISIT_STORAGE_KEY])
+  /**
+   * The tabs are read back from the browser rather than stored: a new worker has otherwise tracked none,
+   * and could not say whether the page the user is on belongs to a publisher.
+   */
+  private async restore() {
+    const [stored, tabs] = await Promise.all([
+      chrome.storage.session.get<{ focusedVisit?: FocusedVisit }>([FOCUSED_VISIT_STORAGE_KEY]),
+      chrome.tabs.query({}),
+      telemetry().ready,
+    ])
 
     // Whatever this worker has already seen is newer than what the last one left behind.
     this.focused ??= stored.focusedVisit
+
+    for (const tab of tabs) {
+      if (tab.id && !this.map.has(tab.id)) this.track(tab.id, tab)
+    }
+
+    await telemetry().prune(tabs.map((tab) => tab.url))
   }
 }
 

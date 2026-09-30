@@ -29,7 +29,7 @@ describe("Telemetry persistence", () => {
     await Bun.sleep(0)
 
     expect(storedTelemetry()).toEqual({
-      "a.test": { publisherId: "client-a", source: "header", views: 1, duration: 750 },
+      "a.test": { publisherId: "client-a", source: "header", views: 1, duration: 750, viewed: true },
     })
   })
 
@@ -50,6 +50,7 @@ describe("Telemetry persistence", () => {
       source: "header",
       views: 1,
       duration: 750,
+      viewed: true,
     })
   })
 

@@ -139,9 +139,12 @@ class Messaging {
     })
     onPopupMessage(EVENT.POPUP.EXTENSION_PAUSE_REQUEST, () => extension().pause())
     onPopupMessage(EVENT.POPUP.EXTENSION_RESUME_REQUEST, () => extension().resume())
-    onPopupMessage(EVENT.POPUP.CHECK_IF_ACTIVE_TAB_PUBLISHER_REQUEST, async () =>
+    // Opening the popup can be what wakes the worker, and the open tabs are only known once restored.
+    onPopupMessage(EVENT.POPUP.CHECK_IF_ACTIVE_TAB_PUBLISHER_REQUEST, async () => {
+      await trackedTabs().ready
+
       trackedTabs().notifyIfActiveTabIsPublisher()
-    )
+    })
   }
 
   proxyMessagesToPopup() {
@@ -160,8 +163,7 @@ class Messaging {
 
     // Send message to the popup
     eventBroker()
-      .on(EVENT.EXTENSION.SUBSCRIPTION_ACTIVE, reloadPopup)
-      .on(EVENT.EXTENSION.SUBSCRIPTION_EXPIRED, reloadPopup)
+      .on(EVENT.EXTENSION.CHANGED, reloadPopup)
       .on(EVENT.TAB_TRACKER.IS_ACTIVE_TAB_PUBLISHER, proxyIsActiveTabPublisherEvent)
   }
 

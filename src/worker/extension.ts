@@ -172,6 +172,7 @@ class Extension {
 
     eventBroker().emit(EVENT.EXTENSION.ACCESS_WILL_CHANGE)
 
+    const previousData = JSON.stringify(this.getExtensionData())
     const previousToken = this.state.user?.extensionToken
 
     if (previousToken && previousToken !== user.extensionToken) {
@@ -205,7 +206,10 @@ class Extension {
 
     // Always reload. Reloading only on a change left a cancelled or downgraded subscription live in
     // memory, so header injection kept running on credentials the server had already withdrawn.
-    return this.load()
+    await this.load()
+
+    // Announced only when it differs: the hourly renewal check brings the same payload back.
+    if (JSON.stringify(this.getExtensionData()) !== previousData) eventBroker().emit(EVENT.EXTENSION.CHANGED)
   }
 
   private async reset() {
