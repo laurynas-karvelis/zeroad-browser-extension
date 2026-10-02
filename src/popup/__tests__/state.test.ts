@@ -211,11 +211,12 @@ test("offers Stop testing only for explicit website test access", async () => {
 })
 
 describe("the pause control", () => {
-  test("offers Pause and no banner while the extension is running", async () => {
+  test("keeps Pause in a collapsed section while the extension is running", async () => {
     chromeMock.runtime.sendMessageResponses = { [EVENT.POPUP.IS_EXTENSION_PAUSED]: false }
 
     await new UserState(member, subscription()).render()
 
+    expect(document.querySelector<HTMLDetailsElement>("#freedom-controls")?.open).toBe(false)
     expect(isShown("#pause-btn")).toBe(true)
     expect(isShown("#resume-btn")).toBe(false)
     expect(isShown("#extension-paused")).toBe(false)
@@ -226,6 +227,7 @@ describe("the pause control", () => {
 
     await new UserState(member, subscription()).render()
 
+    expect(document.querySelector<HTMLDetailsElement>("#freedom-controls")?.open).toBe(true)
     expect(isShown("#resume-btn")).toBe(true)
     expect(isShown("#pause-btn")).toBe(false)
     expect(isShown("#extension-paused")).toBe(true)
@@ -249,9 +251,12 @@ describe("the pause control", () => {
     await new UserState(member, subscription()).render()
 
     chromeMock.runtime.sendMessageResponses = { [EVENT.POPUP.IS_EXTENSION_PAUSED]: false }
+    document.querySelector<HTMLButtonElement>("#resume-btn")?.focus()
     click("#resume-btn")
     await settle()
 
+    expect(document.querySelector<HTMLDetailsElement>("#freedom-controls")?.open).toBe(false)
+    expect(document.activeElement).toBe(document.querySelector("#freedom-controls summary"))
     expect(commandsSent()).toContain(EVENT.POPUP.EXTENSION_RESUME_REQUEST)
     expect(isShown("#pause-btn")).toBe(true)
     expect(isShown("#extension-paused")).toBe(false)

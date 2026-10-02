@@ -231,44 +231,53 @@ function PublisherSite() {
 
 function SubscriberControls() {
   return (
-    <section
-      class="popup-controls border-top bg-1 p-5"
-      aria-label="Browser extension"
+    <details
+      id="freedom-controls"
+      class="popup-controls accordion-item border-top bg-1"
     >
-      <div
-        id="extension-paused"
-        class="mb-3"
-        role="status"
-        hidden
-      >
-        <p class="fw-semibold mb-1">Freedom is off</p>
-        <p class="small fg-2 mb-0">While Freedom is off, the extension doesn’t discover publishers or record visits.</p>
+      <summary class="accordion-header px-5 py-3">
+        Browser extension
+        <Icon
+          name="chevron-down"
+          class="accordion-icon"
+        />
+      </summary>
+      <div class="px-5 pb-5">
+        <div
+          id="extension-paused"
+          class="mb-3"
+          role="status"
+          hidden
+        >
+          <p class="fw-semibold mb-0">Extension paused</p>
+        </div>
+        <button
+          type="button"
+          id="pause-btn"
+          class="btn-outline btn-sm theme-secondary"
+          hidden
+          aria-describedby="freedom-comparison-help"
+        >
+          <Icon name="circle-pause" /> Pause extension
+        </button>
+        <button
+          type="button"
+          id="resume-btn"
+          class="btn-solid btn-sm theme-primary"
+          hidden
+          aria-describedby="freedom-comparison-help"
+        >
+          <Icon name="circle-play" /> Resume extension
+        </button>
+        <p
+          id="freedom-comparison-help"
+          class="small fg-2 mt-3 mb-0"
+        >
+          Pausing stops membership proof, publisher discovery and visit measurement on all websites. Previously recorded
+          visit statistics still sync with Zero Ad Network. Reload pages after pausing or resuming.
+        </p>
       </div>
-      <button
-        type="button"
-        id="pause-btn"
-        class="btn-outline theme-secondary w-100"
-        hidden
-        aria-describedby="freedom-comparison-help"
-      >
-        <Icon name="circle-pause" /> Turn Freedom off
-      </button>
-      <button
-        type="button"
-        id="resume-btn"
-        class="btn-solid theme-primary w-100"
-        hidden
-        aria-describedby="freedom-comparison-help"
-      >
-        <Icon name="circle-play" /> Turn Freedom on
-      </button>
-      <p
-        id="freedom-comparison-help"
-        class="small fg-2 mt-3 mb-0"
-      >
-        It applies to every website. Reload the website after switching.
-      </p>
-    </section>
+    </details>
   )
 }
 

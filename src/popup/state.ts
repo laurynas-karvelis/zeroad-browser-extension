@@ -132,12 +132,13 @@ export class UserState {
   private async setupPauseResumeButtons() {
     const request = (command: EventType) => async (event: Event) => {
       const button = event.currentTarget as HTMLButtonElement
+      const hadFocus = document.activeElement === button
       button.disabled = true
 
       // A click handler is the one place nothing is awaiting us, so it owns its own failures.
       try {
         await worker.sendCommand(command)
-        await this.checkExtensionPaused()
+        await this.checkExtensionPaused(hadFocus)
         $("#popup-error").hide()
       } catch (error) {
         reportFailure(error)
@@ -152,12 +153,23 @@ export class UserState {
     await this.checkExtensionPaused()
   }
 
-  private async checkExtensionPaused() {
+  private async checkExtensionPaused(restoreFocus = false) {
     const isPaused = await worker.sendCommand<boolean>(EVENT.POPUP.IS_EXTENSION_PAUSED)
 
     $("#resume-btn").toggle(isPaused)
     $("#pause-btn").toggle(!isPaused)
 
     $("#extension-paused").toggle(isPaused)
+
+    const controls = document.querySelector<HTMLDetailsElement>("#freedom-controls")
+
+    if (controls) {
+      const focusWasInside =
+        controls.contains(document.activeElement) || (restoreFocus && document.activeElement === document.body)
+      controls.open = !!isPaused
+
+      // Resuming collapses the control; keep keyboard focus on its visible summary.
+      if (!isPaused && focusWasInside) controls.querySelector("summary")?.focus()
+    }
   }
 }
