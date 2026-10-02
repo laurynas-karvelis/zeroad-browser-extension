@@ -1,9 +1,21 @@
+@use "@styles/settings/config" as *;
+
 // Desktop popups size to the body; mobile browsers open a full tab instead.
 body {
   width: 380px;
 
   @media (pointer: coarse) {
     width: auto;
+  }
+}
+
+// Animating content height resizes the desktop popup window on every frame.
+// Keep the fade and chevron motion; mobile tabs can still animate the height.
+@media not (pointer: coarse) {
+  .accordion-item::details-content {
+    transition:
+      opacity $interaction-duration ease-in-out,
+      content-visibility $interaction-duration allow-discrete;
   }
 }
 
