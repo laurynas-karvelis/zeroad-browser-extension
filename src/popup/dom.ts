@@ -76,7 +76,7 @@ export function $(selector: string, within?: Selection): Selection {
 }
 
 export function setVersion(version: string) {
-  $("#version").replace({ VERSION: version })
+  $("#version").replace({ VERSION: version }).show()
 }
 
 /** Repoints the template's site-relative links at the real site, since the popup is its own origin. */

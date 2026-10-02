@@ -1,17 +1,15 @@
 import { EVENT, type EventType } from "../worker/event-broker"
 import { log } from "../worker/logger"
 import type { TabTrackActiveTabEventData } from "../worker/tab-tracker"
-import { SUBSCRIPTION_PLAN_LABEL, type SubscriptionExtensionData, type UserExtensionData } from "../worker/types"
+import type { SubscriptionExtensionData, UserExtensionData } from "../worker/types"
 import { getHostname } from "../worker/utils"
 import { from } from "./date"
 import { $ } from "./dom"
 import { worker } from "./worker"
 
-/**
- * The popup has no error surface of its own and a half-rendered popup is better than a blank one,
- * so a worker round-trip that fails is logged and the affected controls are simply left hidden.
- */
-function reportFailure(error: unknown) {
+export function reportFailure(error: unknown) {
+  $("#popup-loading").hide()
+  $("#popup-error").show()
   log("error", "[popup]", "Could not finish rendering", error)
 }
 
@@ -24,16 +22,14 @@ export class UserState {
 
   /** Resolves once the popup has settled, having reported rather than thrown any worker failure. */
   async render(): Promise<void> {
+    $("#popup-loading").hide()
+
     if (!this.user?.extensionToken) {
       // User is brand new or not signed in
       $(".guest").show()
 
       return
     }
-
-    $(".user.greeting").replace({
-      FIRST_NAME: this.user.firstName || "Member",
-    })
 
     // The subscription record itself is the signal now. There is no server-minted token to check for -
     // tokens are built locally from credentials - and an expired record is handled further in, where
@@ -62,14 +58,16 @@ export class UserState {
       const { isPublisher, url } = data
 
       const $reportBtn = $("#report-site-btn").toggle(isPublisher)
-      const $publisherFeatures = $("#publisher-features").toggle(isPublisher)
+      $("#publisher-site").toggle(isPublisher)
 
       if (!isPublisher) {
         return
       }
 
-      // One plan, so a participating site provides everything - there is nothing to strike through
-      $publisherFeatures.$("li").show()
+      $("#publisher-hostname").text(getHostname(url))
+      $("#publisher-kind").text(
+        data.telemetryEntry.source === "content" ? "Creator integration" : "Website integration"
+      )
 
       // set up report button
       const reportBaseUrl = $reportBtn.data("href")
@@ -98,11 +96,12 @@ export class UserState {
     }
 
     $("#link-pricing").hide()
-    $("#subscription-label span").text(SUBSCRIPTION_PLAN_LABEL[this.subscription.planName])
 
     $(`.${this.subscription.planName}`).show()
 
     if (this.subscription.hostname) {
+      $("#access-title").text(this.user?.extensionToken === "demo" ? "Demo access" : "Test access")
+      $("#membership-expired-details").hide()
       $("#developer-details").show()
       $("#developer-hostname-label span").text(this.subscription.hostname)
     }
@@ -110,12 +109,16 @@ export class UserState {
     if (this.testing) {
       $("#stop-testing-btn")
         .show()
-        .onClick(async () => {
+        .onClick(async (event) => {
+          const button = event.currentTarget as HTMLButtonElement
+          button.disabled = true
+
           try {
             await worker.sendCommand(EVENT.POPUP.STOP_TESTING)
             window.location.reload()
           } catch (error) {
             reportFailure(error)
+            button.disabled = false
           }
         })
     }
@@ -124,13 +127,19 @@ export class UserState {
   }
 
   private async setupPauseResumeButtons() {
-    const request = (command: EventType) => async () => {
+    const request = (command: EventType) => async (event: Event) => {
+      const button = event.currentTarget as HTMLButtonElement
+      button.disabled = true
+
       // A click handler is the one place nothing is awaiting us, so it owns its own failures.
       try {
         await worker.sendCommand(command)
         await this.checkExtensionPaused()
+        $("#popup-error").hide()
       } catch (error) {
         reportFailure(error)
+      } finally {
+        button.disabled = false
       }
     }
 

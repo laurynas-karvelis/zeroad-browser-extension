@@ -1,10 +1,22 @@
 import { jsx } from "hono/jsx"
-import { Bug, CirclePause, CirclePlay, type IconNode, LayoutDashboard } from "lucide"
+import {
+  ArrowRight,
+  ChevronDown,
+  CircleHelp,
+  CirclePause,
+  CirclePlay,
+  Flag,
+  type IconNode,
+  LayoutDashboard,
+} from "lucide"
 
 // Lucide (https://lucide.dev, ISC) inlined as SVG. Sized to 1em so the font-size utilities control the
 // icon size, and stroked with currentColor so it takes the colour of the text around it.
 const ICONS = {
-  bug: Bug,
+  "arrow-right": ArrowRight,
+  "chevron-down": ChevronDown,
+  "circle-help": CircleHelp,
+  flag: Flag,
   "circle-pause": CirclePause,
   "circle-play": CirclePlay,
   "layout-dashboard": LayoutDashboard,

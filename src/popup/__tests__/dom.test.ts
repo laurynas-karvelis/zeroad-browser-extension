@@ -36,7 +36,7 @@ describe("$", () => {
   })
 
   test("narrows a nested lookup to descendants of the current match", () => {
-    expect($("li", $("#publisher-features")).elements).toHaveLength(2)
+    expect($("li", $(".popup-navigation-links")).elements).toHaveLength(2)
     expect($("li").elements.length).toBeGreaterThan(2)
   })
 
@@ -143,9 +143,9 @@ describe("toggleClass", () => {
 
 describe("title", () => {
   test("sets the tooltip on every match", () => {
-    $("#publisher-features li").title("Not in your plan")
+    $(".popup-navigation-links li").title("Not in your plan")
 
-    expect($("#publisher-features li").elements.map((element) => element.title)).toEqual([
+    expect($(".popup-navigation-links li").elements.map((element) => element.title)).toEqual([
       "Not in your plan",
       "Not in your plan",
     ])
@@ -166,9 +166,9 @@ describe("onClick", () => {
 
   test("binds every match", () => {
     const handler = mock()
-    $("#publisher-features li").onClick(handler)
+    $(".popup-navigation-links li").onClick(handler)
 
-    for (const element of $("#publisher-features li").elements) element.click()
+    for (const element of $(".popup-navigation-links li").elements) element.click()
 
     expect(handler).toHaveBeenCalledTimes(2)
   })
@@ -189,7 +189,7 @@ describe("updateUrls", () => {
     updateUrls(SITE_URL)
 
     expect(hrefOf(".popup-brand")).toBe("https://zeroad.network/")
-    expect(hrefOf("#link-pricing a")).toBe("https://zeroad.network/#features")
+    expect(hrefOf("#link-pricing a")).toBe("https://zeroad.network/#membership")
     expect(hrefOf("#choose-plan-btn")).toBe("https://zeroad.network/dashboard")
   })
 
@@ -221,7 +221,7 @@ describe("updateUrls", () => {
     updateUrls(SITE_URL)
     updateUrls(SITE_URL)
 
-    expect(hrefOf("#link-pricing a")).toBe("https://zeroad.network/#features")
+    expect(hrefOf("#link-pricing a")).toBe("https://zeroad.network/#membership")
     expect($("#report-site-btn").data("href")).toBe("https://zeroad.network/report/site")
   })
 
@@ -242,9 +242,11 @@ describe("the template the popup is written against", () => {
       "#link-pricing",
       "#debug-menu",
       "#report-site-btn",
-      "#publisher-features",
+      "#publisher-site",
       "#developer-details",
-      "#subscription-label span",
+      "#access-title",
+      "#popup-error",
+      "#retry-btn",
       "#developer-hostname-label span",
       "#pause-btn",
       "#resume-btn",
@@ -259,7 +261,7 @@ describe("the template the popup is written against", () => {
   })
 
   test("starts with everything conditional hidden", () => {
-    for (const selector of [".guest", ".user.subscribed", "#publisher-features", "#debug-menu", "#extension-paused"]) {
+    for (const selector of [".guest", ".user.subscribed", "#publisher-site", "#debug-menu", "#extension-paused"]) {
       expect({ selector, hidden: $(selector).elements.every((element) => element.hidden) }).toEqual({
         selector,
         hidden: true,
@@ -273,7 +275,7 @@ describe("the template the popup is written against", () => {
 })
 
 describe("titleOf", () => {
-  test("is empty on a freshly rendered feature row", () => {
-    expect(titleOf("#publisher-features li.clean_web")).toBe("")
+  test("is empty on a freshly rendered navigation item", () => {
+    expect(titleOf(".popup-navigation-links li")).toBe("")
   })
 })

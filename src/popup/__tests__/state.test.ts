@@ -1,6 +1,6 @@
 import { afterEach, beforeEach, describe, expect, spyOn, test } from "bun:test"
 import { chromeMock } from "../../__fixtures__/chrome"
-import { classesOf, click, hrefOf, isShown, mountPopup, shownCount, textOf, titleOf } from "../../__fixtures__/dom"
+import { click, hrefOf, isShown, mountPopup, shownCount, textOf } from "../../__fixtures__/dom"
 import { EVENT } from "../../worker/event-broker"
 import type { TabTrackActiveTabEventData } from "../../worker/tab-tracker"
 import type { Entry } from "../../worker/telemetry"
@@ -80,25 +80,19 @@ describe("a guest", () => {
 })
 
 describe("a member without a subscription", () => {
-  test("is greeted by name and pushed towards a plan", async () => {
+  test("uses the dashboard membership heading and offers a plan", async () => {
     await new UserState(member, undefined).render()
 
-    expect(textOf(".user.not-subscribed.greeting")).toBe("Hi Ada,")
+    expect(textOf(".user.not-subscribed.greeting")).toBe("Freedom membership")
     expect(isShown("a.user.not-subscribed.btn-solid")).toBe(true)
     expect(isShown("a.guest.btn-solid")).toBe(false)
-  })
-
-  test('falls back to "Member" when the account carries no first name', async () => {
-    await new UserState({ firstName: null, extensionToken: "refresh-token" }, undefined).render()
-
-    expect(textOf(".user.not-subscribed.greeting")).toBe("Hi Member,")
   })
 
   test("never sees the publisher or developer sections, which live inside the subscribed block", async () => {
     await new UserState(member, undefined).render()
     await activeTabChangedTo({ isPublisher: true, url: "https://news.example/a", telemetryEntry: publisherEntry() })
 
-    expect(isShown("#publisher-features")).toBe(false)
+    expect(isShown("#publisher-site")).toBe(false)
     expect(isShown("#report-site-btn")).toBe(false)
   })
 })
@@ -123,10 +117,10 @@ describe("a member with an active subscription", () => {
     expect(isShown("#link-pricing")).toBe(false)
   })
 
-  test("has their plan named in the developer badge", async () => {
+  test("has their plan named in the membership heading", async () => {
     await new UserState(member, subscription({ planName: SUBSCRIPTION_PLAN_NAME.FREEDOM })).render()
 
-    expect(textOf("#subscription-label span")).toBe("Freedom")
+    expect(textOf("#access-title")).toBe("Freedom membership")
   })
 
   test("does not see the expiry notice", async () => {
@@ -139,7 +133,7 @@ describe("a member with an active subscription", () => {
   test("only contains Freedom membership details", async () => {
     await new UserState(member, subscription()).render()
 
-    const content = document.querySelector(".subscription-valid")
+    const content = document.querySelector(".user.subscribed")
 
     if (!content) throw new Error("Missing membership details")
 
@@ -178,6 +172,25 @@ describe("a developer token", () => {
 
     expect(isShown("#developer-details")).toBe(true)
     expect(textOf("#developer-hostname-label span")).toBe("acme.example")
+    expect(textOf("#access-title")).toBe("Test access")
+  })
+
+  test("labels demo access separately from a paid membership", async () => {
+    await new UserState(
+      { firstName: null, extensionToken: "demo" },
+      subscription({ hostname: "demo.example" })
+    ).render()
+
+    expect(textOf("#access-title")).toBe("Demo access")
+    expect(isShown("#stop-testing-btn")).toBe(false)
+  })
+
+  test("does not ask a test user to pay when scoped access expires", async () => {
+    await new UserState(member, subscription({ hostname: "test.example", expiresAt: Date.now() - DAY }), true).render()
+
+    expect(isShown(".subscription-expired")).toBe(true)
+    expect(isShown("#membership-expired-details")).toBe(false)
+    expect(isShown("#stop-testing-btn")).toBe(true)
   })
 
   test("stays hidden for an ordinary subscriber", async () => {
@@ -244,6 +257,53 @@ describe("the pause control", () => {
     expect(isShown("#extension-paused")).toBe(false)
   })
 
+  test("keeps the previous state and lets the user retry a failed pause", async () => {
+    chromeMock.runtime.sendMessageResponses = { [EVENT.POPUP.IS_EXTENSION_PAUSED]: false }
+    await new UserState(member, subscription()).render()
+
+    chromeMock.runtime.sendMessageResponses[EVENT.POPUP.EXTENSION_PAUSE_REQUEST] = { error: "Storage unavailable" }
+    click("#pause-btn")
+    await settle()
+
+    expect(isShown("#popup-error")).toBe(true)
+    expect(isShown("#pause-btn")).toBe(true)
+    expect(document.querySelector<HTMLButtonElement>("#pause-btn")?.disabled).toBe(false)
+    expect(isShown("#extension-paused")).toBe(false)
+
+    chromeMock.runtime.sendMessageResponses = { [EVENT.POPUP.IS_EXTENSION_PAUSED]: true }
+    click("#pause-btn")
+    await settle()
+
+    expect(isShown("#popup-error")).toBe(false)
+    expect(isShown("#resume-btn")).toBe(true)
+  })
+
+  test("prevents repeated clicks while the pause command is pending", async () => {
+    chromeMock.runtime.sendMessageResponses = { [EVENT.POPUP.IS_EXTENSION_PAUSED]: false }
+    await new UserState(member, subscription()).render()
+
+    let complete: ((response: unknown) => void) | undefined
+    const sendMessage = spyOn(chromeMock.runtime, "sendMessage").mockImplementation((_message, callback) => {
+      complete = callback
+    })
+
+    try {
+      click("#pause-btn")
+      click("#pause-btn")
+
+      expect(sendMessage).toHaveBeenCalledTimes(1)
+      expect(document.querySelector<HTMLButtonElement>("#pause-btn")?.disabled).toBe(true)
+
+      sendMessage.mockRestore()
+      complete?.(undefined)
+      await settle()
+
+      expect(document.querySelector<HTMLButtonElement>("#pause-btn")?.disabled).toBe(false)
+    } finally {
+      sendMessage.mockRestore()
+    }
+  })
+
   test("shows neither button rather than a wrong one when the worker cannot answer", async () => {
     // The worker answers a failed handler with `{ error }`, which is an object and therefore truthy.
     // Read as a plain result that would mean "paused" - offering Resume and a warning banner to a
@@ -267,13 +327,11 @@ describe("the publisher site section", () => {
 
     await activeTabChangedTo({ isPublisher: false, url: "https://example.com", telemetryEntry: undefined })
 
-    expect(isShown("#publisher-features")).toBe(false)
+    expect(isShown("#publisher-site")).toBe(false)
     expect(isShown("#report-site-btn")).toBe(false)
   })
 
-  test("lists everything a participating site provides, once the worker says the tab is a publisher", async () => {
-    // One plan means one answer: a participating site provides all of it, so every row is shown and
-    // there is nothing to strike through
+  test("identifies the participating website without repeating plan features", async () => {
     await subscribed()
 
     await activeTabChangedTo({
@@ -282,43 +340,47 @@ describe("the publisher site section", () => {
       telemetryEntry: publisherEntry(),
     })
 
-    expect(isShown("#publisher-features")).toBe(true)
-    expect(isShown("#publisher-features li.clean_web")).toBe(true)
-    expect(isShown("#publisher-features li.one_pass")).toBe(true)
+    expect(isShown("#publisher-site")).toBe(true)
+    expect(textOf("#publisher-hostname")).toBe("news.example")
+    expect(document.querySelector("#publisher-site ul")).toBeNull()
   })
 
-  test("leaves every row plain and untitled, whatever the plan", async () => {
-    await subscribed(SUBSCRIPTION_PLAN_NAME.FREEDOM)
+  test("distinguishes creator content and updates when moving to a website", async () => {
+    await subscribed()
+
+    await activeTabChangedTo({
+      isPublisher: true,
+      url: "https://platform.example/watch?id=42",
+      telemetryEntry: publisherEntry({ source: "content" }),
+    })
+
+    expect(textOf("#publisher-kind")).toBe("Creator integration")
+    expect(new URL(hrefOf("#report-site-btn") as string).searchParams.get("url")).toBe(
+      "https://platform.example/watch?id=42"
+    )
+
+    await activeTabChangedTo({
+      isPublisher: true,
+      url: "https://news.example/story",
+      telemetryEntry: publisherEntry({ source: "meta" }),
+    })
+
+    expect(textOf("#publisher-kind")).toBe("Website integration")
+    expect(textOf("#publisher-hostname")).toBe("news.example")
+  })
+
+  test("clears the site context when moving away from a publisher", async () => {
+    await subscribed()
 
     await activeTabChangedTo({
       isPublisher: true,
       url: "https://news.example/story",
       telemetryEntry: publisherEntry(),
     })
+    await activeTabChangedTo({ isPublisher: false, url: "https://example.com", telemetryEntry: undefined })
 
-    for (const row of ["#publisher-features li.clean_web", "#publisher-features li.one_pass"]) {
-      expect(classesOf(row)).not.toContain("text-decoration-line-through")
-      expect(titleOf(row)).toBe("")
-    }
-  })
-
-  test("shows the same rows again when the user moves to another publisher site", async () => {
-    // The popup stays open while the user switches tabs, so each event has to re-describe the site
-    // from scratch rather than add to what the last one left behind.
-    await subscribed(SUBSCRIPTION_PLAN_NAME.FREEDOM)
-
-    await activeTabChangedTo({
-      isPublisher: true,
-      url: "https://both.example",
-      telemetryEntry: publisherEntry(),
-    })
-    await activeTabChangedTo({
-      isPublisher: true,
-      url: "https://clean.example",
-      telemetryEntry: publisherEntry(),
-    })
-
-    expect(shownCount("#publisher-features li")).toBe(2)
+    expect(isShown("#publisher-site")).toBe(false)
+    expect(isShown("#report-site-btn")).toBe(false)
   })
 
   test("points Report at the site being reported, hostname and page url and all", async () => {
@@ -353,6 +415,7 @@ describe("the publisher site section", () => {
       telemetryEntry: publisherEntry(),
     })
 
+    expect(textOf("#publisher-hostname")).toBe("second.example")
     expect(hrefOf("#report-site-btn")).toContain("/report/site/second.example")
     expect(hrefOf("#report-site-btn")).not.toContain("first.example")
   })
@@ -386,6 +449,8 @@ describe("when the worker cannot be reached at all", () => {
   test("still renders what it knows, instead of rejecting into nothing", async () => {
     await expect(new UserState(member, subscription()).render()).resolves.toBeUndefined()
 
+    expect(isShown("#popup-loading")).toBe(false)
+    expect(isShown("#popup-error")).toBe(true)
     expect(isShown(".user.subscribed")).toBe(true)
     expect(isShown(".subscription-valid")).toBe(true)
     expect(textOf(".valid-until")).toBe("20 days")

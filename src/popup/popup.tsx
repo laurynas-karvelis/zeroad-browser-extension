@@ -4,11 +4,9 @@
 // the conditional ones `hidden`, and `state.ts` un-hides the ones that apply to the account. That
 // is why selectors, not props, carry the state - see `dom.ts`.
 
-import { raw } from "hono/html"
 import { Icon } from "./icon"
 
 /** Markers `dom.ts`'s `replace()` substitutes once the worker has answered. */
-const FIRST_NAME = "{FIRST_NAME}"
 const VERSION = "{VERSION}"
 
 // Keep aligned with SUBSCRIBER_ENTITLEMENTS in the main site's @config package.
@@ -22,30 +20,26 @@ const PLAN_FEATURES = [
 
 function Header() {
   return (
-    <header class="mb-6">
-      <nav
-        class="popup-navigation"
-        aria-label="Main navigation"
+    <header class="popup-header">
+      <a
+        class="popup-brand"
+        href="/"
       >
-        <a
-          class="popup-brand"
-          href="/"
-        >
-          Zero Ad Network
-        </a>
-        <ul class="popup-navigation-links list-unstyled mb-0">
-          <li id="link-pricing">
-            <a href="/#features">Features</a>
-          </li>
-          <li>
-            <a href="/#membership">Pricing</a>
-          </li>
-        </ul>
-      </nav>
+        Zero Ad Network
+      </a>
+      <a
+        class="popup-help"
+        href="/docs/extension-workflow"
+        aria-label="Help & guides"
+      >
+        <Icon name="circle-help" />
+      </a>
     </header>
   )
 }
 
+// Match the homepage, onboarding and dashboard copy. The extension is released separately,
+// so it keeps its own markup while using the frontend's shared @styles components.
 function UnsubscribedSection() {
   return (
     <div
@@ -56,115 +50,110 @@ function UnsubscribedSection() {
         class="guest greeting fs-xl"
         hidden
       >
-        Welcome guest,
+        A quieter way to browse
       </h1>
       <h1
         class="user not-subscribed greeting fs-xl"
         hidden
       >
-        Hi {FIRST_NAME},
+        Freedom membership
       </h1>
-      <div
-        class="guest"
-        hidden
-      >
-        <p class="fg-2">Sign up and activate a subscription to unlock your ad-free and enhanced browsing experience:</p>
-      </div>
-      <div
-        class="not-subscribed"
-        hidden
-      >
-        <p class="fg-2">Activate a subscription to begin enjoying an ad-free and enhanced web experience:</p>
-      </div>
-      <ul class="list-unstyled check-list d-flex flex-column gap-3 mb-6">
-        {PLAN_FEATURES.map((feature) => (
-          <li>{feature}</li>
-        ))}
-      </ul>
-      <div class="d-grid">
+      <p class="fg-2">Join to read participating websites without ads, and fund the publishers you spend time with.</p>
+      <div class="d-grid gap-3">
         <a
-          class="guest btn-solid btn-lg theme-primary"
+          class="guest btn-solid theme-primary"
           hidden
           href="/login"
         >
-          Join us now {raw("&rarr;")}
+          Sign in to get started <Icon name="arrow-right" />
         </a>
         <a
-          class="user not-subscribed btn-solid btn-lg theme-primary"
+          class="user not-subscribed btn-solid theme-primary"
           hidden
           href="/checkout"
         >
-          Join Freedom {raw("&rarr;")}
+          Explore Freedom <Icon name="arrow-right" />
         </a>
       </div>
-    </div>
-  )
-}
-
-function ValidSubscription() {
-  return (
-    <div
-      class="subscription-valid"
-      hidden
-    >
-      <div
-        class="freedom"
-        hidden
-      >
-        <p>
-          You have the <b>Freedom</b> plan active for <b class="valid-until"></b>.
-        </p>
-        <ul class="list-unstyled check-list d-flex flex-column gap-3 fg-2 mb-6">
-          {PLAN_FEATURES.map((feature) => (
-            <li>{feature}</li>
-          ))}
-        </ul>
-      </div>
-    </div>
-  )
-}
-
-function ExpiredSubscription() {
-  return (
-    <div
-      class="subscription-expired"
-      hidden
-    >
-      <h5>
-        Your plan is now <span class="fg-danger">expired</span>.
-      </h5>
-      <p class="fg-2">
-        No action needed {raw("&mdash;")} we'll automatically refresh your token while your subscription is active.
-      </p>
-      <p class="fg-2">
-        If not, you can renew your subscription anytime from your dashboard to keep enjoying an ad-free web experience.
-      </p>
-    </div>
-  )
-}
-
-function PublisherFeatures() {
-  return (
-    <div
-      id="publisher-features"
-      hidden
-    >
-      <hr />
-      <h5>This website offers</h5>
-      <ul class="list-unstyled check-list d-flex flex-column gap-3 mb-0">
-        <li
-          class="clean_web"
-          hidden
-        >
-          Ad Free experience without interruptions
+      <details class="accordion-item popup-benefits">
+        <summary class="accordion-header">
+          Freedom benefits{" "}
+          <Icon
+            name="chevron-down"
+            class="accordion-icon"
+          />
+        </summary>
+        <div class="accordion-body">
+          <p>
+            One monthly subscription activates your browser extension and includes all Freedom benefits on participating
+            websites.
+          </p>
+          <ul class="list-unstyled check-list d-flex flex-column gap-3 mb-0">
+            {PLAN_FEATURES.map((feature) => (
+              <li>{feature}</li>
+            ))}
+          </ul>
+        </div>
+      </details>
+      <ul class="popup-navigation-links list-unstyled d-flex gap-6 mb-0">
+        <li>
+          <a href="/#how-it-works">How it works</a>
         </li>
-        <li
-          class="one_pass"
-          hidden
-        >
-          Included subscription content and features
+        <li id="link-pricing">
+          <a href="/#membership">Pricing</a>
         </li>
       </ul>
+    </div>
+  )
+}
+
+function Membership() {
+  return (
+    <div class="p-5">
+      <div class="d-flex align-items-center justify-content-between flex-wrap gap-3 mb-2">
+        <h1
+          id="access-title"
+          class="fs-lg mb-0"
+        >
+          Freedom membership
+        </h1>
+        <span
+          class="subscription-valid badge badge-subtle theme-success"
+          hidden
+        >
+          Active
+        </span>
+        <span
+          class="subscription-expired badge badge-subtle theme-warning"
+          hidden
+        >
+          Expired
+        </span>
+      </div>
+      <div
+        class="subscription-valid"
+        hidden
+      >
+        <div
+          class="freedom"
+          hidden
+        >
+          <p class="small fg-2 mb-0">
+            Access valid for <span class="valid-until"></span>.
+          </p>
+        </div>
+      </div>
+      <div
+        id="membership-expired-details"
+        class="subscription-expired"
+        hidden
+      >
+        <p class="small fg-2 mb-3">Check your payment method and subscription status to restore access.</p>
+        <a href="/billing">
+          Review billing <Icon name="arrow-right" />
+        </a>
+      </div>
+      <DeveloperDetails />
     </div>
   )
 }
@@ -173,35 +162,20 @@ function DeveloperDetails() {
   return (
     <div
       id="developer-details"
+      class="mt-3"
       hidden
     >
-      <hr />
-      <h5>Website test access</h5>
-      <span
-        id="developer-token-label"
-        class="badge theme-warning me-1"
-      >
-        Mode: Testing
-      </span>
-      <span
-        id="subscription-label"
-        class="badge theme-warning me-1"
-      >
-        Subscription: <span></span>
-      </span>
-      <span
+      <p
         id="developer-hostname-label"
-        class="badge theme-warning"
+        class="popup-hostname mb-2"
       >
-        Website: <span></span>
-      </span>
-      <p class="small fg-secondary mt-2">
-        Access is limited to this hostname. Test visits do not contribute to publisher earnings.
+        <span></span>
       </p>
+      <p class="small fg-2 mb-3">Test visits do not earn revenue.</p>
       <button
         type="button"
         id="stop-testing-btn"
-        class="btn-outline theme-secondary mt-2"
+        class="btn-outline btn-sm theme-secondary"
         hidden
       >
         Stop testing
@@ -210,38 +184,67 @@ function DeveloperDetails() {
   )
 }
 
+function PublisherSite() {
+  return (
+    <section
+      id="publisher-site"
+      class="popup-site"
+      hidden
+      aria-label="Websites & creators"
+    >
+      <div class="d-flex align-items-start justify-content-between gap-3">
+        <div class="min-w-0">
+          <p
+            id="publisher-kind"
+            class="small fg-2 mb-1"
+          >
+            Website integration
+          </p>
+          <h2
+            id="publisher-hostname"
+            class="popup-hostname fs-md mb-0"
+          >
+            This website
+          </h2>
+        </div>
+        {/* biome-ignore lint/a11y/useValidAnchor: state.ts sets the destination after identifying the active tab. */}
+        <a
+          id="report-site-btn"
+          class="popup-report"
+          role="link"
+          hidden
+          data-href="/report/site"
+          target="_blank"
+          title="Report a website or creator"
+          aria-label="Report a website or creator"
+        >
+          <Icon name="flag" />
+        </a>
+      </div>
+    </section>
+  )
+}
+
 function SubscriberControls() {
   return (
-    <div class="d-flex flex-wrap gap-2">
-      <a
-        id="choose-plan-btn"
-        class="btn-solid theme-primary flex-grow-1"
-        href="/dashboard"
-        title="Open my dashboard"
-      >
-        <Icon name="layout-dashboard" />
-        Dashboard
-      </a>
-      {/* biome-ignore lint/a11y/useValidAnchor: the destination is only known once the active tab
-          turns out to be a publisher site - see `updateUrls` in `dom.ts`. */}
-      <a
-        id="report-site-btn"
-        role="link"
-        class="btn-outline theme-danger"
+    <section
+      class="popup-controls border-top p-5"
+      aria-label="Browser extension"
+    >
+      <div
+        id="extension-paused"
+        class="mb-3"
+        role="status"
         hidden
-        data-href="/report/site"
-        title="Report a website issue"
-        aria-label="Report a website issue"
       >
-        <Icon name="bug" />
-      </a>
+        <p class="fw-semibold mb-1">Freedom is off</p>
+        <p class="small fg-2 mb-0">While Freedom is off, the extension doesn’t discover publishers or record visits.</p>
+      </div>
       <button
         type="button"
         id="pause-btn"
         class="btn-outline theme-secondary w-100"
         hidden
-        title="Turn Freedom off on all websites"
-        aria-label="Turn Freedom off on all websites"
         aria-describedby="freedom-comparison-help"
       >
         <Icon name="circle-pause" /> Turn Freedom off
@@ -249,22 +252,19 @@ function SubscriberControls() {
       <button
         type="button"
         id="resume-btn"
-        class="btn-outline theme-success w-100"
+        class="btn-solid theme-primary w-100"
         hidden
-        title="Turn Freedom on for all websites"
-        aria-label="Turn Freedom on for all websites"
         aria-describedby="freedom-comparison-help"
       >
         <Icon name="circle-play" /> Turn Freedom on
       </button>
       <p
         id="freedom-comparison-help"
-        class="small fg-secondary mb-0"
+        class="small fg-2 mt-3 mb-0"
       >
-        Compare websites with Freedom on or off. Applies to all websites; reload pages after switching. Off also pauses
-        website discovery and visit measurement.
+        It applies to every website. Reload the website after switching.
       </p>
-    </div>
+    </section>
   )
 }
 
@@ -274,12 +274,25 @@ function SubscribedSection() {
       class="user subscribed"
       hidden
     >
-      <ValidSubscription />
-      <ExpiredSubscription />
-      <PublisherFeatures />
-      <DeveloperDetails />
-      <hr />
-      <SubscriberControls />
+      <section class="panel">
+        <Membership />
+        <SubscriberControls />
+      </section>
+      <PublisherSite />
+      <nav
+        class="popup-account-links"
+        aria-label="Account"
+      >
+        <a
+          id="choose-plan-btn"
+          href="/dashboard"
+        >
+          <Icon name="layout-dashboard" /> Overview
+        </a>
+        <a href="/billing">
+          Manage membership <Icon name="arrow-right" />
+        </a>
+      </nav>
     </div>
   )
 }
@@ -321,7 +334,12 @@ function Footer() {
             reset
           </a>
         </small>
-        <small id="version">Version {VERSION}</small>
+        <small
+          id="version"
+          hidden
+        >
+          Version {VERSION}
+        </small>
       </div>
     </footer>
   )
@@ -356,16 +374,30 @@ export function Popup() {
         ></script>
       </head>
       <body>
-        <div class="px-7 py-6">
+        <div class="popup-shell">
           <Header />
           <main>
+            <p
+              id="popup-loading"
+              class="fg-2"
+              role="status"
+            >
+              Checking…
+            </p>
             <div
-              id="extension-paused"
+              id="popup-error"
               class="alert theme-warning"
+              role="alert"
               hidden
             >
-              Freedom is off on all websites. Website discovery and visit measurement are paused; visits recorded
-              earlier still upload. Turn it on and reload to request subscriber access again.
+              <p class="mb-3">Could not sync the extension</p>
+              <button
+                id="retry-btn"
+                type="button"
+                class="btn-outline btn-sm"
+              >
+                Try again
+              </button>
             </div>
             <UnsubscribedSection />
             <SubscribedSection />
