@@ -105,6 +105,20 @@ describe("site messages relayed by the Firefox content script", () => {
     expect(response).toBeUndefined()
   })
 
+  test("answers the popup when it opens as a tab of its own, as on Android", async () => {
+    let response: unknown
+    await chromeMock.runtime.onMessage.dispatch(
+      { command: EVENT.POPUP.GET_EXTENSION_DATA },
+      { id: chromeMock.runtime.id, tab: { id: 2 }, url: chromeMock.runtime.getURL("popup.html") },
+      (value: unknown) => {
+        response = value
+      }
+    )
+    await Bun.sleep(0)
+
+    expect(response).toEqual({ user: { extensionToken: "secret" } })
+  })
+
   test("rejects a tab sender with no URL to check", async () => {
     await relayFromSite(
       { command: EVENT.WEBSITE.SYNC_CLIENT_DATA, payload: { user: { extensionToken: "x" } } },

@@ -293,7 +293,8 @@ chrome.tabs.onUpdated.addListener(async (tabId, changeInfo, tab) => {
   trackedTabs().register(tab, TAB_REGISTER_SOURCE.ON_TAB_UPDATED)
 })
 
-chrome.windows.onFocusChanged.addListener(async (windowId) => {
+// Firefox for Android has no windows API, so there neither window listener exists to register.
+chrome.windows?.onFocusChanged.addListener(async (windowId) => {
   await allReady()
 
   // The user moved to another application - the page is no longer being read.
@@ -322,7 +323,8 @@ chrome.idle.onStateChanged.addListener(async (state) => {
     return
   }
 
-  if (state !== "active" || trackedTabs().hasFocus()) return
+  // Firefox never reports "locked", so on Android - with no windows to ask - there is nothing to resume.
+  if (state !== "active" || trackedTabs().hasFocus() || !chrome.windows) return
 
   // Unlocked: resume on the active tab, but only if the browser is what the user came back to.
   const lastFocusedWindow = await chrome.windows.getLastFocused()
@@ -339,7 +341,7 @@ chrome.tabs.onRemoved.addListener(async (tabId) => {
   trackedTabs().delete(tabId)
 })
 
-chrome.windows.onRemoved.addListener(async (windowId) => {
+chrome.windows?.onRemoved.addListener(async (windowId) => {
   await allReady()
   trackedTabs().deleteByWindowId(windowId)
 })
