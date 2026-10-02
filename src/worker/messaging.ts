@@ -36,11 +36,12 @@ function respondWith<P>(work: Promise<P>, sendResponse: (response: unknown) => v
 
 /**
  * Popup commands must come from the extension's own pages. On Firefox a site's content script shares
- * the same `runtime.onMessage` channel, and anything sent from a tab would otherwise reach commands
- * that hand out the extension token or reset the extension.
+ * the same `runtime.onMessage` channel, and anything sent from a site would otherwise reach commands
+ * that hand out the extension token or reset the extension. The page's origin decides, not whether it
+ * sits in a tab: Android browsers open the popup as a tab of its own.
  */
 function isFromExtensionPage(sender: chrome.runtime.MessageSender | undefined) {
-  return !sender?.tab && sender?.id === chrome.runtime.id
+  return sender?.id === chrome.runtime.id && !!sender.url?.startsWith(chrome.runtime.getURL(""))
 }
 
 function onSiteMessage<T = unknown, P = unknown>(
@@ -54,8 +55,9 @@ function onSiteMessage<T = unknown, P = unknown>(
   if (!chrome.runtime.onMessageExternal) {
     // Firefox extension - has to communicate via `content.js` (facepalm)
     chrome.runtime.onMessage.addListener((message, sender) => {
-      // The popup talks on this channel too; only a tab can be our content script
-      if (!sender.tab || !sender.url) return
+      // The popup talks on this channel too, from a tab of its own on Android; only a site's tab can
+      // be our content script
+      if (!sender.tab || !sender.url || isFromExtensionPage(sender)) return
 
       if (!trustedSiteHostnames().includes(getHostname(sender.url))) {
         log("warn", "[messaging]", "Rejected message from untrusted origin:", sender.url)

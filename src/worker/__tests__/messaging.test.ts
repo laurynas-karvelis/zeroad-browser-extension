@@ -164,6 +164,14 @@ describe("popup messages", () => {
     expect(extensionStub.getExtensionData).not.toHaveBeenCalled()
   })
 
+  test("answers the popup when it opens as a tab of its own, as on Android", async () => {
+    const popupTab = { ...POPUP_SENDER, tab: { id: 4 } }
+
+    const { response } = await askPopupChannel(EVENT.POPUP.GET_CONFIG, popupTab)
+
+    expect(response).toMatchObject({ VERSION: expect.any(String) })
+  })
+
   test("refuses popup commands from another extension", async () => {
     const { response } = await askPopupChannel(EVENT.POPUP.RESET_EXTENSION_STATE, { id: "someone-else" })
 
