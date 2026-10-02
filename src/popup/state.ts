@@ -133,43 +133,77 @@ export class UserState {
     const request = (command: EventType) => async (event: Event) => {
       const button = event.currentTarget as HTMLButtonElement
       const hadFocus = document.activeElement === button
-      button.disabled = true
+      this.setControlsDisabled(true)
 
-      // A click handler is the one place nothing is awaiting us, so it owns its own failures.
       try {
         await worker.sendCommand(command)
-        await this.checkExtensionPaused(hadFocus)
-        $("#popup-error").hide()
+        await this.checkExtensionPaused(true)
+
+        $("#reload-tab-btn").show()
+        $("#reload-tab-error, #popup-error").hide()
       } catch (error) {
         reportFailure(error)
       } finally {
-        button.disabled = false
+        this.setControlsDisabled(false)
+      }
+
+      if (
+        hadFocus &&
+        button.hidden &&
+        (document.activeElement === button || document.activeElement === document.body)
+      ) {
+        document.querySelector<HTMLButtonElement>("#reload-tab-btn")?.focus()
       }
     }
 
     $("#pause-btn").onClick(request(EVENT.POPUP.EXTENSION_PAUSE_REQUEST))
     $("#resume-btn").onClick(request(EVENT.POPUP.EXTENSION_RESUME_REQUEST))
+    $("#reload-tab-btn").onClick(() => this.reloadActiveTab())
 
     await this.checkExtensionPaused()
   }
 
-  private async checkExtensionPaused(restoreFocus = false) {
+  private setControlsDisabled(disabled: boolean) {
+    for (const button of document.querySelectorAll<HTMLButtonElement>("#extension-actions button")) {
+      button.disabled = disabled
+    }
+  }
+
+  private async reloadActiveTab() {
+    const button = document.querySelector<HTMLButtonElement>("#reload-tab-btn")
+    const hadFocus = document.activeElement === button
+    this.setControlsDisabled(true)
+    $("#reload-tab-error").hide()
+
+    try {
+      const [tab] = await chrome.tabs.query({ active: true, currentWindow: true })
+
+      if (tab?.id === undefined) throw new Error("No active tab is available")
+
+      await chrome.tabs.reload(tab.id)
+
+      $("#reload-tab-btn").hide()
+    } catch (error) {
+      $("#reload-tab-error").show()
+      log("warn", "[popup]", "Could not reload active tab", error)
+    } finally {
+      this.setControlsDisabled(false)
+    }
+
+    if (hadFocus && button?.hidden && (document.activeElement === button || document.activeElement === document.body)) {
+      document.querySelector<HTMLButtonElement>("#extension-actions button:not([hidden])")?.focus()
+    }
+  }
+
+  private async checkExtensionPaused(keepOpen = false) {
     const isPaused = await worker.sendCommand<boolean>(EVENT.POPUP.IS_EXTENSION_PAUSED)
 
     $("#resume-btn").toggle(isPaused)
     $("#pause-btn").toggle(!isPaused)
-
     $("#extension-paused").toggle(isPaused)
 
     const controls = document.querySelector<HTMLDetailsElement>("#freedom-controls")
 
-    if (controls) {
-      const focusWasInside =
-        controls.contains(document.activeElement) || (restoreFocus && document.activeElement === document.body)
-      controls.open = !!isPaused
-
-      // Resuming collapses the control; keep keyboard focus on its visible summary.
-      if (!isPaused && focusWasInside) controls.querySelector("summary")?.focus()
-    }
+    if (controls) controls.open = !!isPaused || keepOpen
   }
 }

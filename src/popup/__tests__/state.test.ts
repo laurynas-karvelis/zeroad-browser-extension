@@ -48,6 +48,8 @@ beforeEach(() => {
   chromeMock.runtime.sendMessageResponse = undefined
   chromeMock.runtime.sendMessageResponses = {}
   chromeMock.runtime.lastError = undefined
+  chromeMock.tabs.byId.clear()
+  chromeMock.tabs.reloaded = []
 
   logged = spyOn(console, "log").mockImplementation(() => {})
 })
@@ -244,6 +246,8 @@ describe("the pause control", () => {
     expect(commandsSent()).toContain(EVENT.POPUP.EXTENSION_PAUSE_REQUEST)
     expect(isShown("#resume-btn")).toBe(true)
     expect(isShown("#extension-paused")).toBe(true)
+    expect(isShown("#reload-tab-btn")).toBe(true)
+    expect(chromeMock.tabs.reloaded).toEqual([])
   })
 
   test("swaps them back on resume", async () => {
@@ -255,8 +259,9 @@ describe("the pause control", () => {
     click("#resume-btn")
     await settle()
 
-    expect(document.querySelector<HTMLDetailsElement>("#freedom-controls")?.open).toBe(false)
-    expect(document.activeElement).toBe(document.querySelector("#freedom-controls summary"))
+    expect(document.querySelector<HTMLDetailsElement>("#freedom-controls")?.open).toBe(true)
+    expect(isShown("#reload-tab-btn")).toBe(true)
+    expect(document.activeElement).toBe(document.querySelector("#reload-tab-btn"))
     expect(commandsSent()).toContain(EVENT.POPUP.EXTENSION_RESUME_REQUEST)
     expect(isShown("#pause-btn")).toBe(true)
     expect(isShown("#extension-paused")).toBe(false)
@@ -271,6 +276,7 @@ describe("the pause control", () => {
     await settle()
 
     expect(isShown("#popup-error")).toBe(true)
+    expect(isShown("#reload-tab-btn")).toBe(false)
     expect(isShown("#pause-btn")).toBe(true)
     expect(document.querySelector<HTMLButtonElement>("#pause-btn")?.disabled).toBe(false)
     expect(isShown("#extension-paused")).toBe(false)
@@ -320,6 +326,116 @@ describe("the pause control", () => {
     expect(isShown("#resume-btn")).toBe(false)
     expect(isShown("#pause-btn")).toBe(false)
     expect(isShown("#extension-paused")).toBe(false)
+  })
+})
+
+describe("reloading the active tab", () => {
+  async function pause() {
+    chromeMock.runtime.sendMessageResponses = { [EVENT.POPUP.IS_EXTENSION_PAUSED]: false }
+    await new UserState(member, subscription()).render()
+
+    chromeMock.runtime.sendMessageResponses = { [EVENT.POPUP.IS_EXTENSION_PAUSED]: true }
+    click("#pause-btn")
+    await settle()
+  }
+
+  test("does not offer reload just from opening the popup", async () => {
+    chromeMock.runtime.sendMessageResponses = { [EVENT.POPUP.IS_EXTENSION_PAUSED]: true }
+
+    await new UserState(member, subscription()).render()
+
+    expect(isShown("#reload-tab-btn")).toBe(false)
+    expect(chromeMock.tabs.reloaded).toEqual([])
+  })
+
+  test("reloads only the tab active at click time and clears the prompt after success", async () => {
+    chromeMock.tabs.byId.set(1, { id: 1, active: true })
+    await pause()
+
+    chromeMock.tabs.byId.set(1, { id: 1, active: false })
+    chromeMock.tabs.byId.set(2, { id: 2, active: true })
+    const query = spyOn(chromeMock.tabs, "query")
+    document.querySelector<HTMLButtonElement>("#reload-tab-btn")?.focus()
+
+    try {
+      click("#reload-tab-btn")
+      await settle()
+
+      expect(query).toHaveBeenCalledWith({ active: true, currentWindow: true })
+      expect(chromeMock.tabs.reloaded).toEqual([2])
+      expect(isShown("#reload-tab-btn")).toBe(false)
+      expect(isShown("#reload-tab-error")).toBe(false)
+      expect(document.activeElement).toBe(document.querySelector("#resume-btn"))
+    } finally {
+      query.mockRestore()
+    }
+  })
+
+  test("keeps reload available when there is no active tab", async () => {
+    await pause()
+
+    click("#reload-tab-btn")
+    await settle()
+
+    expect(chromeMock.tabs.reloaded).toEqual([])
+    expect(isShown("#reload-tab-error")).toBe(true)
+    expect(isShown("#reload-tab-btn")).toBe(true)
+    expect(document.querySelector<HTMLButtonElement>("#reload-tab-btn")?.disabled).toBe(false)
+  })
+
+  test("allows retrying a failed reload without changing the extension state", async () => {
+    await pause()
+    chromeMock.tabs.byId.set(1, { id: 1, active: true })
+    const reload = spyOn(chromeMock.tabs, "reload").mockRejectedValueOnce(new Error("Tab closed"))
+
+    try {
+      click("#reload-tab-btn")
+      await settle()
+
+      expect(isShown("#reload-tab-error")).toBe(true)
+      expect(isShown("#reload-tab-btn")).toBe(true)
+      expect(isShown("#resume-btn")).toBe(true)
+
+      reload.mockRestore()
+      click("#reload-tab-btn")
+      await settle()
+
+      expect(chromeMock.tabs.reloaded).toEqual([1])
+      expect(isShown("#reload-tab-error")).toBe(false)
+      expect(isShown("#reload-tab-btn")).toBe(false)
+    } finally {
+      reload.mockRestore()
+    }
+  })
+
+  test("blocks repeated reloads and state changes until the reload request finishes", async () => {
+    await pause()
+    chromeMock.tabs.byId.set(1, { id: 1, active: true })
+    let finish: (() => void) | undefined
+    const reload = spyOn(chromeMock.tabs, "reload").mockImplementation(
+      () =>
+        new Promise<void>((resolve) => {
+          finish = resolve
+        })
+    )
+
+    try {
+      click("#reload-tab-btn")
+      await settle()
+      click("#reload-tab-btn")
+      click("#resume-btn")
+
+      expect(reload).toHaveBeenCalledTimes(1)
+      expect(commandsSent()).not.toContain(EVENT.POPUP.EXTENSION_RESUME_REQUEST)
+      expect(document.querySelector<HTMLButtonElement>("#resume-btn")?.disabled).toBe(true)
+
+      finish?.()
+      await settle()
+
+      expect(document.querySelector<HTMLButtonElement>("#resume-btn")?.disabled).toBe(false)
+    } finally {
+      reload.mockRestore()
+    }
   })
 })
 

@@ -212,6 +212,12 @@ export function createChromeMock() {
 
         return { id: mock.tabs.byId.size + 1, ...options }
       },
+      reloaded: [] as number[],
+      async reload(tabId: number) {
+        if (!mock.tabs.byId.has(tabId)) throw new Error(`No tab with id: ${tabId}`)
+
+        mock.tabs.reloaded.push(tabId)
+      },
       removed: [] as number[],
       async remove(tabId: number) {
         mock.tabs.removed.push(tabId)

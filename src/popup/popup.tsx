@@ -251,24 +251,45 @@ function SubscriberControls() {
         >
           <p class="fw-semibold mb-0">Extension paused</p>
         </div>
-        <button
-          type="button"
-          id="pause-btn"
-          class="btn-outline btn-sm theme-secondary"
-          hidden
-          aria-describedby="freedom-comparison-help"
+        <div
+          id="extension-actions"
+          class="d-flex flex-wrap gap-3"
         >
-          <Icon name="circle-pause" /> Pause extension
-        </button>
-        <button
-          type="button"
-          id="resume-btn"
-          class="btn-solid btn-sm theme-primary"
+          <button
+            type="button"
+            id="pause-btn"
+            class="btn-outline btn-xs theme-secondary"
+            hidden
+            aria-describedby="freedom-comparison-help"
+          >
+            <Icon name="circle-pause" /> Pause extension
+          </button>
+          <button
+            type="button"
+            id="resume-btn"
+            class="btn-solid btn-xs theme-primary"
+            hidden
+            aria-describedby="freedom-comparison-help"
+          >
+            <Icon name="circle-play" /> Resume extension
+          </button>
+          <button
+            type="button"
+            id="reload-tab-btn"
+            class="btn-outline btn-xs theme-secondary"
+            hidden
+          >
+            Reload active tab
+          </button>
+        </div>
+        <p
+          id="reload-tab-error"
+          class="small fg-danger mt-3 mb-0"
+          role="alert"
           hidden
-          aria-describedby="freedom-comparison-help"
         >
-          <Icon name="circle-play" /> Resume extension
-        </button>
+          Could not reload this tab. Try again or reload it in your browser.
+        </p>
         <p
           id="freedom-comparison-help"
           class="small fg-2 mt-3 mb-0"
