@@ -188,37 +188,41 @@ function PublisherSite() {
   return (
     <section
       id="publisher-site"
-      class="popup-site"
+      class="popup-site panel"
       hidden
-      aria-label="Websites & creators"
+      aria-labelledby="publisher-hostname"
     >
-      <div class="d-flex align-items-start justify-content-between gap-3">
-        <div class="min-w-0">
-          <p
-            id="publisher-kind"
-            class="small fg-2 mb-1"
-          >
-            Website integration
-          </p>
-          <h2
-            id="publisher-hostname"
-            class="popup-hostname fs-md mb-0"
-          >
-            This website
-          </h2>
-        </div>
+      <div class="d-flex align-items-center gap-3 p-4">
+        <Icon
+          name="globe"
+          class="fg-2 flex-shrink-0"
+        />
+        <h2
+          id="publisher-hostname"
+          class="popup-hostname fs-md mb-0"
+        >
+          This website
+        </h2>
+      </div>
+      <div class="popup-site-actions border-top bg-1 px-4 py-3">
+        <span
+          id="publisher-kind"
+          class="badge badge-subtle theme-primary"
+        >
+          Website integration
+        </span>
         {/* biome-ignore lint/a11y/useValidAnchor: state.ts sets the destination after identifying the active tab. */}
         <a
           id="report-site-btn"
-          class="popup-report"
+          class="btn-outline btn-xs theme-secondary"
           role="link"
           hidden
           data-href="/report/site"
           target="_blank"
           title="Report a website or creator"
-          aria-label="Report a website or creator"
+          aria-label="Report issue with this website or creator"
         >
-          <Icon name="flag" />
+          <Icon name="flag" /> Report issue
         </a>
       </div>
     </section>
@@ -228,7 +232,7 @@ function PublisherSite() {
 function SubscriberControls() {
   return (
     <section
-      class="popup-controls border-top p-5"
+      class="popup-controls border-top bg-1 p-5"
       aria-label="Browser extension"
     >
       <div
@@ -274,7 +278,7 @@ function SubscribedSection() {
       class="user subscribed"
       hidden
     >
-      <section class="panel">
+      <section class="panel popup-membership">
         <Membership />
         <SubscriberControls />
       </section>

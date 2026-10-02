@@ -64,10 +64,13 @@ export class UserState {
         return
       }
 
+      const isCreator = data.telemetryEntry.source === "content"
+
       $("#publisher-hostname").text(getHostname(url))
-      $("#publisher-kind").text(
-        data.telemetryEntry.source === "content" ? "Creator integration" : "Website integration"
-      )
+      $("#publisher-kind")
+        .text(isCreator ? "Creator integration" : "Website integration")
+        .toggleClass("theme-primary", !isCreator)
+        .toggleClass("theme-info", isCreator)
 
       // set up report button
       const reportBaseUrl = $reportBtn.data("href")

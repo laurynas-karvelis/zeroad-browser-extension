@@ -6,6 +6,7 @@ import {
   CirclePause,
   CirclePlay,
   Flag,
+  Globe,
   type IconNode,
   LayoutDashboard,
 } from "lucide"
@@ -17,6 +18,7 @@ const ICONS = {
   "chevron-down": ChevronDown,
   "circle-help": CircleHelp,
   flag: Flag,
+  globe: Globe,
   "circle-pause": CirclePause,
   "circle-play": CirclePlay,
   "layout-dashboard": LayoutDashboard,
