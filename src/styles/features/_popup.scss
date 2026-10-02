@@ -56,6 +56,15 @@ body {
   overflow: hidden;
 }
 
+.popup-actions {
+  display: flex;
+  gap: 0.5rem;
+
+  > button {
+    white-space: nowrap;
+  }
+}
+
 .popup-hostname {
   overflow-wrap: anywhere;
 }

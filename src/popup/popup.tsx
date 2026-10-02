@@ -235,8 +235,17 @@ function SubscriberControls() {
       id="freedom-controls"
       class="popup-controls accordion-item border-top bg-1"
     >
-      <summary class="accordion-header px-5 py-3">
-        Browser extension
+      <summary class="accordion-header gap-3 px-5 py-3">
+        <span class="flex-grow-1">Browser extension</span>
+        <span
+          id="extension-paused"
+          class="badge badge-subtle theme-warning"
+          role="status"
+          aria-label="Extension paused"
+          hidden
+        >
+          Paused
+        </span>
         <Icon
           name="chevron-down"
           class="accordion-icon"
@@ -244,16 +253,8 @@ function SubscriberControls() {
       </summary>
       <div class="px-5 pb-5">
         <div
-          id="extension-paused"
-          class="mb-3"
-          role="status"
-          hidden
-        >
-          <p class="fw-semibold mb-0">Extension paused</p>
-        </div>
-        <div
           id="extension-actions"
-          class="d-flex flex-wrap gap-3"
+          class="popup-actions"
         >
           <button
             type="button"
@@ -262,7 +263,7 @@ function SubscriberControls() {
             hidden
             aria-describedby="freedom-comparison-help"
           >
-            <Icon name="circle-pause" /> Pause extension
+            Pause extension
           </button>
           <button
             type="button"
@@ -271,15 +272,16 @@ function SubscriberControls() {
             hidden
             aria-describedby="freedom-comparison-help"
           >
-            <Icon name="circle-play" /> Resume extension
+            Resume extension
           </button>
           <button
             type="button"
             id="reload-tab-btn"
             class="btn-outline btn-xs theme-secondary"
             hidden
+            title="Reload active tab"
           >
-            Reload active tab
+            Reload tab
           </button>
         </div>
         <p
