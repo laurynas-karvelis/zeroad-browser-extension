@@ -1,5 +1,12 @@
+// A desktop popup sizes its window to the body, so the body sets the width. Android opens the popup
+// as a full tab instead, where that width overflows a phone screen. A width media query would measure
+// the not-yet-sized desktop popup window, so the touch pointer is what tells the two apart.
 body {
   width: 430px;
+
+  @media (pointer: coarse) {
+    width: auto;
+  }
 }
 
 .popup-navigation {
