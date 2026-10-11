@@ -16,7 +16,7 @@ A paid Freedom membership is required for subscriber benefits. They are availabl
 
 ### More of what you came for
 
-- **Read without the interruptions.** Participating websites provide pages without ads, cookie consent banners, marketing popups, or non-essential third-party tracking.
+- **Browse without the interruptions.** Participating websites provide pages without ads, cookie consent banners, marketing popups, or non-essential third-party tracking.
 - **Enjoy included paid content.** Access a partner site's base subscription or the paid articles and features it includes with Freedom. Higher tiers and other purchases may still cost extra.
 - **Support the people behind the content.** Part of your membership funds participating websites and creators. How much time you spend with them helps determine their share, alongside your allocation preferences.
 - **Keep it simple.** One monthly membership works across participating sites. After setup, the extension lets recognized partner websites know you're a member as you browse.

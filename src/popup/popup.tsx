@@ -77,7 +77,7 @@ function UnsubscribedSection() {
         </div>
       </div>
       <p class="popup-intro">
-        Read participating websites without ads. Your membership funds the publishers you spend time with.
+        Browse participating websites without ads. Your membership funds the publishers you spend time with.
       </p>
       <div class="d-grid gap-3">
         <a
