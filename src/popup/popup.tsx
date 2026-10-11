@@ -25,6 +25,12 @@ function Header() {
         class="popup-brand"
         href="/"
       >
+        <img
+          src="./images/logo.svg"
+          width="32"
+          height="32"
+          alt=""
+        />
         Zero Ad Network
       </a>
       <a
@@ -46,19 +52,33 @@ function UnsubscribedSection() {
       class="guest user not-subscribed"
       hidden
     >
-      <h1
-        class="guest greeting fs-xl"
-        hidden
-      >
-        A quieter way to browse
-      </h1>
-      <h1
-        class="user not-subscribed greeting fs-xl"
-        hidden
-      >
-        Freedom membership
-      </h1>
-      <p class="fg-2">Join to read participating websites without ads, and fund the publishers you spend time with.</p>
+      <div class="popup-welcome popup-feature">
+        <p class="popup-eyebrow">Less noise. More freedom.</p>
+        <div class="popup-feature-heading">
+          <h1
+            class="guest greeting"
+            hidden
+          >
+            A quieter way to browse.
+          </h1>
+          <h1
+            class="user not-subscribed greeting"
+            hidden
+          >
+            Freedom membership
+          </h1>
+          <img
+            class="popup-bird"
+            src="./images/logo.svg"
+            width="96"
+            height="96"
+            alt=""
+          />
+        </div>
+      </div>
+      <p class="popup-intro">
+        Read participating websites without ads. Your membership funds the publishers you spend time with.
+      </p>
       <div class="d-grid gap-3">
         <a
           class="guest btn-solid theme-primary"
@@ -77,7 +97,7 @@ function UnsubscribedSection() {
       </div>
       <details class="accordion-item popup-benefits">
         <summary class="accordion-header">
-          Freedom benefits{" "}
+          What’s included{" "}
           <Icon
             name="chevron-down"
             class="accordion-icon"
@@ -109,26 +129,31 @@ function UnsubscribedSection() {
 
 function Membership() {
   return (
-    <div class="p-5">
-      <div class="d-flex align-items-center justify-content-between flex-wrap gap-3 mb-2">
-        <h1
-          id="access-title"
-          class="fs-lg mb-0"
-        >
-          Freedom membership
-        </h1>
+    <div class="popup-feature popup-membership">
+      <div class="popup-membership-status">
+        <p class="popup-eyebrow">Your access</p>
         <span
-          class="subscription-valid badge badge-subtle theme-success"
+          class="subscription-valid popup-status badge badge-subtle theme-success"
           hidden
         >
-          Active
+          <Icon name="check" /> Active
         </span>
         <span
-          class="subscription-expired badge badge-subtle theme-warning"
+          class="subscription-expired popup-status badge badge-subtle theme-warning"
           hidden
         >
-          Expired
+          <Icon name="circle-alert" /> Expired
         </span>
+      </div>
+      <div class="popup-feature-heading">
+        <h1 id="access-title">Freedom membership</h1>
+        <img
+          class="popup-bird"
+          src="./images/logo.svg"
+          width="96"
+          height="96"
+          alt=""
+        />
       </div>
       <div
         class="subscription-valid"
@@ -138,7 +163,7 @@ function Membership() {
           class="freedom"
           hidden
         >
-          <p class="small fg-2 mb-0">
+          <p class="popup-validity">
             Access valid for <span class="valid-until"></span>.
           </p>
         </div>
@@ -192,19 +217,21 @@ function PublisherSite() {
       hidden
       aria-labelledby="publisher-hostname"
     >
-      <div class="d-flex align-items-center gap-3 p-4">
-        <Icon
-          name="globe"
-          class="fg-2 flex-shrink-0"
-        />
-        <h2
-          id="publisher-hostname"
-          class="popup-hostname fs-md mb-0"
-        >
-          This website
-        </h2>
+      <div class="popup-site-heading">
+        <span class="popup-site-icon">
+          <Icon name="globe" />
+        </span>
+        <div>
+          <p class="popup-eyebrow">On this tab</p>
+          <h2
+            id="publisher-hostname"
+            class="popup-hostname fs-md mb-0"
+          >
+            This website
+          </h2>
+        </div>
       </div>
-      <div class="popup-site-actions border-top bg-1 px-4 py-3">
+      <div class="popup-site-actions">
         <span
           id="publisher-kind"
           class="badge badge-subtle theme-primary"
@@ -214,7 +241,7 @@ function PublisherSite() {
         {/* biome-ignore lint/a11y/useValidAnchor: state.ts sets the destination after identifying the active tab. */}
         <a
           id="report-site-btn"
-          class="btn-outline btn-xs theme-secondary"
+          class="popup-report"
           role="link"
           hidden
           data-href="/report/site"
@@ -231,76 +258,101 @@ function PublisherSite() {
 
 function SubscriberControls() {
   return (
-    <details
-      id="freedom-controls"
-      class="popup-controls accordion-item border-top bg-1"
+    <section
+      class="popup-controls"
+      aria-labelledby="extension-heading"
     >
-      <summary class="accordion-header gap-3 px-5 py-3">
-        <span class="flex-grow-1">Browser extension</span>
+      <div class="popup-controls-heading">
+        <h2
+          id="extension-heading"
+          class="fs-sm mb-0"
+        >
+          Browser extension
+        </h2>
+        <span
+          id="extension-running"
+          class="popup-status fg-primary"
+          role="status"
+          hidden
+        >
+          <Icon name="check" /> Enabled
+        </span>
         <span
           id="extension-paused"
-          class="badge badge-subtle theme-warning"
+          class="popup-status fg-warning"
           role="status"
           aria-label="Extension paused"
           hidden
         >
-          Paused
+          <Icon name="circle-pause" /> Paused
         </span>
-        <Icon
-          name="chevron-down"
-          class="accordion-icon"
-        />
-      </summary>
-      <div class="px-5 pb-5">
-        <div
-          id="extension-actions"
-          class="popup-actions"
-        >
-          <button
-            type="button"
-            id="pause-btn"
-            class="btn-outline btn-xs theme-secondary"
-            hidden
-            aria-describedby="freedom-comparison-help"
-          >
-            Pause extension
-          </button>
-          <button
-            type="button"
-            id="resume-btn"
-            class="btn-solid btn-xs theme-primary"
-            hidden
-            aria-describedby="freedom-comparison-help"
-          >
-            Resume extension
-          </button>
-          <button
-            type="button"
-            id="reload-tab-btn"
-            class="btn-outline btn-xs theme-secondary"
-            hidden
-            title="Reload active tab"
-          >
-            Reload tab
-          </button>
-        </div>
-        <p
-          id="reload-tab-error"
-          class="small fg-danger mt-3 mb-0"
-          role="alert"
+      </div>
+      <div
+        id="extension-actions"
+        class="popup-actions"
+      >
+        <button
+          type="button"
+          id="pause-btn"
+          class="btn-outline btn-sm theme-secondary"
           hidden
+          aria-describedby="extension-scope"
         >
-          Could not reload this tab. Try again or reload it in your browser.
-        </p>
+          <Icon name="circle-pause" /> Pause extension
+        </button>
+        <button
+          type="button"
+          id="resume-btn"
+          class="btn-solid btn-sm theme-primary"
+          hidden
+          aria-describedby="extension-scope"
+        >
+          <Icon name="circle-play" /> Resume extension
+        </button>
+        <button
+          type="button"
+          id="reload-tab-btn"
+          class="btn-outline btn-sm theme-secondary"
+          hidden
+          title="Reload active tab"
+        >
+          <Icon name="rotate-cw" /> Reload tab
+        </button>
+      </div>
+      <p
+        id="reload-tab-error"
+        class="small fg-danger mt-3 mb-0"
+        role="alert"
+        hidden
+      >
+        Could not reload this tab. Try again or reload it in your browser.
+      </p>
+      <p
+        id="extension-scope"
+        class="popup-control-hint"
+      >
+        Applies to all websites. Reload tabs after changing.
+      </p>
+      <details
+        id="freedom-controls"
+        class="accordion-item"
+      >
+        <summary class="accordion-header">
+          What happens when I pause?
+          <Icon
+            name="chevron-down"
+            class="accordion-icon"
+          />
+        </summary>
         <p
           id="freedom-comparison-help"
-          class="small fg-2 mt-3 mb-0"
+          class="small fg-2 mb-0"
         >
           Pausing stops membership proof, publisher discovery and visit measurement on all websites. Previously recorded
-          visit statistics still sync with Zero Ad Network. Reload pages after pausing or resuming.
+          visit statistics still sync with Zero Ad Network.
         </p>
-      </div>
-    </details>
+      </details>
+    </section>
   )
 }
 
@@ -310,11 +362,9 @@ function SubscribedSection() {
       class="user subscribed"
       hidden
     >
-      <section class="panel popup-membership">
-        <Membership />
-        <SubscriberControls />
-      </section>
+      <Membership />
       <PublisherSite />
+      <SubscriberControls />
       <nav
         class="popup-account-links"
         aria-label="Account"
@@ -326,7 +376,7 @@ function SubscribedSection() {
           <Icon name="layout-dashboard" /> Overview
         </a>
         <a href="/billing">
-          Manage membership <Icon name="arrow-right" />
+          <Icon name="settings" /> Membership
         </a>
       </nav>
     </div>
@@ -386,6 +436,7 @@ export function Popup() {
     <html lang="en">
       <head>
         <meta charset="UTF-8" />
+        <title>Zero Ad Network</title>
         <meta
           name="viewport"
           content="width=device-width, initial-scale=1"
@@ -415,10 +466,10 @@ export function Popup() {
           <main>
             <p
               id="popup-loading"
-              class="fg-2"
+              class="popup-loading fg-2"
               role="status"
             >
-              Checking…
+              Checking your membership…
             </p>
             <div
               id="popup-error"

@@ -137,7 +137,7 @@ export class UserState {
 
       try {
         await worker.sendCommand(command)
-        await this.checkExtensionPaused(true)
+        await this.checkExtensionPaused()
 
         $("#reload-tab-btn").show()
         $("#reload-tab-error, #popup-error").hide()
@@ -195,15 +195,12 @@ export class UserState {
     }
   }
 
-  private async checkExtensionPaused(keepOpen = false) {
+  private async checkExtensionPaused() {
     const isPaused = await worker.sendCommand<boolean>(EVENT.POPUP.IS_EXTENSION_PAUSED)
 
     $("#resume-btn").toggle(isPaused)
     $("#pause-btn").toggle(!isPaused)
     $("#extension-paused").toggle(isPaused)
-
-    const controls = document.querySelector<HTMLDetailsElement>("#freedom-controls")
-
-    if (controls) controls.open = !!isPaused || keepOpen
+    $("#extension-running").toggle(!isPaused)
   }
 }

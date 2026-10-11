@@ -1,7 +1,9 @@
 import { jsx } from "hono/jsx"
 import {
   ArrowRight,
+  Check,
   ChevronDown,
+  CircleAlert,
   CircleHelp,
   CirclePause,
   CirclePlay,
@@ -9,12 +11,16 @@ import {
   Globe,
   type IconNode,
   LayoutDashboard,
+  RotateCw,
+  Settings,
 } from "lucide"
 
 // Lucide (https://lucide.dev, ISC) inlined as SVG. Sized to 1em so the font-size utilities control the
 // icon size, and stroked with currentColor so it takes the colour of the text around it.
 const ICONS = {
   "arrow-right": ArrowRight,
+  check: Check,
+  "circle-alert": CircleAlert,
   "chevron-down": ChevronDown,
   "circle-help": CircleHelp,
   flag: Flag,
@@ -22,6 +28,8 @@ const ICONS = {
   "circle-pause": CirclePause,
   "circle-play": CirclePlay,
   "layout-dashboard": LayoutDashboard,
+  "rotate-cw": RotateCw,
+  settings: Settings,
 } satisfies Record<string, IconNode>
 
 export type IconName = keyof typeof ICONS

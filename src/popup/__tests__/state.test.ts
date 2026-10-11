@@ -213,7 +213,7 @@ test("offers Stop testing only for explicit website test access", async () => {
 })
 
 describe("the pause control", () => {
-  test("keeps Pause in a collapsed section while the extension is running", async () => {
+  test("keeps Pause directly available while the explanation is collapsed", async () => {
     chromeMock.runtime.sendMessageResponses = { [EVENT.POPUP.IS_EXTENSION_PAUSED]: false }
 
     await new UserState(member, subscription()).render()
@@ -222,17 +222,20 @@ describe("the pause control", () => {
     expect(isShown("#pause-btn")).toBe(true)
     expect(isShown("#resume-btn")).toBe(false)
     expect(isShown("#extension-paused")).toBe(false)
+    expect(isShown("#extension-running")).toBe(true)
+    expect(document.querySelector("#pause-btn")?.closest("details")).toBeNull()
   })
 
-  test("offers Resume and warns loudly while it is paused", async () => {
+  test("shows the paused status and Resume without expanding the explanation", async () => {
     chromeMock.runtime.sendMessageResponses = { [EVENT.POPUP.IS_EXTENSION_PAUSED]: true }
 
     await new UserState(member, subscription()).render()
 
-    expect(document.querySelector<HTMLDetailsElement>("#freedom-controls")?.open).toBe(true)
+    expect(document.querySelector<HTMLDetailsElement>("#freedom-controls")?.open).toBe(false)
     expect(isShown("#resume-btn")).toBe(true)
     expect(isShown("#pause-btn")).toBe(false)
     expect(isShown("#extension-paused")).toBe(true)
+    expect(isShown("#extension-running")).toBe(false)
   })
 
   test("swaps the buttons over once a pause has actually landed", async () => {
@@ -244,8 +247,10 @@ describe("the pause control", () => {
     await settle()
 
     expect(commandsSent()).toContain(EVENT.POPUP.EXTENSION_PAUSE_REQUEST)
+    expect(document.querySelector<HTMLDetailsElement>("#freedom-controls")?.open).toBe(false)
     expect(isShown("#resume-btn")).toBe(true)
     expect(isShown("#extension-paused")).toBe(true)
+    expect(isShown("#extension-running")).toBe(false)
     expect(isShown("#reload-tab-btn")).toBe(true)
     expect(chromeMock.tabs.reloaded).toEqual([])
   })
@@ -259,12 +264,35 @@ describe("the pause control", () => {
     click("#resume-btn")
     await settle()
 
-    expect(document.querySelector<HTMLDetailsElement>("#freedom-controls")?.open).toBe(true)
+    expect(document.querySelector<HTMLDetailsElement>("#freedom-controls")?.open).toBe(false)
     expect(isShown("#reload-tab-btn")).toBe(true)
     expect(document.activeElement).toBe(document.querySelector("#reload-tab-btn"))
     expect(commandsSent()).toContain(EVENT.POPUP.EXTENSION_RESUME_REQUEST)
     expect(isShown("#pause-btn")).toBe(true)
     expect(isShown("#extension-paused")).toBe(false)
+    expect(isShown("#extension-running")).toBe(true)
+  })
+
+  test("preserves a manually opened explanation through pausing and resuming", async () => {
+    chromeMock.runtime.sendMessageResponses = { [EVENT.POPUP.IS_EXTENSION_PAUSED]: false }
+    await new UserState(member, subscription()).render()
+    const explanation = document.querySelector<HTMLDetailsElement>("#freedom-controls")
+
+    if (!explanation) throw new Error("Missing pause explanation")
+
+    explanation.open = true
+
+    for (const [button, paused] of [
+      ["#pause-btn", true],
+      ["#resume-btn", false],
+    ] as const) {
+      chromeMock.runtime.sendMessageResponses = { [EVENT.POPUP.IS_EXTENSION_PAUSED]: paused }
+
+      click(button)
+      await settle()
+
+      expect(explanation.open).toBe(true)
+    }
   })
 
   test("keeps the previous state and lets the user retry a failed pause", async () => {
@@ -280,6 +308,7 @@ describe("the pause control", () => {
     expect(isShown("#pause-btn")).toBe(true)
     expect(document.querySelector<HTMLButtonElement>("#pause-btn")?.disabled).toBe(false)
     expect(isShown("#extension-paused")).toBe(false)
+    expect(isShown("#extension-running")).toBe(true)
 
     chromeMock.runtime.sendMessageResponses = { [EVENT.POPUP.IS_EXTENSION_PAUSED]: true }
     click("#pause-btn")
@@ -575,6 +604,8 @@ describe("when the worker cannot be reached at all", () => {
     expect(isShown(".user.subscribed")).toBe(true)
     expect(isShown(".subscription-valid")).toBe(true)
     expect(textOf(".valid-until")).toBe("20 days")
+    expect(isShown("#extension-running")).toBe(false)
+    expect(isShown("#extension-paused")).toBe(false)
   })
 
   test("leaves a trace of why the rest is missing", async () => {
