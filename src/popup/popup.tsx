@@ -76,9 +76,7 @@ function UnsubscribedSection() {
           />
         </div>
       </div>
-      <p class="popup-intro">
-        Browse participating websites without ads. Your membership funds the publishers you spend time with.
-      </p>
+      <p class="popup-intro">Browse participating websites without ads and access the paid content they include.</p>
       <div class="d-grid gap-3">
         <a
           class="guest btn-solid theme-primary"
@@ -105,8 +103,8 @@ function UnsubscribedSection() {
         </summary>
         <div class="accordion-body">
           <p>
-            One monthly subscription activates your browser extension and includes all Freedom benefits on participating
-            websites.
+            One monthly Freedom membership works across participating websites. Your subscription supports the
+            publishers and creators you spend time with.
           </p>
           <ul class="list-unstyled check-list d-flex flex-column gap-3 mb-0">
             {PLAN_FEATURES.map((feature) => (
@@ -247,9 +245,9 @@ function PublisherSite() {
           data-href="/report/site"
           target="_blank"
           title="Report a website or creator"
-          aria-label="Report issue with this website or creator"
+          aria-label="Report an issue with this website or creator"
         >
-          <Icon name="flag" /> Report issue
+          <Icon name="flag" /> Report an issue
         </a>
       </div>
     </section>
@@ -331,7 +329,7 @@ function SubscriberControls() {
         id="extension-scope"
         class="popup-control-hint"
       >
-        Applies to all websites. Reload tabs after changing.
+        Pausing or resuming affects all websites. Reload open pages afterwards.
       </p>
       <details
         id="freedom-controls"
@@ -348,8 +346,8 @@ function SubscriberControls() {
           id="freedom-comparison-help"
           class="small fg-2 mb-0"
         >
-          Pausing stops membership proof, publisher discovery and visit measurement on all websites. Previously recorded
-          visit statistics still sync with Zero Ad Network.
+          While paused, the extension stops telling websites you’re a member, looking for publishers and recording
+          visits. This applies to all websites. Previously recorded activity still syncs with Zero Ad Network.
         </p>
       </details>
     </section>
