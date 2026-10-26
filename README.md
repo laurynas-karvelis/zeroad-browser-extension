@@ -7,7 +7,7 @@
 
 ## Project setup
 
-Source builds require a Bun workspace with the `@styles` dependency available.
+Source builds require a Bun workspace with the `#styles` dependency available.
 Install dependencies from the workspace root:
 
 ```sh

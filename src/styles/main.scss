@@ -1,11 +1,11 @@
 @use "sass:meta";
-@use "@styles/settings/site-theme";
+@use "styles/settings/site-theme";
 
 // The shared design system (packages/styles in the better-web monorepo), the same one the frontend app
 // uses. Loaded first: it declares the cascade layer order; the popup's own styles go in `features`.
 // scripts/purge-css.ts strips every rule the popup markup does not use. The palette resolves with
 // light-dark(), so the popup follows the OS light/dark setting via the `color-scheme` meta tag.
-@include meta.load-css("@styles");
+@include meta.load-css("styles");
 
 // Chrome injects an unlayered `body { font-family: system-ui; font-size: 75% }` into every extension page,
 // and an unlayered rule beats every layer - so both are restated outside the layers. `html body` outranks

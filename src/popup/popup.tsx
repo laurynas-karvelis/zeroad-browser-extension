@@ -9,7 +9,7 @@ import { Icon } from "./icon"
 /** Markers `dom.ts`'s `replace()` substitutes once the worker has answered. */
 const VERSION = "{VERSION}"
 
-// Keep aligned with SUBSCRIBER_ENTITLEMENTS in the main site's @config package.
+// Keep aligned with SUBSCRIBER_ENTITLEMENTS in the main site's #config package.
 const PLAN_FEATURES = [
   "Ads removed",
   "Cookie consent screens removed",
@@ -45,7 +45,7 @@ function Header() {
 }
 
 // Match the homepage, onboarding and dashboard copy. The extension is released separately,
-// so it keeps its own markup while using the frontend's shared @styles components.
+// so it keeps its own markup while using the frontend's shared #styles components.
 function UnsubscribedSection() {
   return (
     <div

@@ -14,7 +14,7 @@
     "manifest:build": "bun run ./scripts/build-manifest.ts",
     "popup:build": "bun run ./scripts/build-popup.ts",
     "assets:build": "rsync -a --delete src/images/ build/images/ && bun run ./scripts/build-icons.ts",
-    "styles:build": "sass --no-charset --no-source-map --quiet --style=compressed --load-path=node_modules src/styles/main.scss build/css/main.css && bun run ./scripts/purge-css.ts",
+    "styles:build": "sass --no-charset --no-source-map --quiet --style=compressed --load-path=../../packages src/styles/main.scss build/css/main.css && bun run ./scripts/purge-css.ts",
     "scripts:build": "bun build src/*.ts --outdir=build/js/ --target=browser",
     "targets:build": "dirs=(\"chrome\" \"firefox\"); for d in \"${dirs[@]}\"; do (rsync -a --delete --mkpath build/ targets/$d/ && bun manifest:build $d > targets/$d/manifest.json); done",
     "watch": "bun run ./scripts/watch.ts",
@@ -26,7 +26,7 @@
   },
   "devDependencies": {
     "@resvg/resvg-js": "^2.6.2",
-    "@styles": "workspace:*",
+    "#styles": "workspace:*",
     "@types/chrome": "^0.3.6",
     "@types/firefox-webext-browser": "^143.0.1",
     "chokidar": "^6.0.0",

@@ -1,4 +1,4 @@
-@use "@styles/settings/config" as *;
+@use "styles/settings/config" as *;
 
 // Desktop popups size to the body; mobile browsers open a full tab instead.
 // A viewport-based max-width traps Chrome at its initial, narrow popup viewport.

@@ -1,4 +1,4 @@
-import { purgeStylesheet } from "@styles/purge-stylesheet"
+import { purgeStylesheet } from "#styles/purge-stylesheet"
 
 // Run at the end of `styles:build`, straight after sass writes build/css/main.css. main.scss pulls in
 // the whole shared design system; this trims it to the classes the popup uses.
