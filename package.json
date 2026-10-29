@@ -27,13 +27,13 @@
   "devDependencies": {
     "@resvg/resvg-js": "^2.6.2",
     "#styles": "workspace:*",
-    "@types/chrome": "^0.3.6",
+    "@types/chrome": "^0.3.7",
     "@types/firefox-webext-browser": "^143.0.1",
     "chokidar": "^6.0.0",
     "happy-dom": "^21.0.4",
     "hono": "^4.13.14",
     "json-e": "^4.8.4",
-    "lucide": "^1.62.0",
-    "sass": "^1.106.1"
+    "lucide": "^1.64.0",
+    "sass": "^1.107.0"
   }
 }
